@@ -1,5 +1,5 @@
 ### login
-POST {{xen_host}}/auth/login
+POST {{api_host}}/auth/login
 Content-Type: application/json
 
 {
@@ -12,7 +12,7 @@ Content-Type: application/json
 %}
 
 ### create close-days
-POST {{xen_host}}/close-days
+POST {{api_host}}/close-days
 Authorization: Bearer {{user_auth_token}}
 Content-Type: application/json
 
@@ -22,5 +22,5 @@ Content-Type: application/json
 }
 
 ### get close-days
-GET {{xen_host}}/close-days
+GET {{api_host}}/close-days
 Authorization: Bearer {{user_auth_token}}

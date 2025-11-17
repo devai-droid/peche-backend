@@ -1,5 +1,5 @@
 ### login
-POST {{xen_host}}/auth/login
+POST {{api_host}}/auth/login
 Content-Type: application/json
 
 {
@@ -12,7 +12,7 @@ Content-Type: application/json
 %}
 
 ### create product backup
-POST {{xen_host}}/product-backup-bundle
+POST {{api_host}}/product-backup-bundle
 Authorization: Bearer {{user_auth_token}}
 
 > {%
@@ -20,7 +20,7 @@ Authorization: Bearer {{user_auth_token}}
 %}
 
 ### create product backup
-POST {{xen_host}}/product-backup
+POST {{api_host}}/product-backup
 Authorization: Bearer {{user_auth_token}}
 Content-Type: application/json
 
@@ -41,12 +41,12 @@ Content-Type: application/json
 }
 
 ### get product backup
-GET {{xen_host}}/product-backup-bundle
+GET {{api_host}}/product-backup-bundle
 Authorization: Bearer {{user_auth_token}}
 
 ### load product backup
-PUT {{xen_host}}/product-backup-bundle/{{bundle_id}}
+PUT {{api_host}}/product-backup-bundle/{{bundle_id}}
 Authorization: Bearer {{user_auth_token}}
 
 ### get products
-GET {{xen_host}}/products
+GET {{api_host}}/products

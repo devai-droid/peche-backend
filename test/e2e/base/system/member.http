@@ -1,5 +1,5 @@
 ### login
-POST {{xen_host}}/auth/login
+POST {{api_host}}/auth/login
 Content-Type: application/json
 
 {
@@ -12,7 +12,7 @@ Content-Type: application/json
 %}
 
 ### create members
-POST {{xen_host}}/members
+POST {{api_host}}/members
 Authorization: Bearer {{user_auth_token}}
 Content-Type: application/json
 
@@ -23,5 +23,5 @@ Content-Type: application/json
 }
 
 ### get members
-GET {{xen_host}}/members
+GET {{api_host}}/members
 Authorization: Bearer {{user_auth_token}}

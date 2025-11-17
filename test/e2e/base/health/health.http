@@ -1,10 +1,10 @@
 ### health check
-GET {{xen_host}}/health
+GET {{api_host}}/health
 Accept-Language: ko
 
 
 ### check-env
-PUT {{xen_host}}/health/check-env?check-code=all
+PUT {{api_host}}/health/check-env?check-code=all
 Content-Type: application/json
 
 {}

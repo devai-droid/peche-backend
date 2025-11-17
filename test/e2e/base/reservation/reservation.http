@@ -1,5 +1,5 @@
 ### get admin token
-POST {{xen_host}}/admin-auth/admin-jwt
+POST {{api_host}}/admin-auth/admin-jwt
 Content-Type: application/json
 
 > {%
@@ -8,7 +8,7 @@ Content-Type: application/json
 %}
 
 ### get admin user
-GET {{xen_host}}/admin/users
+GET {{api_host}}/admin/users
 Content-Type: application/json
 Authorization: Bearer {{admin_auth_token}}
 
@@ -18,7 +18,7 @@ Authorization: Bearer {{admin_auth_token}}
 
 
 ### login
-POST {{xen_host}}/admin-auth/{{user_id}}/jwt
+POST {{api_host}}/admin-auth/{{user_id}}/jwt
 Content-Type: application/json
 
 > {%
@@ -26,7 +26,7 @@ Content-Type: application/json
 %}
 
 ### get product
-GET {{xen_host}}/products
+GET {{api_host}}/products
 Authorization: Bearer {{user_auth_token}}
 
 > {%
@@ -35,7 +35,7 @@ Authorization: Bearer {{user_auth_token}}
 %}
 
 ### create reservations
-POST {{xen_host}}/reservations
+POST {{api_host}}/reservations
 Authorization: Bearer {{user_auth_token}}
 Content-Type: application/json
 
@@ -49,7 +49,7 @@ Content-Type: application/json
 }
 
 ### update reservations
-PUT {{xen_host}}/reservations/92289abb-9d17-49ca-b25b-268067e904d8
+PUT {{api_host}}/reservations/92289abb-9d17-49ca-b25b-268067e904d8
 Authorization: Bearer {{user_auth_token}}
 Content-Type: application/json
 
@@ -58,29 +58,29 @@ Content-Type: application/json
 }
 
 ### get reservations
-GET {{xen_host}}/reservations?createdAtBetween=2023-12-01T00:00:00.000Z&createdAtBetween=2023-12-28T23:59:59.999Z
+GET {{api_host}}/reservations?createdAtBetween=2023-12-01T00:00:00.000Z&createdAtBetween=2023-12-28T23:59:59.999Z
 Authorization: Bearer {{user_auth_token}}
 
 ### get available-by-month
-GET {{xen_host}}/reservations/available-by-month?year=2024&month=3&productIds={{product_id_1}}&
+GET {{api_host}}/reservations/available-by-month?year=2024&month=3&productIds={{product_id_1}}&
     productIds={{product_id_2}}
 Authorization: Bearer {{user_auth_token}}
 
 ### get available-by-day
-GET {{xen_host}}/reservations/available-by-day?year=2024&month=3&day=29&productIds={{product_id_1}}&
+GET {{api_host}}/reservations/available-by-day?year=2024&month=3&day=29&productIds={{product_id_1}}&
     productIds={{product_id_2}}
 Authorization: Bearer {{user_auth_token}}
 
 ### get count-by-month
-GET {{xen_host}}/reservations/count-by-month?year=2024&month=1
+GET {{api_host}}/reservations/count-by-month?year=2024&month=1
 Authorization: Bearer {{user_auth_token}}
 
 ### get available-by-month
-GET {{xen_host}}/reservations/available-by-month?year=2024&month=3&eventIds=82356cd1-15c8-4580-9069-e65518173107&
+GET {{api_host}}/reservations/available-by-month?year=2024&month=3&eventIds=82356cd1-15c8-4580-9069-e65518173107&
     eventIds=dd9c6f84-6222-4b90-89c5-e5b790e37dfc
 Authorization: Bearer {{user_auth_token}}
 
 ### get available-by-day
-GET {{xen_host}}/reservations/available-by-day?year=2024&month=3&day=19&eventIds=82356cd1-15c8-4580-9069-e65518173107&
+GET {{api_host}}/reservations/available-by-day?year=2024&month=3&day=19&eventIds=82356cd1-15c8-4580-9069-e65518173107&
     eventIds=dd9c6f84-6222-4b90-89c5-e5b790e37dfc
 Authorization: Bearer {{user_auth_token}}

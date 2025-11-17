@@ -4,7 +4,7 @@
   const phone_number_value = "";
   client.global.set("phone_number", phone_number_value);
 %}
-POST {{xen_host}}/auth/phone-code
+POST {{api_host}}/auth/phone-code
 Accept-Language: ko
 Content-Type: application/json
 
@@ -19,7 +19,7 @@ Content-Type: application/json
   const code_value = "";
   request.variables.set("code", code_value);
 %}
-POST {{xen_host}}/auth/phone
+POST {{api_host}}/auth/phone
 Accept-Language: ko
 Content-Type: application/json
 
@@ -33,7 +33,7 @@ Content-Type: application/json
 %}
 
 ### me
-GET {{xen_host}}/users/me
+GET {{api_host}}/users/me
 Authorization: Bearer {{user_auth_token}}
 
 
@@ -43,7 +43,7 @@ Authorization: Bearer {{user_auth_token}}
   const email_value = "";
   client.global.set("email", email_value);
 %}
-POST {{xen_host}}/auth/email-code
+POST {{api_host}}/auth/email-code
 Accept-Language: ko
 Content-Type: application/json
 
@@ -58,7 +58,7 @@ Content-Type: application/json
   const code_value = "";
   request.variables.set("code", code_value);
 %}
-POST {{xen_host}}/auth/email
+POST {{api_host}}/auth/email
 Accept-Language: ko
 Content-Type: application/json
 
@@ -73,5 +73,5 @@ Content-Type: application/json
 %}
 
 ### me
-GET {{xen_host}}/users/me
+GET {{api_host}}/users/me
 Authorization: Bearer {{user_auth_token}}

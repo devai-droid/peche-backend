@@ -1,5 +1,5 @@
 ### login
-POST {{xen_host}}/admin-auth/login
+POST {{api_host}}/admin-auth/login
 Content-Type: application/json
 
 {
@@ -12,5 +12,5 @@ Content-Type: application/json
 %}
 
 ### get test
-GET {{xen_host}}/smart-doctor/nationalities
+GET {{api_host}}/smart-doctor/nationalities
 Authorization: Bearer {{user_auth_token}}

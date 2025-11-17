@@ -1,5 +1,5 @@
 ### get admin token
-POST {{xen_host}}/admin-auth/admin-jwt
+POST {{api_host}}/admin-auth/admin-jwt
 Content-Type: application/json
 
 > {%
@@ -13,7 +13,7 @@ Content-Type: application/json
   const phone_number_value = "";
   client.global.set("phone_number", phone_number_value);
 %}
-POST {{xen_host}}/admin/sms/verification-test
+POST {{api_host}}/admin/sms/verification-test
 Content-Type: application/json
 Authorization: Bearer {{admin_auth_token}}
 

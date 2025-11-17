@@ -1,19 +1,19 @@
 ### GET /available-by-month 이용 가능한 예약 정보를 조회 - 월
-GET {{xen_host}}/reservations/available-by-month?year=2025&month=5&
+GET {{api_host}}/reservations/available-by-month?year=2025&month=5&
     productIds=cad74ae1-e922-49af-a6ef-164fa4086718
 Accept: application/json, text/plain, */*
 Accept-Language: ko
 Authorization: Bearer {{user_auth_token}}
 
 ### GET /available-by-day 이용 가능한 예약 정보를 조회
-GET {{xen_host}}/reservations/available-by-day?year=2025&month=5&day=30&
+GET {{api_host}}/reservations/available-by-day?year=2025&month=5&day=30&
     productIds=cad74ae1-e922-49af-a6ef-164fa4086718
 Accept: application/json, text/plain, */*
 Accept-Language: ko
 Authorization: Bearer {{user_auth_token}}
 
 ### POST /reservations 예약정보를 생성
-POST {{xen_host}}/api/reservations
+POST {{api_host}}/api/reservations
 Accept: application/json, text/plain, */*
 Accept-Language: ko
 Authorization: Bearer {{user_auth_token}}

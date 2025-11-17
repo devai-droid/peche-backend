@@ -1,5 +1,5 @@
 ### login
-POST {{xen_host}}/auth/login
+POST {{api_host}}/auth/login
 Content-Type: application/json
 
 {
@@ -12,7 +12,7 @@ Content-Type: application/json
 %}
 
 ### create event category
-POST {{xen_host}}/event-categories
+POST {{api_host}}/event-categories
 Authorization: Bearer {{user_auth_token}}
 Content-Type: application/json
 
@@ -33,7 +33,7 @@ Content-Type: application/json
 }
 
 ### get integrated-crm-categories
-GET {{xen_host}}/event-categories
+GET {{api_host}}/event-categories
 Authorization: Bearer {{user_auth_token}}
 
 > {%
@@ -41,7 +41,7 @@ Authorization: Bearer {{user_auth_token}}
 %}
 
 ### update crm-categories
-PUT {{xen_host}}/product-categories/{{event_category_id}}
+PUT {{api_host}}/product-categories/{{event_category_id}}
 Authorization: Bearer {{user_auth_token}}
 Content-Type: application/json
 

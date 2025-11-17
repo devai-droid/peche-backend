@@ -1,2 +1,2 @@
 ### get search
-GET {{xen_host}}/search?query=productaaa
+GET {{api_host}}/search?query=productaaa

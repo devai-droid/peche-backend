@@ -1,5 +1,5 @@
 ### get admin token
-POST {{xen_host}}/admin-auth/admin-jwt
+POST {{api_host}}/admin-auth/admin-jwt
 Content-Type: application/json
 
 > {%
@@ -9,7 +9,7 @@ Content-Type: application/json
 
 
 ### create user
-POST {{xen_host}}/admin/users
+POST {{api_host}}/admin/users
 Content-Type: application/json
 Authorization: Bearer {{admin_auth_token}}
 
@@ -24,18 +24,18 @@ Authorization: Bearer {{admin_auth_token}}
 
 
 ### set admin user
-PUT {{xen_host}}/admin/users/{{user_id}}/admin
+PUT {{api_host}}/admin/users/{{user_id}}/admin
 Content-Type: application/json
 Authorization: Bearer {{admin_auth_token}}
 
 
 ### remove admin user
-DELETE {{xen_host}}/admin/users/{{user_id}}/admin
+DELETE {{api_host}}/admin/users/{{user_id}}/admin
 Content-Type: application/json
 Authorization: Bearer {{admin_auth_token}}
 
 
 ### get admin user
-GET {{xen_host}}/admin/users?role=ADMIN
+GET {{api_host}}/admin/users?role=ADMIN
 Content-Type: application/json
 Authorization: Bearer {{admin_auth_token}}

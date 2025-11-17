@@ -1,5 +1,5 @@
 ### login
-POST {{xen_host}}/auth/login
+POST {{api_host}}/auth/login
 Content-Type: application/json
 
 {
@@ -12,7 +12,7 @@ Content-Type: application/json
 %}
 
 ### get product
-GET {{xen_host}}/products
+GET {{api_host}}/products
 Authorization: Bearer {{user_auth_token}}
 
 > {%
@@ -20,7 +20,7 @@ Authorization: Bearer {{user_auth_token}}
 %}
 
 ### create main-products
-POST {{xen_host}}/main-products
+POST {{api_host}}/main-products
 Authorization: Bearer {{user_auth_token}}
 Content-Type: application/json
 
@@ -32,5 +32,5 @@ Content-Type: application/json
 }
 
 ### get main-products
-GET {{xen_host}}/main-products
+GET {{api_host}}/main-products
 Authorization: Bearer {{user_auth_token}}

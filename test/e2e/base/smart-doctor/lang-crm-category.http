@@ -1,5 +1,5 @@
 ### get admin token
-POST {{xen_host}}/admin-auth/admin-jwt
+POST {{api_host}}/admin-auth/admin-jwt
 Content-Type: application/json
 
 > {%
@@ -8,7 +8,7 @@ Content-Type: application/json
 %}
 
 ### CRM 카테고리 정보 가져오기
-GET {{xen_host}}/crm-categories
+GET {{api_host}}/crm-categories
 Authorization: Bearer {{user_auth_token}}
 
 > {%
@@ -18,19 +18,19 @@ Authorization: Bearer {{user_auth_token}}
 %}
 
 ### 모든 언어 CRM 카테고리 조회
-GET {{xen_host}}/lang-crm-categories
+GET {{api_host}}/lang-crm-categories
 Authorization: Bearer {{user_auth_token}}
 
 ### 특정 언어로 CRM 카테고리 조회 (한국어)
-GET {{xen_host}}/lang-crm-categories/by-lang?lang=KO
+GET {{api_host}}/lang-crm-categories/by-lang?lang=KO
 Authorization: Bearer {{user_auth_token}}
 
 ### 특정 상태로 CRM 카테고리 조회 (활성)
-GET {{xen_host}}/lang-crm-categories/by-status?status=ACTIVE
+GET {{api_host}}/lang-crm-categories/by-status?status=ACTIVE
 Authorization: Bearer {{user_auth_token}}
 
 ### 이미지에 표시된 언어별 카테고리 생성
-POST {{xen_host}}/lang-crm-categories
+POST {{api_host}}/lang-crm-categories
 Authorization: Bearer {{user_auth_token}}
 Content-Type: application/json
 
@@ -90,7 +90,7 @@ Content-Type: application/json
 %}
 
 ### 언어 CRM 카테고리 데이터 업데이트
-PUT {{xen_host}}/lang-crm-categories
+PUT {{api_host}}/lang-crm-categories
 Authorization: Bearer {{user_auth_token}}
 Content-Type: application/json
 
@@ -108,15 +108,15 @@ Content-Type: application/json
 ]
 
 ### 언어 CRM 카테고리 상태 토글 (활성 ↔ 비활성)
-PUT {{xen_host}}/lang-crm-categories/{{lang_crm_category_id_ko}}/toggle-status
+PUT {{api_host}}/lang-crm-categories/{{lang_crm_category_id_ko}}/toggle-status
 Authorization: Bearer {{user_auth_token}}
 
 ### 더미 언어 CRM 카테고리 삭제
-DELETE {{xen_host}}/lang-crm-categories/{{lang_crm_category_id_en}}
+DELETE {{api_host}}/lang-crm-categories/{{lang_crm_category_id_en}}
 Authorization: Bearer {{user_auth_token}}
 
 ### 삭제된 카테고리 추가
-POST {{xen_host}}/lang-crm-categories
+POST {{api_host}}/lang-crm-categories
 Authorization: Bearer {{user_auth_token}}
 Content-Type: application/json
 

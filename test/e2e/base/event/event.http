@@ -1,5 +1,5 @@
 ### login
-POST {{xen_host}}/auth/login
+POST {{api_host}}/auth/login
 Content-Type: application/json
 
 {
@@ -12,7 +12,7 @@ Content-Type: application/json
 %}
 
 ### get product-categories
-GET {{xen_host}}/event-categories
+GET {{api_host}}/event-categories
 Authorization: Bearer {{user_auth_token}}
 
 > {%
@@ -20,7 +20,7 @@ Authorization: Bearer {{user_auth_token}}
 %}
 
 ### get product-detail-pages
-GET {{xen_host}}/product-detail-pages
+GET {{api_host}}/product-detail-pages
 Authorization: Bearer {{user_auth_token}}
 
 > {%
@@ -28,7 +28,7 @@ Authorization: Bearer {{user_auth_token}}
 %}
 
 ### get integrated-crm-categories
-GET {{xen_host}}/integrated-crm-categories
+GET {{api_host}}/integrated-crm-categories
 Authorization: Bearer {{user_auth_token}}
 
 > {%
@@ -36,7 +36,7 @@ Authorization: Bearer {{user_auth_token}}
 %}
 
 ### create event bundle
-POST {{xen_host}}/event-bundle
+POST {{api_host}}/event-bundle
 Authorization: Bearer {{user_auth_token}}
 
 > {%
@@ -44,7 +44,7 @@ Authorization: Bearer {{user_auth_token}}
 %}
 
 ### create event
-POST {{xen_host}}/events
+POST {{api_host}}/events
 Authorization: Bearer {{user_auth_token}}
 Content-Type: application/json
 
@@ -67,5 +67,5 @@ Content-Type: application/json
 }
 
 ### get event-bundle
-GET {{xen_host}}/event-bundle
+GET {{api_host}}/event-bundle
 Authorization: Bearer {{user_auth_token}}

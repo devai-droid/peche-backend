@@ -1,5 +1,5 @@
 ### register
-POST {{xen_host}}/auth/register
+POST {{api_host}}/auth/register
 Content-Type: application/json
 
 {
@@ -8,7 +8,7 @@ Content-Type: application/json
 }
 
 ### login
-POST {{xen_host}}/admin-auth/login
+POST {{api_host}}/admin-auth/login
 Content-Type: application/json
 
 {
@@ -21,11 +21,11 @@ Content-Type: application/json
 %}
 
 ### me
-GET {{xen_host}}/users/me
+GET {{api_host}}/users/me
 Authorization: Bearer {{user_auth_token}}
 
 ### update profile
-PUT {{xen_host}}/users/me
+PUT {{api_host}}/users/me
 Authorization: Bearer {{user_auth_token}}
 Content-Type: application/json
 

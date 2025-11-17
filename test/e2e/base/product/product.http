@@ -1,5 +1,5 @@
 ### login
-POST {{xen_host}}/auth/login
+POST {{api_host}}/auth/login
 Content-Type: application/json
 
 {
@@ -12,7 +12,7 @@ Content-Type: application/json
 %}
 
 ### get product-categories
-GET {{xen_host}}/product-categories
+GET {{api_host}}/product-categories
 Authorization: Bearer {{user_auth_token}}
 
 > {%
@@ -20,7 +20,7 @@ Authorization: Bearer {{user_auth_token}}
 %}
 
 ### get product-categories
-GET {{xen_host}}/product-detail-pages
+GET {{api_host}}/product-detail-pages
 Authorization: Bearer {{user_auth_token}}
 
 > {%
@@ -28,7 +28,7 @@ Authorization: Bearer {{user_auth_token}}
 %}
 
 ### get integrated-crm-categories
-GET {{xen_host}}/integrated-crm-categories
+GET {{api_host}}/integrated-crm-categories
 Authorization: Bearer {{user_auth_token}}
 
 > {%
@@ -36,7 +36,7 @@ Authorization: Bearer {{user_auth_token}}
 %}
 
 ### create product
-POST {{xen_host}}/products
+POST {{api_host}}/products
 Authorization: Bearer {{user_auth_token}}
 Content-Type: application/json
 
@@ -56,5 +56,5 @@ Content-Type: application/json
 }
 
 ### get product
-GET {{xen_host}}/products
+GET {{api_host}}/products
 Authorization: Bearer {{user_auth_token}}

@@ -1,5 +1,5 @@
 ### get admin token
-POST {{xen_host}}/admin-auth/admin-jwt
+POST {{api_host}}/admin-auth/admin-jwt
 Content-Type: application/json
 
 > {%
@@ -8,7 +8,7 @@ Content-Type: application/json
 
 
 ### create pre-signed url
-POST {{xen_host}}/files/upload-urls
+POST {{api_host}}/files/upload-urls
 Authorization: Bearer {{admin_auth_token}}
 Content-Type: application/json
 
@@ -25,6 +25,6 @@ Content-Type: image/jpeg
 < ./test_image_file.jpg
 
 ### get file object
-GET {{xen_host}}/files/{{file_id}}
+GET {{api_host}}/files/{{file_id}}
 Authorization: Bearer {{admin_auth_token}}
 Content-Type: application/json
