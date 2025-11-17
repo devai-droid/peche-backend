@@ -1,0 +1,52 @@
+### login
+POST {{xen_host}}/auth/login
+Content-Type: application/json
+
+{
+  "phoneNumber": "+821012345678",
+  "password": "12345678"
+}
+
+> {%
+  client.global.set("user_auth_token", response.body);
+%}
+
+### create product backup
+POST {{xen_host}}/product-backup-bundle
+Authorization: Bearer {{user_auth_token}}
+
+> {%
+  client.global.set("bundle_id", response.body.id);
+%}
+
+### create product backup
+POST {{xen_host}}/product-backup
+Authorization: Bearer {{user_auth_token}}
+Content-Type: application/json
+
+{
+  "backupBundleId": "{{bundle_id}}",
+  "categoryId": "{{product_category_id}}",
+  "detailPageId": "{{product_detail_page_id}}",
+  "integratedCrmCategoryId": "{{integrated_crm_category_id}}",
+  "name": "new product",
+  "description": "new",
+  "price": 1000,
+  "order": 1,
+  "visible": true,
+  "visibleEN": true,
+  "visibleZH": true,
+  "visibleJA": true,
+  "visibleTH": true
+}
+
+### get product backup
+GET {{xen_host}}/product-backup-bundle
+Authorization: Bearer {{user_auth_token}}
+
+### load product backup
+PUT {{xen_host}}/product-backup-bundle/{{bundle_id}}
+Authorization: Bearer {{user_auth_token}}
+
+### get products
+GET {{xen_host}}/products

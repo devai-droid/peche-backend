@@ -1,0 +1,2 @@
+### get search
+GET {{xen_host}}/search?query=productaaa

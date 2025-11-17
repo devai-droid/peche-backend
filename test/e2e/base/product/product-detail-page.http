@@ -1,0 +1,50 @@
+### login
+POST {{xen_host}}/auth/login
+Content-Type: application/json
+
+{
+  "phoneNumber": "+821012345678",
+  "password": "12345678"
+}
+
+> {%
+  client.global.set("user_auth_token", response.body);
+%}
+
+### get product-categories
+GET {{xen_host}}/product-categories
+Authorization: Bearer {{user_auth_token}}
+
+> {%
+  client.global.set("product_category_id", response.body[0].id);
+%}
+
+### get product-categories
+GET {{xen_host}}/product-detail-pages
+Authorization: Bearer {{user_auth_token}}
+
+> {%
+  client.global.set("product_detail_page_id", response.body[0].id);
+%}
+
+### create product detail page
+POST {{xen_host}}/product-detail-pages
+Authorization: Bearer {{user_auth_token}}
+Content-Type: application/json
+
+{
+  "categoryId": "{{product_category_id}}",
+  "status": "ACTIVE",
+  "name": "test detail page",
+  "description": "test",
+  "relatedDetailPageIds": ["{{product_detail_page_id}}"],
+  "order": 1
+}
+
+> {%
+  client.global.set("created_product_detail_page_id", response.body.id);
+%}
+
+### get product detail page
+GET {{xen_host}}/product-detail-pages/{{created_product_detail_page_id}}
+Authorization: Bearer {{user_auth_token}}

@@ -1,0 +1,34 @@
+### register
+POST {{xen_host}}/auth/register
+Content-Type: application/json
+
+{
+  "phoneNumber": "+821012345678",
+  "password": "12345678"
+}
+
+### login
+POST {{xen_host}}/admin-auth/login
+Content-Type: application/json
+
+{
+  "email": "88chinu@gmail.com",
+  "password": "12345678"
+}
+
+> {%
+  client.global.set("user_auth_token", response.body);
+%}
+
+### me
+GET {{xen_host}}/users/me
+Authorization: Bearer {{user_auth_token}}
+
+### update profile
+PUT {{xen_host}}/users/me
+Authorization: Bearer {{user_auth_token}}
+Content-Type: application/json
+
+{
+  "languageLocale": "ja"
+}

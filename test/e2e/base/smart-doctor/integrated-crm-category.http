@@ -1,0 +1,52 @@
+### login
+POST {{xen_host}}/auth/login
+Content-Type: application/json
+
+{
+  "phoneNumber": "+821012345678",
+  "password": "12345678"
+}
+
+> {%
+  client.global.set("user_auth_token", response.body);
+%}
+
+### get crm-categories
+GET {{xen_host}}/crm-categories
+Authorization: Bearer {{user_auth_token}}
+
+> {%
+  client.global.set("crm_category_code1", response.body[0].code);
+  client.global.set("crm_category_code2", response.body[1].code);
+%}
+
+### create integrated crm-categories
+POST {{xen_host}}/integrated-crm-categories
+Authorization: Bearer {{user_auth_token}}
+Content-Type: application/json
+
+[{
+  "name": "test",
+  "mainBuildingCrmCategoryCode": "{{crm_category_code1}}",
+  "newBuildingCrmCategoryCode": "{{crm_category_code2}}",
+  "buildingPriority": "MAIN",
+  "order": 1
+}]
+
+### get integrated-crm-categories
+GET {{xen_host}}/integrated-crm-categories
+Authorization: Bearer {{user_auth_token}}
+
+> {%
+  client.global.set("integrated_crm_category_id", response.body[0].id);
+%}
+
+### update crm-categories
+PUT {{xen_host}}/integrated-crm-categories
+Authorization: Bearer {{user_auth_token}}
+Content-Type: application/json
+
+[{
+  "id": "{{integrated_crm_category_id}}",
+  "order": 2
+}]

@@ -1,0 +1,49 @@
+### login
+POST {{xen_host}}/auth/login
+Content-Type: application/json
+
+{
+  "phoneNumber": "+821012345678",
+  "password": "12345678"
+}
+
+> {%
+  client.global.set("user_auth_token", response.body);
+%}
+
+### get event bundle
+GET {{xen_host}}/event-bundle-bundle
+Authorization: Bearer {{user_auth_token}}
+
+> {%
+  client.global.set("event_bundle_id", response.body.item[0].id);
+%}
+
+### create event backup
+POST {{xen_host}}/event-backup-bundle
+Authorization: Bearer {{user_auth_token}}
+Content-Type: application/json
+
+{
+  "eventBundleId": "{{event_bundle_id}}"
+}
+
+> {%
+  client.global.set("bundle_id", response.body.id);
+%}
+
+### get product backup
+GET {{xen_host}}/event-backup-bundle
+Authorization: Bearer {{user_auth_token}}
+
+### load product backup
+PUT {{xen_host}}/event-backup-bundle/{{bundle_id}}
+Authorization: Bearer {{user_auth_token}}
+Content-Type: application/json
+
+{
+  "eventBundleId": "{{event_bundle_id}}"
+}
+
+### get products
+GET {{xen_host}}/event-bundle

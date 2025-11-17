@@ -1,0 +1,26 @@
+### login
+POST {{xen_host}}/auth/login
+Content-Type: application/json
+
+{
+  "phoneNumber": "+821012345678",
+  "password": "12345678"
+}
+
+> {%
+  client.global.set("user_auth_token", response.body);
+%}
+
+### create system-constants
+POST {{xen_host}}/system-constants
+Authorization: Bearer {{user_auth_token}}
+Content-Type: application/json
+
+{
+  "key": "AUTO_RESERVATION_CONFIRM",
+  "value": false
+}
+
+### get system-constants
+GET {{xen_host}}/system-constants/AUTO_RESERVATION_CONFIRM
+Authorization: Bearer {{user_auth_token}}

@@ -1,0 +1,24 @@
+{
+  "ERROR": {
+    "UNAUTHORIZED": "Unauthorized",
+    "FORBIDDEN": "Forbidden",
+    "DELAY_LIMIT": "Delay limit",
+    "INVALID_REQUEST": "INVALID_REQUEST"
+  },
+  "VALIDATION": {
+  },
+  "AUTHENTICATION": {
+    "VERIFICATION_CODE": "[Peche Clinic] Verification Code"
+  },
+  "NOTIFICATION": {
+    "TITLE": "[Peche Clinic]\n",
+    "NEW_RESERVATION": "Hello, {name}.\nYou have an appointment scheduled for {date} at {time}。",
+    "THE_DAY_BEFORE": "Hello, {name}.\nWe are checking in to see if you wish to have any modifications to your appointment on {date} at {time}。",
+    "ON_THE_DAY": "Hello, {name}.\nWe will meet you today at {time}",
+    "NEW_RESERVATION_LONG": "{name}님, 안녕하세요.<br>{date} {time}에 예약되었습니다.<br>1661-2365",
+    "THE_DAY_BEFORE_LONG": "{name}님, 안녕하세요.<br>{date} {time} 예약에 변경사항 없으신지요.<br>1661-2365",
+    "ON_THE_DAY_LONG": "{name}님, 안녕하세요.<br>금일 {time}에 뵙겠습니다.<br>1661-2365",
+    "RESERVATION_CANCELLATION": "Your reservation was canceled at {datetime}. For inquiries, please contact us through Whatsapp or Instagram DM.\nWhatsapp : +821027694410\nInstagram ID : pecheclinic.eng",
+    "RESERVATION_CONFIRMATION": "Your reservation was made for [New Building] at {datetime}.\nNew building location: 5-6 floor, Seoho Building, 10, Gangnam-daero 69-gil, Seocho-gu, Seoul\nFor further inquiries, please contact us via WhatsApp or Instagram DM.\nWhatsapp : +821027694410\nInstagram ID : pecheclinic.eng"
+  }
+}

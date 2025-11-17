@@ -1,0 +1,133 @@
+### get admin token
+POST {{xen_host}}/admin-auth/admin-jwt
+Content-Type: application/json
+
+> {%
+  client.global.set("admin_auth_token", response.body);
+  client.global.set("user_auth_token", response.body);
+%}
+
+### CRM 카테고리 정보 가져오기
+GET {{xen_host}}/crm-categories
+Authorization: Bearer {{user_auth_token}}
+
+> {%
+  client.global.set("crm_1_category_id", response.body[0].code);
+  client.global.set("crm_2_category_id", response.body[1].code);
+  client.global.set("crm_3_category_id", response.body[2].code);
+%}
+
+### 모든 언어 CRM 카테고리 조회
+GET {{xen_host}}/lang-crm-categories
+Authorization: Bearer {{user_auth_token}}
+
+### 특정 언어로 CRM 카테고리 조회 (한국어)
+GET {{xen_host}}/lang-crm-categories/by-lang?lang=KO
+Authorization: Bearer {{user_auth_token}}
+
+### 특정 상태로 CRM 카테고리 조회 (활성)
+GET {{xen_host}}/lang-crm-categories/by-status?status=ACTIVE
+Authorization: Bearer {{user_auth_token}}
+
+### 이미지에 표시된 언어별 카테고리 생성
+POST {{xen_host}}/lang-crm-categories
+Authorization: Bearer {{user_auth_token}}
+Content-Type: application/json
+
+[
+  {
+    "lang": "ko",
+    "status": "ACTIVE",
+    "name": "한국어",
+    "building1CrmCategoryId": "{{crm_1_category_id}}",
+    "building3CrmCategoryId": "{{crm_3_category_id}}",
+    "buildingPriorities": ["BUILDING_3", "BUILDING_1", "BUILDING_2"],
+    "order": 1
+  },
+  {
+    "lang": "en",
+    "status": "ACTIVE",
+    "name": "영어",
+    "building1CrmCategoryId": "{{crm_1_category_id}}",
+    "building2CrmCategoryId": "{{crm_2_category_id}}",
+    "buildingPriorities": ["BUILDING_1", "BUILDING_2", "BUILDING_3"],
+    "order": 2
+  },
+  {
+    "lang": "zh",
+    "status": "ACTIVE",
+    "name": "중국어",
+    "building1CrmCategoryId": "{{crm_1_category_id}}",
+    "building3CrmCategoryId": "{{crm_3_category_id}}",
+    "buildingPriorities": ["BUILDING_3", "BUILDING_1", "BUILDING_2"],
+    "order": 3
+  },
+  {
+    "lang": "ja",
+    "status": "ACTIVE",
+    "name": "일본어",
+    "building1CrmCategoryId": "{{crm_1_category_id}}",
+    "building2CrmCategoryId": "{{crm_2_category_id}}",
+    "buildingPriorities": ["BUILDING_2", "BUILDING_1", "BUILDING_3"],
+    "order": 4
+  },
+  {
+    "lang": "th",
+    "status": "ACTIVE",
+    "name": "태국어",
+    "building1CrmCategoryId": "{{crm_1_category_id}}",
+    "building3CrmCategoryId": "{{crm_3_category_id}}",
+    "buildingPriorities": ["BUILDING_3", "BUILDING_1", "BUILDING_2"],
+    "order": 5
+  }
+]
+
+> {%
+  if (response.body && response.body.length > 0) {
+    client.global.set("lang_crm_category_id_ko", response.body[0].id);
+    client.global.set("lang_crm_category_id_en", response.body[1].id);
+  }
+%}
+
+### 언어 CRM 카테고리 데이터 업데이트
+PUT {{xen_host}}/lang-crm-categories
+Authorization: Bearer {{user_auth_token}}
+Content-Type: application/json
+
+[
+  {
+    "id": "{{lang_crm_category_id_ko}}",
+    "building2CrmCategoryId": "{{crm_2_category_id}}",
+    "order": 1
+  },
+  {
+    "id": "{{lang_crm_category_id_en}}",
+    "building3CrmCategoryId": "{{crm_3_category_id}}",
+    "order": 2
+  }
+]
+
+### 언어 CRM 카테고리 상태 토글 (활성 ↔ 비활성)
+PUT {{xen_host}}/lang-crm-categories/{{lang_crm_category_id_ko}}/toggle-status
+Authorization: Bearer {{user_auth_token}}
+
+### 더미 언어 CRM 카테고리 삭제
+DELETE {{xen_host}}/lang-crm-categories/{{lang_crm_category_id_en}}
+Authorization: Bearer {{user_auth_token}}
+
+### 삭제된 카테고리 추가
+POST {{xen_host}}/lang-crm-categories
+Authorization: Bearer {{user_auth_token}}
+Content-Type: application/json
+
+[
+  {
+    "lang": "en",
+    "status": "ACTIVE",
+    "name": "영어",
+    "building1CrmCategoryId": "{{crm_1_category_id}}",
+    "building2CrmCategoryId": "{{crm_2_category_id}}",
+    "buildingPriorities": ["BUILDING_1", "BUILDING_2", "BUILDING_3"],
+    "order": 2
+  }
+]

@@ -1,0 +1,49 @@
+services:
+  backend:
+    build:
+      target: development
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PORT=3000
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${DB_USER}
+      - DB_NAME=${DB_NAME}
+      - DB_PW=${DB_PW}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - STAGE=${STAGE}
+      - SCHEDULER=${SCHEDULER}
+      - IS_LOCAL_ENV=1
+    ports:
+      - "3007:3000"
+    depends_on:
+      - postgres
+      - redis
+    links:
+      - postgres:postgres
+      - redis:redis
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+      - ~/.aws/credentials:/home/node/.aws/credentials:ro
+    working_dir: /usr/src/app
+    command: pnpm start:dev
+
+  postgres:
+    image: postgres:14-alpine
+    restart: always
+    environment:
+      - POSTGRES_PASSWORD=local_postgres
+      - POSTGRES_USER=postgres
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    ports:
+      - "5440:5432"
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server
+    ports:
+      - "6386:6379"

@@ -1,0 +1,26 @@
+{
+  "ERROR": {
+    "UNAUTHORIZED": "Unauthorized",
+    "FORBIDDEN": "Forbidden",
+    "DELAY_LIMIT": "Delay limit",
+    "INVALID_REQUEST": "INVALID_REQUEST"
+  },
+  "VALIDATION": {
+  },
+  "AUTHENTICATION": {
+    "VERIFICATION_CODE": "【Peche Clinic】 验证码"
+  },
+  "NOTIFICATION": {
+    "TITLE": "[Peche Clinic]\n",
+    "NEW_RESERVATION": "",
+    "THE_DAY_BEFORE": "",
+    "ON_THE_DAY": "",
+    "NEW_RESERVATION_LONG": "[Peche露岱皮膚科]<br><br>{name}，您好。 <br>您已成功預約{date} {time}的診療。 <br>地址：首爾特別市江南區德黑蘭路8街8號 F&F大廈4層 Peche露岱皮膚科 <br><br>爲提供專屬私密的服務體驗， <br>Peche露岱皮膚科選址於安保嚴密的大型企業辦公樓內。 <br><br>進入大廈一樓需出示二維碼， <br>我們將在就診前1-2天通過LINE發送給您， <br>敬請留意並提前確認:) <br><br>#在{name}駐留我院期間， <br>我們將以透明化的體系與臻於至善的準備， <br>助您煥現與生俱來的本真之美 <br>深度體驗這場沒有邊界、不被定義的美學之旅。 <br><br>若您有任何問題， <br>歡迎通過Peche ClinicTW的LINE賬號(ID: pecheglobal_tw) <br>或撥打Instagram DM (ID: @pecheglobal_tw)與我們聯系。",
+    "NEW_RESERVATION_LONG_BUILDING_1": "[Peche露岱皮膚科]<br><br>{name}，您好。 <br>您已成功預約{date} {time}的診療。 <br>地址：首爾特別市江南區德黑蘭路8街8號 F&F大廈4層 Peche露岱皮膚科 <br><br>爲提供專屬私密的服務體驗， <br>Peche露岱皮膚科選址於安保嚴密的大型企業辦公樓內。 <br><br>進入大廈一樓需出示二維碼， <br>我們將在就診前1-2天通過LINE發送給您， <br>敬請留意並提前確認:) <br><br>#在{name}駐留我院期間， <br>我們將以透明化的體系與臻於至善的準備， <br>助您煥現與生俱來的本真之美 <br>深度體驗這場沒有邊界、不被定義的美學之旅。 <br><br>若您有任何問題， <br>歡迎通過Peche ClinicTW的LINE賬號(ID: pecheglobal_tw) <br>或撥打Instagram DM (ID: @pecheglobal_tw)與我們聯系。",
+    "NEW_RESERVATION_LONG_BUILDING_2": "[Peche露岱皮膚科]<br><br>{name}，您好。 <br>您已成功預約{date} {time}的診療。 <br>地址：首爾特別市江南區德黑蘭路8街8號 F&F大廈4層 Peche露岱皮膚科 <br><br>爲提供專屬私密的服務體驗， <br>Peche露岱皮膚科選址於安保嚴密的大型企業辦公樓內。 <br><br>進入大廈一樓需出示二維碼， <br>我們將在就診前1-2天通過LINE發送給您， <br>敬請留意並提前確認:) <br><br>#在{name}駐留我院期間， <br>我們將以透明化的體系與臻於至善的準備， <br>助您煥現與生俱來的本真之美 <br>深度體驗這場沒有邊界、不被定義的美學之旅。 <br><br>若您有任何問題， <br>歡迎通過Peche ClinicTW的LINE賬號(ID: pecheglobal_tw) <br>或撥打Instagram DM (ID: @pecheglobal_tw)與我們聯系。",
+    "THE_DAY_BEFORE_LONG": "[Peche露岱皮膚科]<br><br>{name}，您好。 <br>特此確認{date}{time}的預約是否需作調整 :) <br>如需變更或取消預約，我們將全力協助安排。 <br><br>地址：首爾特別市江南區德黑蘭路8街8號 F&F大廈4層  Peche露岱皮膚科 <br><br>如先前所述，爲提供專屬私密的服務體驗， <br> Peche露岱皮膚科選址於安保嚴密的大型企業辦公樓內。 <br><br>進入大廈一樓需出示二維碼， <br>我們已將二維碼發送至您預留的聯系方式或LINE賬號，煩請留意並確認。 <br><br>#在{name}駐留我院期間， <br>我們將以透明化的體系與臻於至善的準備， <br>助您煥現與生俱來的本真之美 <br>深度體驗這場沒有邊界、不被定義的美學之旅。",
+    "ON_THE_DAY_LONG": "[Peche露岱皮膚科]<br><br>{name}，您好。 <br>今天是您來訪Peche露岱皮膚科的日子，期待{date}{time}與您相見。 <br>如需變更或取消預約，我們將全力協助安排 :) <br><br>地址：首爾特別市江南區德黑蘭路8街8號 F&F大廈4層 Peche露岱皮膚科 <br><br>#在{name}駐留我院期間， <br>我們將以透明化的體系與臻於至善的準備， <br>助您煥現與生俱來的本真之美 <br>深度體驗這場沒有邊界、不被定義的美學之旅。",
+    "RESERVATION_CANCELLATION": "您預約的{datetime}時段已取消。 <br>如需重新預約或有任何疑問， <br>歡迎隨時通過LINE頻道與我們溝通：） <br><br>\nLINE ID：pecheglobal_tw",
+    "RESERVATION_CONFIRMATION": ""
+  }
+}

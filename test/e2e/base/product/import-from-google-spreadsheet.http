@@ -1,0 +1,39 @@
+### login
+POST {{xen_host}}/admin-auth/login
+Content-Type: application/json
+
+{
+  "email": "88chinu@gmail.com",
+  "password": "12345678"
+}
+
+> {%
+  client.global.set("user_auth_token", response.body);
+%}
+
+### import product
+POST {{xen_host}}/products/import-from-google-spreadsheet
+Authorization: Bearer {{user_auth_token}}
+Content-Type: application/json
+
+{
+  "url": "https://docs.google.com/spreadsheets/d/11qvqG0uJYAb3DbapxrVJ9YegdCgFZm4tMcRDS13ilyU/edit#gid=0"
+}
+
+### create event bundle
+POST {{xen_host}}/event-bundle
+Authorization: Bearer {{user_auth_token}}
+
+> {%
+  client.global.set("event_bundle_id", response.body.id);
+%}
+
+### import event
+POST {{xen_host}}/events/import-from-google-spreadsheet
+Authorization: Bearer {{user_auth_token}}
+Content-Type: application/json
+
+{
+  "url": "https://docs.google.com/spreadsheets/d/11qvqG0uJYAb3DbapxrVJ9YegdCgFZm4tMcRDS13ilyU/edit#gid=0",
+  "bundleId": "{{event_bundle_id}}"
+}

@@ -1,0 +1,122 @@
+import { MigrationInterface, QueryRunner } from "typeorm";
+
+export class AddChineseTraditional1759422107363 implements MigrationInterface {
+    name = 'AddChineseTraditional1759422107363'
+
+    public async up(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`ALTER TABLE "product_detail_page" ADD "name_zhtw" character varying`);
+        await queryRunner.query(`ALTER TABLE "product_detail_page" ADD "description_zhtw" character varying`);
+        await queryRunner.query(`ALTER TABLE "product_detail_page" ADD "procedure_zhtw" character varying`);
+        await queryRunner.query(`ALTER TABLE "product_detail_page" ADD "information_zhtw" character varying`);
+        await queryRunner.query(`ALTER TABLE "product_detail_page" ADD "advantages_zhtw" character varying`);
+        await queryRunner.query(`ALTER TABLE "product_detail_page" ADD "target_zhtw" character varying`);
+        await queryRunner.query(`ALTER TABLE "product_detail_page" ADD "q_and_azhtw" character varying`);
+        await queryRunner.query(`ALTER TABLE "product_detail_page" ADD "caution_zhtw" character varying`);
+        await queryRunner.query(`ALTER TABLE "product_category" ADD "name_zhtw" character varying`);
+        await queryRunner.query(`ALTER TABLE "product" ADD "name_zhtw" character varying`);
+        await queryRunner.query(`ALTER TABLE "product" ADD "description_zhtw" character varying`);
+        await queryRunner.query(`ALTER TABLE "product" ADD "order_zhtw" integer`);
+        await queryRunner.query(`ALTER TABLE "product" ADD "visible_zhtw" boolean`);
+        await queryRunner.query(`ALTER TABLE "popular_product" ADD "product_name_zhtw" character varying`);
+        await queryRunner.query(`ALTER TABLE "member" ADD "name_zhtw" character varying`);
+        await queryRunner.query(`ALTER TABLE "member" ADD "description_zhtw" character varying`);
+        await queryRunner.query(`ALTER TABLE "main_product" ADD "image_zhtw_id" uuid`);
+        await queryRunner.query(`ALTER TABLE "main_popup" ADD "image_zhtw_id" uuid`);
+        await queryRunner.query(`ALTER TABLE "equipment" ADD "name_zhtw" character varying`);
+        await queryRunner.query(`ALTER TABLE "equipment" ADD "description_first_zhtw" character varying`);
+        await queryRunner.query(`ALTER TABLE "equipment" ADD "description_second_zhtw" character varying`);
+        await queryRunner.query(`ALTER TABLE "celeb_pictures" ADD "name_zhtw" character varying`);
+        await queryRunner.query(`ALTER TABLE "celeb_pictures" ADD "occupation_zhtw" character varying`);
+        await queryRunner.query(`ALTER TABLE "celeb_pictures" ADD "image_zhtw_id" uuid`);
+        await queryRunner.query(`ALTER TABLE "event_category" ADD "name_zhtw" character varying`);
+        await queryRunner.query(`ALTER TABLE "event_category" ADD "description_zhtw" character varying`);
+        await queryRunner.query(`ALTER TABLE "event" ADD "name_zhtw" character varying`);
+        await queryRunner.query(`ALTER TABLE "event" ADD "description_zhtw" character varying`);
+        await queryRunner.query(`ALTER TABLE "event" ADD "order_zhtw" integer`);
+        await queryRunner.query(`ALTER TABLE "event" ADD "visible_zhtw" boolean`);
+        await queryRunner.query(`ALTER TABLE "product_backup" ADD "name_zhtw" character varying`);
+        await queryRunner.query(`ALTER TABLE "product_backup" ADD "description_zhtw" character varying`);
+        await queryRunner.query(`ALTER TABLE "product_backup" ADD "order_zhtw" integer`);
+        await queryRunner.query(`ALTER TABLE "product_backup" ADD "visible_zhtw" boolean`);
+        await queryRunner.query(`ALTER TABLE "event_backup" ADD "name_zhtw" character varying`);
+        await queryRunner.query(`ALTER TABLE "event_backup" ADD "description_zhtw" character varying`);
+        await queryRunner.query(`ALTER TABLE "event_backup" ADD "order_zhtw" integer`);
+        await queryRunner.query(`ALTER TABLE "event_backup" ADD "visible_zhtw" boolean`);
+        await queryRunner.query(`ALTER TYPE "public"."account_user_language_locale_enum" RENAME TO "account_user_language_locale_enum_old"`);
+        await queryRunner.query(`CREATE TYPE "public"."account_user_language_locale_enum" AS ENUM('ko', 'en', 'zh', 'zh-TW', 'ja', 'th')`);
+        await queryRunner.query(`ALTER TABLE "account_user" ALTER COLUMN "language_locale" TYPE "public"."account_user_language_locale_enum" USING "language_locale"::"text"::"public"."account_user_language_locale_enum"`);
+        await queryRunner.query(`DROP TYPE "public"."account_user_language_locale_enum_old"`);
+        await queryRunner.query(`ALTER TYPE "public"."search_keyword_language_locale_enum" RENAME TO "search_keyword_language_locale_enum_old"`);
+        await queryRunner.query(`CREATE TYPE "public"."search_keyword_language_locale_enum" AS ENUM('ko', 'en', 'zh', 'zh-TW', 'ja', 'th')`);
+        await queryRunner.query(`ALTER TABLE "search_keyword" ALTER COLUMN "language_locale" DROP DEFAULT`);
+        await queryRunner.query(`ALTER TABLE "search_keyword" ALTER COLUMN "language_locale" TYPE "public"."search_keyword_language_locale_enum" USING "language_locale"::"text"::"public"."search_keyword_language_locale_enum"`);
+        await queryRunner.query(`ALTER TABLE "search_keyword" ALTER COLUMN "language_locale" SET DEFAULT 'ko'`);
+        await queryRunner.query(`DROP TYPE "public"."search_keyword_language_locale_enum_old"`);
+        await queryRunner.query(`ALTER TYPE "public"."lang_crm_category_lang_enum" RENAME TO "lang_crm_category_lang_enum_old"`);
+        await queryRunner.query(`CREATE TYPE "public"."lang_crm_category_lang_enum" AS ENUM('ko', 'en', 'zh', 'zh-TW', 'ja', 'th')`);
+        await queryRunner.query(`ALTER TABLE "lang_crm_category" ALTER COLUMN "lang" TYPE "public"."lang_crm_category_lang_enum" USING "lang"::"text"::"public"."lang_crm_category_lang_enum"`);
+        await queryRunner.query(`DROP TYPE "public"."lang_crm_category_lang_enum_old"`);
+        await queryRunner.query(`ALTER TABLE "main_product" ADD CONSTRAINT "FK_081318e4065d9beca0431c4c9fb" FOREIGN KEY ("image_zhtw_id") REFERENCES "file_object"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "main_popup" ADD CONSTRAINT "FK_789aafe3c9695797d5c2f5ef1cf" FOREIGN KEY ("image_zhtw_id") REFERENCES "file_object"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "celeb_pictures" ADD CONSTRAINT "FK_6e04f60a87c803155721776f279" FOREIGN KEY ("image_zhtw_id") REFERENCES "file_object"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+    }
+
+    public async down(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`ALTER TABLE "celeb_pictures" DROP CONSTRAINT "FK_6e04f60a87c803155721776f279"`);
+        await queryRunner.query(`ALTER TABLE "main_popup" DROP CONSTRAINT "FK_789aafe3c9695797d5c2f5ef1cf"`);
+        await queryRunner.query(`ALTER TABLE "main_product" DROP CONSTRAINT "FK_081318e4065d9beca0431c4c9fb"`);
+        await queryRunner.query(`CREATE TYPE "public"."lang_crm_category_lang_enum_old" AS ENUM('ko', 'en', 'zh', 'ja', 'th')`);
+        await queryRunner.query(`ALTER TABLE "lang_crm_category" ALTER COLUMN "lang" TYPE "public"."lang_crm_category_lang_enum_old" USING "lang"::"text"::"public"."lang_crm_category_lang_enum_old"`);
+        await queryRunner.query(`DROP TYPE "public"."lang_crm_category_lang_enum"`);
+        await queryRunner.query(`ALTER TYPE "public"."lang_crm_category_lang_enum_old" RENAME TO "lang_crm_category_lang_enum"`);
+        await queryRunner.query(`CREATE TYPE "public"."search_keyword_language_locale_enum_old" AS ENUM('ko', 'en', 'zh', 'ja', 'th')`);
+        await queryRunner.query(`ALTER TABLE "search_keyword" ALTER COLUMN "language_locale" DROP DEFAULT`);
+        await queryRunner.query(`ALTER TABLE "search_keyword" ALTER COLUMN "language_locale" TYPE "public"."search_keyword_language_locale_enum_old" USING "language_locale"::"text"::"public"."search_keyword_language_locale_enum_old"`);
+        await queryRunner.query(`ALTER TABLE "search_keyword" ALTER COLUMN "language_locale" SET DEFAULT 'ko'`);
+        await queryRunner.query(`DROP TYPE "public"."search_keyword_language_locale_enum"`);
+        await queryRunner.query(`ALTER TYPE "public"."search_keyword_language_locale_enum_old" RENAME TO "search_keyword_language_locale_enum"`);
+        await queryRunner.query(`CREATE TYPE "public"."account_user_language_locale_enum_old" AS ENUM('ko', 'en', 'zh', 'ja', 'th')`);
+        await queryRunner.query(`ALTER TABLE "account_user" ALTER COLUMN "language_locale" TYPE "public"."account_user_language_locale_enum_old" USING "language_locale"::"text"::"public"."account_user_language_locale_enum_old"`);
+        await queryRunner.query(`DROP TYPE "public"."account_user_language_locale_enum"`);
+        await queryRunner.query(`ALTER TYPE "public"."account_user_language_locale_enum_old" RENAME TO "account_user_language_locale_enum"`);
+        await queryRunner.query(`ALTER TABLE "event_backup" DROP COLUMN "visible_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "event_backup" DROP COLUMN "order_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "event_backup" DROP COLUMN "description_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "event_backup" DROP COLUMN "name_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "product_backup" DROP COLUMN "visible_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "product_backup" DROP COLUMN "order_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "product_backup" DROP COLUMN "description_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "product_backup" DROP COLUMN "name_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "event" DROP COLUMN "visible_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "event" DROP COLUMN "order_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "event" DROP COLUMN "description_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "event" DROP COLUMN "name_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "event_category" DROP COLUMN "description_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "event_category" DROP COLUMN "name_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "celeb_pictures" DROP COLUMN "image_zhtw_id"`);
+        await queryRunner.query(`ALTER TABLE "celeb_pictures" DROP COLUMN "occupation_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "celeb_pictures" DROP COLUMN "name_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "equipment" DROP COLUMN "description_second_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "equipment" DROP COLUMN "description_first_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "equipment" DROP COLUMN "name_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "main_popup" DROP COLUMN "image_zhtw_id"`);
+        await queryRunner.query(`ALTER TABLE "main_product" DROP COLUMN "image_zhtw_id"`);
+        await queryRunner.query(`ALTER TABLE "member" DROP COLUMN "description_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "member" DROP COLUMN "name_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "popular_product" DROP COLUMN "product_name_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "product" DROP COLUMN "visible_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "product" DROP COLUMN "order_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "product" DROP COLUMN "description_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "product" DROP COLUMN "name_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "product_category" DROP COLUMN "name_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "product_detail_page" DROP COLUMN "caution_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "product_detail_page" DROP COLUMN "q_and_azhtw"`);
+        await queryRunner.query(`ALTER TABLE "product_detail_page" DROP COLUMN "target_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "product_detail_page" DROP COLUMN "advantages_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "product_detail_page" DROP COLUMN "information_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "product_detail_page" DROP COLUMN "procedure_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "product_detail_page" DROP COLUMN "description_zhtw"`);
+        await queryRunner.query(`ALTER TABLE "product_detail_page" DROP COLUMN "name_zhtw"`);
+    }
+
+}

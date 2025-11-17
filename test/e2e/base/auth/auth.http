@@ -1,0 +1,77 @@
+### create auth-code by phone number
+< {%
+  // 전화번호를 aws sns에 등록하고 아래 국가코드를 포함한 phone_number_value 값으로 설정
+  const phone_number_value = "";
+  client.global.set("phone_number", phone_number_value);
+%}
+POST {{xen_host}}/auth/phone-code
+Accept-Language: ko
+Content-Type: application/json
+
+{
+  "phoneNumber": "{{phone_number}}"
+}
+
+
+### signin by phone number
+< {%
+  // 실제 전송받은 코드를 code_value 값으로 설정
+  const code_value = "";
+  request.variables.set("code", code_value);
+%}
+POST {{xen_host}}/auth/phone
+Accept-Language: ko
+Content-Type: application/json
+
+{
+  "phoneNumber": "{{phone_number}}",
+  "code": "{{code}}"
+}
+
+> {%
+  client.global.set("user_auth_token", response.body.token);
+%}
+
+### me
+GET {{xen_host}}/users/me
+Authorization: Bearer {{user_auth_token}}
+
+
+### create auth-code by email
+< {%
+  // email 주소를 aws ses에 등록하고 아래 phone_number_value 값으로 설정
+  const email_value = "";
+  client.global.set("email", email_value);
+%}
+POST {{xen_host}}/auth/email-code
+Accept-Language: ko
+Content-Type: application/json
+
+{
+  "email": "{{email}}"
+}
+
+
+### signin by email
+< {%
+  // 실제 전송받은 코드를 code_value 값으로 설정
+  const code_value = "";
+  request.variables.set("code", code_value);
+%}
+POST {{xen_host}}/auth/email
+Accept-Language: ko
+Content-Type: application/json
+
+{
+  "name": "{{$random.address.lastName}}",
+  "email": "{{email}}",
+  "code": "{{code}}"
+}
+
+> {%
+  client.global.set("user_auth_token", response.body.token);
+%}
+
+### me
+GET {{xen_host}}/users/me
+Authorization: Bearer {{user_auth_token}}

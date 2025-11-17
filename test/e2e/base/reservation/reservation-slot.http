@@ -1,0 +1,94 @@
+### login
+POST {{xen_host}}/auth/login
+Content-Type: application/json
+
+{
+  "phoneNumber": "+821012345678",
+  "password": "12345678"
+}
+
+> {%
+  client.global.set("user_auth_token", response.body);
+%}
+
+### create reservation-slot
+POST {{xen_host}}/reservation-slots
+Authorization: Bearer {{user_auth_token}}
+Content-Type: application/json
+
+[
+  {
+    "building": "MAIN",
+    "dayOfWeek": "MON",
+    "hour": 10,
+    "minutes": 30,
+    "maxSlot": 1
+  },
+  {
+    "building": "MAIN",
+    "dayOfWeek": "TUE",
+    "hour": 10,
+    "minutes": 30,
+    "maxSlot": 1
+  },
+  {
+    "building": "MAIN",
+    "dayOfWeek": "WED",
+    "hour": 10,
+    "minutes": 30,
+    "maxSlot": 1
+  },
+  {
+    "building": "MAIN",
+    "dayOfWeek": "THU",
+    "hour": 10,
+    "minutes": 30,
+    "maxSlot": 1
+  },
+  {
+    "building": "MAIN",
+    "dayOfWeek": "FRI",
+    "hour": 10,
+    "minutes": 30,
+    "maxSlot": 2
+  },
+  {
+    "building": "NEW",
+    "dayOfWeek": "MON",
+    "hour": 10,
+    "minutes": 30,
+    "maxSlot": 1
+  },
+  {
+    "building": "NEW",
+    "dayOfWeek": "TUE",
+    "hour": 10,
+    "minutes": 30,
+    "maxSlot": 1
+  },
+  {
+    "building": "NEW",
+    "dayOfWeek": "WED",
+    "hour": 10,
+    "minutes": 30,
+    "maxSlot": 1
+  },
+  {
+    "building": "NEW",
+    "dayOfWeek": "THU",
+    "hour": 10,
+    "minutes": 30,
+    "maxSlot": 1
+  },
+  {
+    "building": "NEW",
+    "dayOfWeek": "FRI",
+    "hour": 10,
+    "minutes": 30,
+    "maxSlot": 1
+  }
+]
+
+### get reservation-slots
+GET {{xen_host}}/reservation-slots
+Authorization: Bearer {{user_auth_token}}

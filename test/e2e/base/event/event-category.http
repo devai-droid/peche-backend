@@ -1,0 +1,50 @@
+### login
+POST {{xen_host}}/auth/login
+Content-Type: application/json
+
+{
+  "phoneNumber": "+821012345678",
+  "password": "12345678"
+}
+
+> {%
+  client.global.set("user_auth_token", response.body);
+%}
+
+### create event category
+POST {{xen_host}}/event-categories
+Authorization: Bearer {{user_auth_token}}
+Content-Type: application/json
+
+{
+  "status": "ACTIVE",
+  "name": "test event category",
+  "nameEN": "EN test event category",
+  "nameZH": "ZH test event category",
+  "nameJA": "JA test event category",
+  "nameTH": "TH test event category",
+  "startDate": "2020-01-01T00:00:00.000Z",
+  "dayOfWeek": [0,1,2],
+  "startHour": 10,
+  "startMinute": 0,
+  "endHour": 20,
+  "endMinute": 0,
+  "order": 1
+}
+
+### get integrated-crm-categories
+GET {{xen_host}}/event-categories
+Authorization: Bearer {{user_auth_token}}
+
+> {%
+  client.global.set("event_category_id", response.body[0].id);
+%}
+
+### update crm-categories
+PUT {{xen_host}}/product-categories/{{event_category_id}}
+Authorization: Bearer {{user_auth_token}}
+Content-Type: application/json
+
+{
+  "order": 2
+}

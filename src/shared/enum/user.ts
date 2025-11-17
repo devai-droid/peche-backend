@@ -1,0 +1,5 @@
+export enum UserStatus {
+  UNVERIFIED = "UNVERIFIED",
+  VERIFIED = "VERIFIED",
+  INACTIVE = "INACTIVE",
+}

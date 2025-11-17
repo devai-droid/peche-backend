@@ -1,0 +1,16 @@
+### login
+POST {{xen_host}}/admin-auth/login
+Content-Type: application/json
+
+{
+  "email": "88chinu@gmail.com",
+  "password": "12345678"
+}
+
+> {%
+  client.global.set("user_auth_token", response.body);
+%}
+
+### get test
+GET {{xen_host}}/smart-doctor/nationalities
+Authorization: Bearer {{user_auth_token}}

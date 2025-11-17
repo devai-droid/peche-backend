@@ -1,0 +1,14 @@
+export const BCRYPT_SALT_ROUNDS = 10
+export const JWT_STRATEGY = "jwt"
+export const JWT_EXPIRED_IN_30_DAYS = "30 days"
+export const JWT_ISSUER = "peche"
+export const SWAGGER_TOKEN_NAME = "access-token"
+export const DEFAULT_VERIFICATION_CODE_DIGIT = 6
+export const SIXTY_SECONDS = 60000
+export const KAKAO_PUBLIC_KEY_URL = "https://kauth.kakao.com/.well-known/jwks.json"
+export const KAKAO_OAUTH_ISSUER = "https://kauth.kakao.com"
+export const KAKAO_MARKETING_ACCEPTED_TAG = "marketing_agree"
+export const APP_ROOT = process.env.WORK_DIR
+export const NO_REPLY_EMAIL_ADDRESS = "noreply@pecheclinic.com"
+export const ADMIN_PHONE_NUMBER = "+820000000000"
+export const CS_EMAIL_ADDRESS = "cs@pecheclinic.com"

@@ -1,0 +1,30 @@
+### get admin token
+POST {{xen_host}}/admin-auth/admin-jwt
+Content-Type: application/json
+
+> {%
+  client.global.set("admin_auth_token", response.body);
+%}
+
+
+### create pre-signed url
+POST {{xen_host}}/files/upload-urls
+Authorization: Bearer {{admin_auth_token}}
+Content-Type: application/json
+
+> {%
+  client.global.set("file_id", response.body[0].id);
+  client.global.set("upload_url", response.body[0].url);
+%}
+
+
+### upload image file
+PUT {{upload_url}}
+Content-Type: image/jpeg
+
+< ./test_image_file.jpg
+
+### get file object
+GET {{xen_host}}/files/{{file_id}}
+Authorization: Bearer {{admin_auth_token}}
+Content-Type: application/json

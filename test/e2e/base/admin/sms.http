@@ -1,0 +1,22 @@
+### get admin token
+POST {{xen_host}}/admin-auth/admin-jwt
+Content-Type: application/json
+
+> {%
+  client.global.set("admin_auth_token", response.body);
+  client.global.set("user_auth_token", response.body);
+%}
+
+### send sms verification test code
+< {%
+  // 국가코드를 포함한 전화번호를 phone_number_value 값으로 설정
+  const phone_number_value = "";
+  client.global.set("phone_number", phone_number_value);
+%}
+POST {{xen_host}}/admin/sms/verification-test
+Content-Type: application/json
+Authorization: Bearer {{admin_auth_token}}
+
+{
+  "phoneNumber": "{{phone_number}}"
+}

@@ -1,0 +1,44 @@
+### login
+POST {{xen_host}}/auth/login
+Content-Type: application/json
+
+{
+  "phoneNumber": "+821012345678",
+  "password": "12345678"
+}
+
+> {%
+  client.global.set("user_auth_token", response.body);
+%}
+
+### create product category
+POST {{xen_host}}/product-categories
+Authorization: Bearer {{user_auth_token}}
+Content-Type: application/json
+
+{
+  "status": "ACTIVE",
+  "name": "test product category",
+  "nameEN": "EN test product category",
+  "nameZH": "ZH test product category",
+  "nameJA": "JA test product category",
+  "nameTH": "TH test product category",
+  "order": 1
+}
+
+### get integrated-crm-categories
+GET {{xen_host}}/product-categories
+Authorization: Bearer {{user_auth_token}}
+
+> {%
+  client.global.set("product_category_id", response.body[0].id);
+%}
+
+### update crm-categories
+PUT {{xen_host}}/product-categories/{{product_category_id}}
+Authorization: Bearer {{user_auth_token}}
+Content-Type: application/json
+
+{
+  "order": 2
+}

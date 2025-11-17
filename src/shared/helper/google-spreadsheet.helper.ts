@@ -1,0 +1,177 @@
+import { JWT } from "google-auth-library"
+import { GoogleSpreadsheet } from "google-spreadsheet"
+import { CreateProductFromGoogleSpreadsheetDto } from "@root/product/dto/product.dto"
+import {
+  EVENT_COLUMN_NUMBER,
+  GOOGLE_EMAIL,
+  GOOGLE_PRIVATE_KEY,
+  PRODUCT_COLUMN_NUMBER,
+  SHEET_TRUE_KEY,
+} from "@root/shared/constant/google-spreadsheet"
+import { CreateEventFromGoogleSpreadsheetDto } from "@root/event/dto/event.dto"
+import { EventLabel } from "@root/shared/enum/event"
+
+export class GoogleSpreadsheetHelper {
+  static get config(): any {
+    return new JWT({
+      email: GOOGLE_EMAIL,
+      key: GOOGLE_PRIVATE_KEY,
+      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+    })
+  }
+
+  static async getProductsFromSpreadsheet(url: string) {
+    const spreadsheetId = url.match(/\/d\/(.+)\//)[1]
+    const doc = new GoogleSpreadsheet(spreadsheetId, this.config)
+
+    await doc.loadInfo()
+    const sheet = doc.sheetsByIndex[0]
+    await sheet.loadCells()
+
+    const products = []
+    for (let i = 1; i < sheet.rowCount; i++) {
+      if (
+        sheet.getCell(i, PRODUCT_COLUMN_NUMBER.NAME).value &&
+        sheet.getCell(i, PRODUCT_COLUMN_NUMBER.NAME).value != ""
+      ) {
+        products.push(
+          Object.assign(new CreateProductFromGoogleSpreadsheetDto(), {
+            visible:
+              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE).value &&
+              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE).value == SHEET_TRUE_KEY,
+            visibleEN:
+              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_EN).value &&
+              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_EN).value == SHEET_TRUE_KEY,
+            visibleZH:
+              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_ZH).value &&
+              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_ZH).value == SHEET_TRUE_KEY,
+            visibleZHTW:
+              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_ZHTW).value &&
+              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_ZHTW).value == SHEET_TRUE_KEY,
+            visibleJA:
+              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_JA).value &&
+              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_JA).value == SHEET_TRUE_KEY,
+            visibleTH:
+              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_TH).value &&
+              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_TH).value == SHEET_TRUE_KEY,
+            detailPageName: sheet.getCell(i, PRODUCT_COLUMN_NUMBER.DETAIL_PAGE).value.toString().trim(),
+            integratedCrmCategoryName: sheet.getCell(i, PRODUCT_COLUMN_NUMBER.CRM_CATEGORY).value.toString().trim(),
+            name: sheet.getCell(i, PRODUCT_COLUMN_NUMBER.NAME).value,
+            nameEN: sheet.getCell(i, PRODUCT_COLUMN_NUMBER.NAME_EN).value,
+            nameZH: sheet.getCell(i, PRODUCT_COLUMN_NUMBER.NAME_ZH).value,
+            nameZHTW: sheet.getCell(i, PRODUCT_COLUMN_NUMBER.NAME_ZHTW).value,
+            nameJA: sheet.getCell(i, PRODUCT_COLUMN_NUMBER.NAME_JA).value,
+            nameTH: sheet.getCell(i, PRODUCT_COLUMN_NUMBER.NAME_TH).value,
+            description: sheet.getCell(i, PRODUCT_COLUMN_NUMBER.DESCRIPTION).value,
+            descriptionEN: sheet.getCell(i, PRODUCT_COLUMN_NUMBER.DESCRIPTION_EN).value,
+            descriptionZH: sheet.getCell(i, PRODUCT_COLUMN_NUMBER.DESCRIPTION_ZH).value,
+            descriptionZHTW: sheet.getCell(i, PRODUCT_COLUMN_NUMBER.DESCRIPTION_ZHTW).value,
+            descriptionJA: sheet.getCell(i, PRODUCT_COLUMN_NUMBER.DESCRIPTION_JA).value,
+            descriptionTH: sheet.getCell(i, PRODUCT_COLUMN_NUMBER.DESCRIPTION_TH).value,
+            price: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.PRICE).value),
+            order: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.ORDER).value),
+            orderEN: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.ORDER_EN).value),
+            orderZH: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.ORDER_ZH).value),
+            orderZHTW: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.ORDER_ZHTW).value),
+            orderJA: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.ORDER_JA).value),
+            orderTH: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.ORDER_TH).value),
+          }),
+        )
+      }
+    }
+    return products
+  }
+
+  static async getEventsFromSpreadsheet(url: string, bundleId: string) {
+    const spreadsheetId = url.match(/\/d\/(.+)\//)[1]
+    const doc = new GoogleSpreadsheet(spreadsheetId, this.config)
+
+    await doc.loadInfo()
+    const sheet = doc.sheetsByIndex[0]
+    await sheet.loadCells()
+
+    const events = []
+    for (let i = 1; i < sheet.rowCount; i++) {
+      if (sheet.getCell(i, EVENT_COLUMN_NUMBER.NAME).value && sheet.getCell(i, EVENT_COLUMN_NUMBER.NAME).value != "") {
+        const label = []
+        if (
+          sheet.getCell(i, EVENT_COLUMN_NUMBER.LABEL_NEW).value &&
+          sheet.getCell(i, EVENT_COLUMN_NUMBER.LABEL_NEW).value == SHEET_TRUE_KEY
+        ) {
+          label.push(EventLabel.NEW)
+        }
+        if (
+          sheet.getCell(i, EVENT_COLUMN_NUMBER.LABEL_POP).value &&
+          sheet.getCell(i, EVENT_COLUMN_NUMBER.LABEL_POP).value == SHEET_TRUE_KEY
+        ) {
+          label.push(EventLabel.POP)
+        }
+        if (
+          sheet.getCell(i, EVENT_COLUMN_NUMBER.LABEL_BEST).value &&
+          sheet.getCell(i, EVENT_COLUMN_NUMBER.LABEL_BEST).value == SHEET_TRUE_KEY
+        ) {
+          label.push(EventLabel.BEST)
+        }
+        if (
+          sheet.getCell(i, EVENT_COLUMN_NUMBER.LABEL_KAKAO).value &&
+          sheet.getCell(i, EVENT_COLUMN_NUMBER.LABEL_KAKAO).value == SHEET_TRUE_KEY
+        ) {
+          label.push(EventLabel.KAKAO)
+        }
+        events.push(
+          Object.assign(new CreateEventFromGoogleSpreadsheetDto(), {
+            visible:
+              sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE).value &&
+              sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE).value == SHEET_TRUE_KEY,
+            visibleEN:
+              sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_EN).value &&
+              sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_EN).value == SHEET_TRUE_KEY,
+            visibleZH:
+              sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_ZH).value &&
+              sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_ZH).value == SHEET_TRUE_KEY,
+            visibleZHTW:
+              sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_ZHTW).value &&
+              sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_ZHTW).value == SHEET_TRUE_KEY,
+            visibleJA:
+              sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_JA).value &&
+              sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_JA).value == SHEET_TRUE_KEY,
+            visibleTH:
+              sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_TH).value &&
+              sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_TH).value == SHEET_TRUE_KEY,
+            detailPageShow:
+              sheet.getCell(i, EVENT_COLUMN_NUMBER.DETAIL_PAGE_SHOW).value &&
+              sheet.getCell(i, EVENT_COLUMN_NUMBER.DETAIL_PAGE_SHOW).value == SHEET_TRUE_KEY,
+            categoryName: sheet.getCell(i, EVENT_COLUMN_NUMBER.CATEGORY).value.toString().trim(),
+            detailPageName: sheet.getCell(i, EVENT_COLUMN_NUMBER.DETAIL_PAGE).value.toString().trim(),
+            integratedCrmCategoryName: sheet.getCell(i, EVENT_COLUMN_NUMBER.CRM_CATEGORY).value.toString().trim(),
+            bundleId: bundleId,
+            name: sheet.getCell(i, EVENT_COLUMN_NUMBER.NAME).value,
+            nameEN: sheet.getCell(i, EVENT_COLUMN_NUMBER.NAME_EN).value,
+            nameZH: sheet.getCell(i, EVENT_COLUMN_NUMBER.NAME_ZH).value,
+            nameZHTW: sheet.getCell(i, EVENT_COLUMN_NUMBER.NAME_ZHTW).value,
+            nameJA: sheet.getCell(i, EVENT_COLUMN_NUMBER.NAME_JA).value,
+            nameTH: sheet.getCell(i, EVENT_COLUMN_NUMBER.NAME_TH).value,
+            description: sheet.getCell(i, EVENT_COLUMN_NUMBER.DESCRIPTION).value,
+            descriptionEN: sheet.getCell(i, EVENT_COLUMN_NUMBER.DESCRIPTION_EN).value,
+            descriptionZH: sheet.getCell(i, EVENT_COLUMN_NUMBER.DESCRIPTION_ZH).value,
+            descriptionZHTW: sheet.getCell(i, EVENT_COLUMN_NUMBER.DESCRIPTION_ZHTW).value,
+            descriptionJA: sheet.getCell(i, EVENT_COLUMN_NUMBER.DESCRIPTION_JA).value,
+            descriptionTH: sheet.getCell(i, EVENT_COLUMN_NUMBER.DESCRIPTION_TH).value,
+            price: Number(sheet.getCell(i, EVENT_COLUMN_NUMBER.PRICE).value),
+            ...(sheet.getCell(i, EVENT_COLUMN_NUMBER.DISCOUNT_PRICE).value && {
+              discountPrice: Number(sheet.getCell(i, EVENT_COLUMN_NUMBER.DISCOUNT_PRICE).value),
+            }),
+            order: Number(sheet.getCell(i, EVENT_COLUMN_NUMBER.ORDER).value),
+            orderEN: Number(sheet.getCell(i, EVENT_COLUMN_NUMBER.ORDER_EN).value),
+            orderZH: Number(sheet.getCell(i, EVENT_COLUMN_NUMBER.ORDER_ZH).value),
+            orderZHTW: Number(sheet.getCell(i, EVENT_COLUMN_NUMBER.ORDER_ZHTW).value),
+            orderJA: Number(sheet.getCell(i, EVENT_COLUMN_NUMBER.ORDER_JA).value),
+            orderTH: Number(sheet.getCell(i, EVENT_COLUMN_NUMBER.ORDER_TH).value),
+            ...(label.length > 0 && { label: label }),
+          }),
+        )
+      }
+    }
+    return events
+  }
+}

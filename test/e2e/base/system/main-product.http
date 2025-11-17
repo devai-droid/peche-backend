@@ -1,0 +1,36 @@
+### login
+POST {{xen_host}}/auth/login
+Content-Type: application/json
+
+{
+  "phoneNumber": "+821012345678",
+  "password": "12345678"
+}
+
+> {%
+  client.global.set("user_auth_token", response.body);
+%}
+
+### get product
+GET {{xen_host}}/products
+Authorization: Bearer {{user_auth_token}}
+
+> {%
+  client.global.set("product_id", response.body.items[0].id);
+%}
+
+### create main-products
+POST {{xen_host}}/main-products
+Authorization: Bearer {{user_auth_token}}
+Content-Type: application/json
+
+{
+  "status": "ACTIVE",
+  "description": "test-main-product",
+  "productId": "{{product_id}}"
+
+}
+
+### get main-products
+GET {{xen_host}}/main-products
+Authorization: Bearer {{user_auth_token}}
