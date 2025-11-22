@@ -58,6 +58,7 @@ export interface ProductDetailPageDto {
   cautionTH?: string
   relatedDetailPageIds?: string[]
   order?: number
+  imageId?: string
 }
 
 export class CreateProductDetailPageDto implements ProductDetailPageDto {
@@ -119,6 +120,7 @@ export class CreateProductDetailPageDto implements ProductDetailPageDto {
   @ApiPropertyOptional() @IsOptional() readonly cautionTH?: string
   @ApiPropertyOptional() @IsOptional() readonly relatedDetailPageIds?: string[]
   @ApiPropertyOptional() @IsOptional() order?: number
+  @ApiPropertyOptional() @IsOptional() @IsUUID() readonly imageId?: string
 }
 
 export class UpdateProductDetailPageDto implements ProductDetailPageDto {
@@ -180,6 +182,7 @@ export class UpdateProductDetailPageDto implements ProductDetailPageDto {
   @ApiPropertyOptional() @IsOptional() readonly cautionTH?: string
   @ApiPropertyOptional() @IsOptional() readonly relatedDetailPageIds?: string[]
   @ApiPropertyOptional() @IsOptional() order?: number
+  @ApiPropertyOptional() @IsOptional() @IsUUID() readonly imageId?: string
 }
 
 export class ProductDetailPageList extends Paginated {

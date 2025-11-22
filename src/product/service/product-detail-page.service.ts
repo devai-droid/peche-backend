@@ -10,6 +10,7 @@ import { CreateProductDetailPageDto, UpdateProductDetailPageDto } from "@root/pr
 import { ProductDetailPageQueryDto } from "@root/product/dto/product-detail-page-query.dto"
 import { RelatedProductDetailPageService } from "@root/product/service/related-product-detail-page.service"
 import { ProductService } from "@root/product/service/product.service"
+import { FileService } from "@root/file/service/files.service"
 
 @Injectable()
 export class ProductDetailPageService {
@@ -19,14 +20,26 @@ export class ProductDetailPageService {
     @Inject(forwardRef(() => RelatedProductDetailPageService))
     private readonly relatedProductDetailPageService: RelatedProductDetailPageService,
     @Inject(forwardRef(() => ProductService)) private readonly productService: ProductService,
+    @Inject(forwardRef(() => FileService)) private readonly fileService: FileService,
   ) {}
 
   async create(dto: CreateProductDetailPageDto) {
     const category = dto.categoryId ? await this.productCategoryService.findOne(dto.categoryId) : undefined
-    const productDetailPage = await this.repository.save(Object.assign(dto, { category: category }))
+
+    // 이미지 처리
+    const image = dto.imageId ? await this.fileService.findOne(dto.imageId) : undefined
+
+    const productDetailPage = await this.repository.save(
+      Object.assign(dto, {
+        category,
+        ...(image && { image }),
+      }),
+    )
+
     if (dto.relatedDetailPageIds) {
       await this.relatedProductDetailPageService.bulkCreate(productDetailPage.id, dto.relatedDetailPageIds)
     }
+
     return productDetailPage
   }
 
@@ -69,10 +82,10 @@ export class ProductDetailPageService {
   async update(id: string, dto: UpdateProductDetailPageDto, user?: User) {
     const productDetailPage = await this.findOne(id)
 
-    let category = null
-    if (dto.categoryId) {
-      category = await this.productCategoryService.findOne(dto.categoryId)
-    }
+    const category = dto.categoryId ? await this.productCategoryService.findOne(dto.categoryId) : null
+
+    // 이미지 처리
+    const image = dto.imageId ? await this.fileService.findOne(dto.imageId) : undefined
 
     const relatedDetailPages = dto.relatedDetailPageIds ? await this.findByIds(dto.relatedDetailPageIds) : undefined
 
@@ -84,7 +97,8 @@ export class ProductDetailPageService {
     return this.repository.save(
       Object.assign(productDetailPage, dto, {
         updatedBy: user?.id,
-        category: category, // ✅ assign null explicitly if dto.categoryId === null
+        category: category,
+        ...(image && { image }),
       }),
     )
   }

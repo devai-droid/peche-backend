@@ -5,6 +5,7 @@ import { ProductDetailPageStatus } from "@root/shared/enum/product"
 import { ProductCategory } from "@root/product/entities/product-category.entity"
 import { RelatedProductDetailPage } from "@root/product/entities/related-product-detail-page.entity"
 import { Product } from "@root/product/entities/product.entity"
+import { FileObject } from "@root/file/entities/file-object.entity"
 
 @Entity()
 export class ProductDetailPage extends TimeStampEntity {
@@ -231,4 +232,9 @@ export class ProductDetailPage extends TimeStampEntity {
   @ApiProperty()
   @OneToMany(() => Product, (product) => product.detailPage)
   products?: Product[]
+
+  @ApiProperty()
+  @ManyToOne(() => FileObject, { nullable: true, eager: true })
+  @JoinColumn()
+  image?: FileObject
 }
