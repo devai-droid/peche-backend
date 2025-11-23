@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger"
-import { IsEnum, IsOptional } from "class-validator"
+import { IsEnum, IsOptional, IsUUID } from "class-validator"
 import { Paginated } from "@root/shared/dto/base-list.ro"
 import { EventCategory } from "@root/event/entities/event-category.entity"
 import { EventCategoryStatus } from "@root/shared/enum/event"
@@ -26,6 +26,9 @@ export interface EventCategoryDto {
   endHour?: number
   endMinute?: number
   order?: number
+  imageId?: string
+  minPrice?: number
+  discountPercent?: number
 }
 
 export class CreateEventCategoryDto implements EventCategoryDto {
@@ -53,6 +56,9 @@ export class CreateEventCategoryDto implements EventCategoryDto {
   @ApiPropertyOptional() @IsOptional() endHour?: number
   @ApiPropertyOptional() @IsOptional() endMinute?: number
   @ApiPropertyOptional() @IsOptional() order?: number
+  @ApiPropertyOptional() @IsOptional() @IsUUID() readonly imageId?: string
+  @ApiPropertyOptional() @IsOptional() minPrice?: number
+  @ApiPropertyOptional() @IsOptional() discountPercent?: number
 }
 
 export class UpdateEventCategoryDto implements EventCategoryDto {
@@ -80,6 +86,9 @@ export class UpdateEventCategoryDto implements EventCategoryDto {
   @ApiPropertyOptional() @IsOptional() endHour?: number
   @ApiPropertyOptional() @IsOptional() endMinute?: number
   @ApiPropertyOptional() @IsOptional() order?: number
+  @ApiPropertyOptional() @IsOptional() @IsUUID() readonly imageId?: string
+  @ApiPropertyOptional() @IsOptional() minPrice?: number
+  @ApiPropertyOptional() @IsOptional() discountPercent?: number
 }
 
 export class EventCategoryList extends Paginated {

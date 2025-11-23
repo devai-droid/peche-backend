@@ -1,8 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm"
+import { Column, Entity, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from "typeorm"
 import { TimeStampEntity } from "@root/shared/entity/time-stamp.entity"
 import { ApiProperty } from "@nestjs/swagger"
 import { EventCategoryStatus } from "@root/shared/enum/event"
 import { IsInt, Max, Min } from "class-validator"
+import { FileObject } from "@root/file/entities/file-object.entity"
 
 @Entity()
 export class EventCategory extends TimeStampEntity {
@@ -105,4 +106,17 @@ export class EventCategory extends TimeStampEntity {
   @ApiProperty()
   @Column({ nullable: true })
   order?: number
+
+  @ApiProperty()
+  @ManyToOne(() => FileObject, { nullable: true, eager: true })
+  @JoinColumn()
+  image?: FileObject
+
+  @ApiProperty()
+  @Column({ nullable: true })
+  minPrice: number
+
+  @ApiProperty()
+  @Column({ nullable: true })
+  discountPercent: number
 }

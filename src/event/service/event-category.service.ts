@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, Inject, forwardRef } from "@nestjs/common"
 import { InjectRepository } from "@nestjs/typeorm"
 import { FindManyOptions, Repository } from "typeorm"
 import { paginate } from "@root/shared/pagination"
@@ -7,13 +7,26 @@ import { EventCategory } from "@root/event/entities/event-category.entity"
 import { CreateEventCategoryDto, UpdateEventCategoryDto } from "@root/event/dto/event-category.dto"
 import { EventCategoryQueryDto } from "@root/event/dto/event-category-query.dto"
 import { EventCategoryStatus } from "@root/shared/enum/event"
+import { FileService } from "@root/file/service/files.service"
 
 @Injectable()
 export class EventCategoryService {
-  constructor(@InjectRepository(EventCategory) private repository: Repository<EventCategory>) {}
+  constructor(
+    @InjectRepository(EventCategory)
+    private repository: Repository<EventCategory>,
+
+    @Inject(forwardRef(() => FileService))
+    private readonly fileService: FileService,
+  ) {}
 
   async create(dto: CreateEventCategoryDto) {
-    return await this.repository.save(dto)
+    // 이미지 처리
+    const image = dto.imageId ? await this.fileService.findOne(dto.imageId) : undefined
+
+    return await this.repository.save({
+      ...dto,
+      ...(image && { image }),
+    })
   }
 
   async findManyWithPaginationQuery(query?: EventCategoryQueryDto) {
@@ -27,11 +40,14 @@ export class EventCategoryService {
   }
 
   async findAllActive() {
-    return this.repository.find({ where: { status: EventCategoryStatus.ACTIVE }, order: { order: "ASC" } })
+    return this.repository.find({
+      where: { status: EventCategoryStatus.ACTIVE },
+      order: { order: "ASC" },
+    })
   }
 
   async findOne(id: string) {
-    return this.repository.findOneOrFail({ where: { id: id } })
+    return this.repository.findOneOrFail({ where: { id } })
   }
 
   async findOneByNameOrNull(name: string) {
@@ -43,7 +59,16 @@ export class EventCategoryService {
 
   async update(id: string, dto: UpdateEventCategoryDto, user?: User) {
     const eventCategory = await this.findOne(id)
-    return this.repository.save(Object.assign(eventCategory, dto, { updatedBy: user?.id }))
+
+    // 이미지 처리
+    const image = dto.imageId ? await this.fileService.findOne(dto.imageId) : undefined
+
+    return this.repository.save({
+      ...eventCategory,
+      ...dto,
+      updatedBy: user?.id,
+      ...(image && { image }),
+    })
   }
 
   async remove(id: string) {

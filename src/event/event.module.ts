@@ -17,12 +17,14 @@ import { EventBackupBundleController } from "@root/event/controller/event-backup
 import { EventBundleService } from "@root/event/service/event-bundle.service"
 import { EventBackupBundleService } from "@root/event/service/event-backup-bundle.service"
 import { EventBackupController } from "@root/event/controller/event-backup.controller"
+import { FileModule } from "@root/file/file.module"
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Event, EventCategory, EventBundle, EventBackupBundle, EventBackup]),
     forwardRef(() => ProductModule),
     forwardRef(() => SmartDoctorModule),
+    forwardRef(() => FileModule),
   ],
   controllers: [
     EventController,
