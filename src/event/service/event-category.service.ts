@@ -60,15 +60,22 @@ export class EventCategoryService {
   async update(id: string, dto: UpdateEventCategoryDto, user?: User) {
     const eventCategory = await this.findOne(id)
 
-    // 이미지 처리
-    const image = dto.imageId ? await this.fileService.findOne(dto.imageId) : undefined
+    // 이미지 삭제 처리
+    if (Object.prototype.hasOwnProperty.call(dto, "imageId") && dto.imageId === null) {
+      eventCategory.image = null
+    }
 
-    return this.repository.save({
-      ...eventCategory,
-      ...dto,
-      updatedBy: user?.id,
-      ...(image && { image }),
-    })
+    // 이미지 신규 업로드 처리
+    if (dto.imageId && dto.imageId !== (eventCategory.image?.id || null)) {
+      const image = await this.fileService.findOne(dto.imageId)
+      eventCategory.image = image
+    }
+
+    return this.repository.save(
+      Object.assign(eventCategory, dto, {
+        updatedBy: user?.id,
+      }),
+    )
   }
 
   async remove(id: string) {
