@@ -35,6 +35,12 @@ import { HospitalInfoService } from "./service/hospital-info.service"
 import { CelebPictures } from "./entities/celeb-pictures.entity"
 import { CelebPicturesController } from "./controller/celeb-pictures.controller"
 import { CelebPicturesService } from "./service/celeb-pictures.service"
+import { MostPopularCategory } from "./entities/most-popular-category.entity"
+import { MostPopularItem } from "./entities/most-popular-item.entity"
+import { MostPopularCategoryService } from "./service/most-popular-category.service"
+import { MostPopularItemService } from "./service/most-popular-item.service"
+import { MostPopularCategoryController } from "./controller/most-popular-category.controller"
+import { MostPopularItemController } from "./controller/most-popular-item.controller"
 
 @Module({
   imports: [
@@ -49,6 +55,8 @@ import { CelebPicturesService } from "./service/celeb-pictures.service"
       Member,
       HospitalInfo,
       CelebPictures,
+      MostPopularCategory,
+      MostPopularItem,
     ]),
     forwardRef(() => ProductModule),
     forwardRef(() => EventModule),
@@ -66,6 +74,8 @@ import { CelebPicturesService } from "./service/celeb-pictures.service"
     SearchController,
     HospitalInfoController,
     CelebPicturesController,
+    MostPopularCategoryController,
+    MostPopularItemController,
   ],
   providers: [
     SystemConstantsService,
@@ -79,6 +89,8 @@ import { CelebPicturesService } from "./service/celeb-pictures.service"
     SearchService,
     HospitalInfoService,
     CelebPicturesService,
+    MostPopularCategoryService,
+    MostPopularItemService,
   ],
   exports: [
     SystemConstantsService,
@@ -92,6 +104,8 @@ import { CelebPicturesService } from "./service/celeb-pictures.service"
     SearchService,
     HospitalInfoService,
     CelebPicturesService,
+    MostPopularCategoryService,
+    MostPopularItemService,
   ],
 })
 export class SystemModule {}
