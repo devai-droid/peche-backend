@@ -28,6 +28,11 @@ export class GoogleSpreadsheetHelper {
     const sheet = doc.sheetsByIndex[0]
     await sheet.loadCells()
 
+    // 빈칸에 toString() 해서 발생하는 에러 예방
+    function safeString(value: any): string {
+      return value ? value.toString().trim() : ""
+    }
+
     const products = []
     for (let i = 1; i < sheet.rowCount; i++) {
       if (
@@ -55,7 +60,7 @@ export class GoogleSpreadsheetHelper {
               sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_TH).value &&
               sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_TH).value == SHEET_TRUE_KEY,
             detailPageName: sheet.getCell(i, PRODUCT_COLUMN_NUMBER.DETAIL_PAGE).value.toString().trim(),
-            integratedCrmCategoryName: sheet.getCell(i, PRODUCT_COLUMN_NUMBER.CRM_CATEGORY).value.toString().trim(),
+            integratedCrmCategoryName: safeString(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.CRM_CATEGORY).value),
             name: sheet.getCell(i, PRODUCT_COLUMN_NUMBER.NAME).value,
             nameEN: sheet.getCell(i, PRODUCT_COLUMN_NUMBER.NAME_EN).value,
             nameZH: sheet.getCell(i, PRODUCT_COLUMN_NUMBER.NAME_ZH).value,
@@ -89,6 +94,11 @@ export class GoogleSpreadsheetHelper {
     await doc.loadInfo()
     const sheet = doc.sheetsByIndex[0]
     await sheet.loadCells()
+
+    // 빈칸에 toString() 해서 발생하는 에러 예방
+    function safeString(value: any): string {
+      return value ? value.toString().trim() : ""
+    }
 
     const events = []
     for (let i = 1; i < sheet.rowCount; i++) {
@@ -138,12 +148,9 @@ export class GoogleSpreadsheetHelper {
             visibleTH:
               sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_TH).value &&
               sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_TH).value == SHEET_TRUE_KEY,
-            detailPageShow:
-              sheet.getCell(i, EVENT_COLUMN_NUMBER.DETAIL_PAGE_SHOW).value &&
-              sheet.getCell(i, EVENT_COLUMN_NUMBER.DETAIL_PAGE_SHOW).value == SHEET_TRUE_KEY,
-            categoryName: sheet.getCell(i, EVENT_COLUMN_NUMBER.CATEGORY).value.toString().trim(),
+            categoryName: safeString(sheet.getCell(i, EVENT_COLUMN_NUMBER.CATEGORY).value),
             detailPageName: sheet.getCell(i, EVENT_COLUMN_NUMBER.DETAIL_PAGE).value.toString().trim(),
-            integratedCrmCategoryName: sheet.getCell(i, EVENT_COLUMN_NUMBER.CRM_CATEGORY).value.toString().trim(),
+            integratedCrmCategoryName: safeString(sheet.getCell(i, EVENT_COLUMN_NUMBER.CRM_CATEGORY).value),
             bundleId: bundleId,
             name: sheet.getCell(i, EVENT_COLUMN_NUMBER.NAME).value,
             nameEN: sheet.getCell(i, EVENT_COLUMN_NUMBER.NAME_EN).value,
