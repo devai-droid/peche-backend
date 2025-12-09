@@ -36,9 +36,6 @@ export class SmsService {
       case Building.BUILDING_1:
         templateName = `RESERVATION_CONFIRMATION_BUILDING_1_TEMPLATE_${localeCode}`
         break
-      case Building.BUILDING_2:
-        templateName = `RESERVATION_CONFIRMATION_BUILDING_2_TEMPLATE_${localeCode}`
-        break
       default: // includes BUILDING_3 or undefined
         templateName = `RESERVATION_CONFIRMATION_TEMPLATE_${localeCode}`
     }

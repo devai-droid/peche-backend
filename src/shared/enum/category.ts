@@ -24,9 +24,8 @@ export enum LangCategoryStatus {
  */
 export function sortBuildingsByPriority(availableBuildings: Building[], priorityBuildings: Building[]): Building[] {
   const newOrder = [...priorityBuildings]
-  const third = [Building.BUILDING_1, Building.BUILDING_2, Building.BUILDING_3].find((it) =>
-    priorityBuildings.map((building) => it != building),
-  )
+  // const third = [Building.BUILDING_1, Building.BUILDING_2, Building.BUILDING_3].find((it) =>
+  const third = [Building.BUILDING_1].find((it) => priorityBuildings.map((building) => it != building))
   newOrder.push(third)
 
   return [...availableBuildings].sort((a, b) => {
