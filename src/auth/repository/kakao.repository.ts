@@ -60,7 +60,6 @@ export class KakaoRepository {
     const kakaoPhoneNumber = phoneNumber?.replaceAll("+82 ", "0")
 
     if (!isMobilePhone(kakaoPhoneNumber, "ko-KR")) {
-      console.log("number?", kakaoPhoneNumber)
       throw new BadRequestException("카카오 톡을 통해 제공된 휴대폰 번호가 없거나 올바르지 않습니다.")
     }
     return phoneNumber?.replaceAll(" ", "").replaceAll("-", "")

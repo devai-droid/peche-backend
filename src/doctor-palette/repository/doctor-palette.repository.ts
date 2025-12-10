@@ -84,21 +84,19 @@ export class DoctorPaletteRepository {
       // -------- dateTime 변환 (UTC → KST) --------
       // dto.datetime은 Date 객체 (UTC 기준)
       const dateObj = new Date(dto.datetime)
+      console.log("dateObj: ", dateObj)
 
-      // KST(+9)
-      const kst = new Date(dateObj.getTime() + 9 * 60 * 60 * 1000)
-
-      // "YYYY-MM-DDTHH:mm" 형태로 포매팅
-      const year = kst.getFullYear()
-      const month = String(kst.getMonth() + 1).padStart(2, "0")
-      const day = String(kst.getDate()).padStart(2, "0")
-      const hours = String(kst.getHours()).padStart(2, "0")
-      const minutes = String(kst.getMinutes()).padStart(2, "0")
+      const year = dateObj.getFullYear()
+      const month = String(dateObj.getMonth() + 1).padStart(2, "0")
+      const day = String(dateObj.getDate()).padStart(2, "0")
+      const hours = String(dateObj.getHours()).padStart(2, "0")
+      const minutes = String(dateObj.getMinutes()).padStart(2, "0")
 
       const formattedDateTime = `${year}-${month}-${day}T${hours}:${minutes}`
+      console.log("formattedDate: ", formattedDateTime)
 
       // -------- treatments 생성 --------
-      const treatments = [...eventNames, ...productNames]
+      const treatments = [...(eventNames ?? []), ...(productNames ?? [])]
 
       // -------- patient phone or email --------
       const phone = dto["phoneNumber"] || dto["email"] || ""
