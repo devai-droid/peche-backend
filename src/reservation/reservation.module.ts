@@ -14,6 +14,7 @@ import { ReservationProductService } from "@root/reservation/service/reservation
 import { ReservationSlotService } from "@root/reservation/service/reservation-slot.service"
 import { CloseDayService } from "@root/reservation/service/close-day.service"
 import { SmartDoctorModule } from "@root/smart-doctor/smart-doctor.module"
+import { DoctorPaletteModule } from "@root/doctor-palette/doctor-palette.module"
 import { SpecificDate } from "@root/reservation/entities/specific-date.entity"
 import { SpecificDateService } from "@root/reservation/service/specific-date.service"
 import { SpecificDateSlotService } from "@root/reservation/service/specific-date-slot.service"
@@ -40,6 +41,7 @@ import { NotificationScheduler } from "@root/reservation/scheduler/notification-
     forwardRef(() => ProductModule),
     forwardRef(() => EventModule),
     forwardRef(() => SmartDoctorModule),
+    forwardRef(() => DoctorPaletteModule),
     forwardRef(() => UsersModule),
     forwardRef(() => SystemModule),
     forwardRef(() => MessageModule),

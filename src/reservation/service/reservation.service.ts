@@ -28,6 +28,7 @@ import { ProductService } from "@root/product/service/product.service"
 import { EventService } from "@root/event/service/event.service"
 import { ReservationStatus } from "@root/shared/enum/reservation"
 import { SmartDoctorRepository } from "@root/smart-doctor/repository/smart-doctor.repository"
+import { DoctorPaletteRepository } from "@root/doctor-palette/repository/doctor-palette.repository"
 import { UserService } from "@root/users/service/user.service"
 import { numberToDayOfWeekString } from "@root/shared/utils"
 import { SystemConstantsService } from "@root/system/service/system-constants.service"
@@ -64,6 +65,7 @@ export class ReservationService {
     @Inject(forwardRef(() => UserService)) private readonly userService: UserService,
     @Inject(forwardRef(() => SystemConstantsService)) private readonly systemConstantsService: SystemConstantsService,
     private readonly smartDoctorRepository: SmartDoctorRepository,
+    private readonly doctorPaletteRepository: DoctorPaletteRepository,
     private readonly i18n: I18nService,
     @Inject(forwardRef(() => SmsService)) private readonly smsService: SmsService,
     @Inject(forwardRef(() => SesService)) private readonly sesService: SesService,
@@ -77,14 +79,15 @@ export class ReservationService {
   async create(dto: CreateReservationDto, user: User) {
     this.checkDto(dto)
     await this.checkAvailableEvent(dto.eventIds, dto.datetime)
-    const integratedCrmCategory =
-      dto.eventIds && dto.eventIds.length > 0
-        ? await this.getFirstIntegratedCrmCategoryInEventIds(dto.eventIds)
-        : await this.getFirstIntegratedCrmCategoryInProductIds(dto.productIds)
+    // const integratedCrmCategory =
+    //   dto.eventIds && dto.eventIds.length > 0
+    //     ? await this.getFirstIntegratedCrmCategoryInEventIds(dto.eventIds)
+    // : await this.getFirstIntegratedCrmCategoryInProductIds(dto.productIds)
     user.locale = await this.getUserLanguage(user)
-    const langCrmCategory = user.locale ? await this.getFirstCrmCategoryByLang(user.locale) : null
-    const categoryGroup = langCrmCategory?.isActivated() ? langCrmCategory : integratedCrmCategory
-    const building = await this.checkAvailableAndGetBuilding(dto.datetime, categoryGroup, user)
+    // const langCrmCategory = user.locale ? await this.getFirstCrmCategoryByLang(user.locale) : null
+    // const categoryGroup = langCrmCategory?.isActivated() ? langCrmCategory : integratedCrmCategory
+    // const building = await this.checkAvailableAndGetBuilding(dto.datetime, categoryGroup, user)
+    const building = Building.BUILDING_1
     const datetime = new Date(dto.datetime)
     dto.datetime = new Date(
       datetime.getFullYear(),
@@ -94,11 +97,15 @@ export class ReservationService {
       datetime.getMinutes(),
       0,
     )
-    let rid = undefined
+    const rid = undefined
+    let planId = undefined
+    let eventNames = undefined
+    let productNames = undefined
     if (dto.status == ReservationStatus.DONE || !dto.status) {
       const autoReservationConfirm = await this.systemConstantsService.findOneOrNull(
         SystemConstantsKey.AUTO_RESERVATION_CONFIRM,
       )
+      // 자동예약 확정 true 혹은 관리자가 예약확정된 내역 변경하는 경우
       if (
         (autoReservationConfirm && autoReservationConfirm.value == true) ||
         (UserHelper.isAdmin(user) && dto.status == ReservationStatus.DONE)
@@ -106,28 +113,52 @@ export class ReservationService {
         if (!dto.status) {
           dto.status = ReservationStatus.DONE
         }
-        const customerNumber = await this.getCustomerNumber(user)
-        const crmCode =
-          building == Building.BUILDING_1
-            ? categoryGroup.building1CrmCategory.code
-            : building == Building.BUILDING_2
-            ? categoryGroup.building2CrmCategory.code
-            : categoryGroup.building3CrmCategory.code
-        rid = await this.postReservationAndGetRid(customerNumber, crmCode, dto, building)
+
+        // 스마트닥터 customer number 필요없음
+        const customerName = await this.getCustomerName(user)
+        // 이벤트 이름, 상품 이름 조회
+        if (dto.eventIds && dto.eventIds.length > 0) {
+          // await this.reservationEventService.bulkCreate(reservation, dto.eventIds)
+          eventNames = await this.eventService.findManyByIds(dto.eventIds)
+        }
+        if (dto.productIds && dto.productIds.length > 0) {
+          // await this.reservationProductService.bulkCreate(reservation, dto.productIds)
+          productNames = await this.productService.findManyByIds(dto.productIds)
+        }
+        // 여기서 닥터팔레트 예약 잡아야함
+        console.log("팔레트 예약 하자", dto, eventNames, productNames)
+        planId = await this.postReservationAndGetPlanId(customerName, dto, eventNames, productNames)
+
+        // 스마트닥터 customer number 필요없음
+        // const customerNumber = await this.getCustomerNumber(user)
+
+        // 스마트닥터 관련된 crm code, rid 필요없음
+        // const crmCode =
+        //   building == Building.BUILDING_1
+        //     ? categoryGroup.building1CrmCategory.code
+        //     : building == Building.BUILDING_2
+        //     ? categoryGroup.building2CrmCategory.code
+        //     : categoryGroup.building3CrmCategory.code
+        // rid = await this.postReservationAndGetRid(customerNumber, crmCode, dto, building)
       } else {
         dto.status = ReservationStatus.WAITING
       }
     }
-    let reservation: Reservation
-    if (categoryGroup.isLangCategories()) {
-      reservation = await this.repository.save(
-        Object.assign(dto, { user: user, building: building, langCrmCategory: categoryGroup, rid: rid }),
-      )
-    } else {
-      reservation = await this.repository.save(
-        Object.assign(dto, { user: user, building: building, integratedCrmCategory: categoryGroup, rid: rid }),
-      )
-    }
+    // let reservation: Reservation
+    // 언어 활성화 안되있으니 일단 이걸로
+    // const reservation = await this.repository.save(Object.assign(dto, { user: user, building: building, rid: rid }))
+    const reservation = await this.repository.save(
+      Object.assign(dto, { user: user, building: building, palettePlanId: planId }),
+    )
+    // if (categoryGroup.isLangCategories()) {
+    //   reservation = await this.repository.save(
+    //     Object.assign(dto, { user: user, building: building, langCrmCategory: categoryGroup, rid: rid }),
+    //   )
+    // } else {
+    //   reservation = await this.repository.save(
+    //     Object.assign(dto, { user: user, building: building, integratedCrmCategory: categoryGroup, rid: rid }),
+    //   )
+    // }
     if (dto.eventIds && dto.eventIds.length > 0) {
       await this.reservationEventService.bulkCreate(reservation, dto.eventIds)
     }
@@ -150,12 +181,7 @@ export class ReservationService {
       time: dayjs(reservation.datetime).format("A hh:mm"),
     }
 
-    const translationKey =
-      reservationBuilding === Building.BUILDING_1
-        ? "MESSAGES.NOTIFICATION.NEW_RESERVATION_LONG_BUILDING_1"
-        : reservationBuilding === Building.BUILDING_2
-        ? "MESSAGES.NOTIFICATION.NEW_RESERVATION_LONG_BUILDING_2"
-        : "MESSAGES.NOTIFICATION.NEW_RESERVATION_LONG"
+    const translationKey = "MESSAGES.NOTIFICATION.NEW_RESERVATION_LONG_BUILDING_1"
 
     const longMessage = this.i18n.t(translationKey, { lang, args })
 
@@ -415,9 +441,11 @@ export class ReservationService {
     }
   }
 
+  // 예약 업데이트
   async update(id: string, dto: UpdateReservationDto, user?: User) {
     const reservation = await this.findOneWithEvents(id)
-    const categoryGroup = reservation.langCrmCategory ? reservation.langCrmCategory : reservation.integratedCrmCategory
+    // const categoryGroup = reservation.langCrmCategory ? reservation.langCrmCategory : reservation.integratedCrmCategory
+    const categoryGroup = reservation.integratedCrmCategory
     let building: Building
     if (dto.datetime) {
       if (reservation.events && reservation.events.length > 0) {
@@ -439,31 +467,33 @@ export class ReservationService {
     } else {
       building = reservation.building
     }
-    let rid = undefined
+    // let rid = undefined
+    const rid = undefined
     if (reservation.status != ReservationStatus.DONE && dto.status == ReservationStatus.DONE) {
-      const customerNumber = await this.getCustomerNumber(reservation.user)
-      const crmCode =
-        building && building == Building.BUILDING_1
-          ? categoryGroup.building1CrmCategory.code
-          : building && building == Building.BUILDING_2
-          ? categoryGroup.building2CrmCategory.code
-          : building && building == Building.BUILDING_3
-          ? categoryGroup.building3CrmCategory.code
-          : reservation.building == Building.BUILDING_1
-          ? categoryGroup.building1CrmCategory.code
-          : reservation.building == Building.BUILDING_2
-          ? categoryGroup.building2CrmCategory.code
-          : categoryGroup.building3CrmCategory.code
-      rid = await this.postReservationAndGetRid(
-        customerNumber,
-        crmCode,
-        Object.assign(dto, {
-          ...(!dto.datetime && { datetime: reservation.datetime }),
-          ...(!dto.userMemo && { userMemo: reservation.userMemo }),
-          ...(!dto.adminMemo && { adminMemo: reservation.adminMemo }),
-        }),
-        building,
-      )
+      // 스마트닥터 관련 정보 필요없음
+      // const customerNumber = await this.getCustomerNumber(reservation.user)
+      // const crmCode =
+      //   building && building == Building.BUILDING_1
+      //     ? categoryGroup.building1CrmCategory.code
+      //     : building && building == Building.BUILDING_2
+      //     ? categoryGroup.building2CrmCategory.code
+      //     : building && building == Building.BUILDING_3
+      //     ? categoryGroup.building3CrmCategory.code
+      //     : reservation.building == Building.BUILDING_1
+      //     ? categoryGroup.building1CrmCategory.code
+      //     : reservation.building == Building.BUILDING_2
+      //     ? categoryGroup.building2CrmCategory.code
+      //     : categoryGroup.building3CrmCategory.code
+      // rid = await this.postReservationAndGetRid(
+      //   customerNumber,
+      //   crmCode,
+      //   Object.assign(dto, {
+      //     ...(!dto.datetime && { datetime: reservation.datetime }),
+      //     ...(!dto.userMemo && { userMemo: reservation.userMemo }),
+      //     ...(!dto.adminMemo && { adminMemo: reservation.adminMemo }),
+      //   }),
+      //   building,
+      // )
     }
     const status = reservation.status
     const saved = await this.repository.save(
@@ -487,13 +517,14 @@ export class ReservationService {
       reservation.rid &&
       (dto.datetime || dto.userMemo || dto.adminMemo)
     ) {
-      await this.smartDoctorRepository.updateReservation(
-        reservation.user.customerNumber,
-        reservation.rid,
-        dto.datetime,
-        dto.userMemo,
-        dto.adminMemo,
-      )
+      // 스마트닥터 업데이트 필요없음
+      // await this.smartDoctorRepository.updateReservation(
+      //   reservation.user.customerNumber,
+      //   reservation.rid,
+      //   dto.datetime,
+      //   dto.userMemo,
+      //   dto.adminMemo,
+      // )
     }
     // 예약 변경 후 메시지 전송
     const newReservation = await this.findOne(reservation.id)
@@ -508,7 +539,7 @@ export class ReservationService {
 
   async cancelReservation(reservation: Reservation) {
     await this.sendCancelReservationMessage(reservation)
-    await this.smartDoctorRepository.deleteReservation(reservation.user.customerNumber, reservation.rid)
+    // await this.smartDoctorRepository.deleteReservation(reservation.user.customerNumber, reservation.rid)
   }
 
   async remove(id: string) {
@@ -584,7 +615,6 @@ export class ReservationService {
         }
       }
     }
-    console.log("available slots: ", availableSlots)
     return availableSlots
   }
 
@@ -658,6 +688,23 @@ export class ReservationService {
       }
     }
     return availableDays
+  }
+
+  // NEW 캘린더 조회때 사용
+  async getAvailableReservationByDayFromDoctorPalette(dto: AvailableReservationByDayDto) {
+    // 1. 닥터팔레트 schedule 슬롯 조회
+    const date = `${String(dto.year)}-${String(dto.month).padStart(2, "0")}-${String(dto.day).padStart(2, "0")}`
+    const slots = await this.doctorPaletteRepository.getScheduleSlots(date)
+    console.log("팔레트!!", slots)
+
+    // 2. enabled = true 인 슬롯만 필터링
+    const availableSlots = slots.filter((s) => s.enabled)
+
+    // 3. 프론트에서 원하는 형태로 변환
+    return availableSlots.map((s) => ({
+      datetime: s.dateTime,
+      enabled: s.enabled,
+    }))
   }
 
   // 캘린더 조회때 사용
@@ -1017,13 +1064,10 @@ export class ReservationService {
 
   // 상품의 통합CRM대분류를 판단. 필요없음.
   private async getFirstIntegratedCrmCategoryInEventIds(eventIds: string[]) {
-    console.log("?")
     const events = await this.eventService.findManyByIds(eventIds)
-    console.log("??", events)
     const event = events.reduce((prev, curr) =>
       (prev.integratedCrmCategory?.order ?? 0) < (curr.integratedCrmCategory?.order ?? 0) ? prev : curr,
     )
-    console.log("event", event)
     if (
       !event ||
       !event.integratedCrmCategory?.building1CrmCategory ||
@@ -1570,6 +1614,20 @@ export class ReservationService {
       await this.userService.updateCustomerNumber(user.id, customerNumber)
     }
     return customerNumber
+  }
+
+  private async getCustomerName(user: User) {
+    const accountUser = await this.userService.findOne(user.id)
+    return accountUser.name
+  }
+
+  private async postReservationAndGetPlanId(
+    customerName: string,
+    dto: CreateReservationDto,
+    eventNames: [],
+    productNames: [],
+  ) {
+    return await this.doctorPaletteRepository.createPlan(customerName, dto, eventNames, productNames)
   }
 
   private async postReservationAndGetRid(

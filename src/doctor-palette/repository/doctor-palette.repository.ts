@@ -1,0 +1,181 @@
+import { Injectable, Logger } from "@nestjs/common"
+import { ConfigService } from "@nestjs/config"
+import axios, { AxiosInstance } from "axios"
+import { SCHEDULE_CODE } from "@root/shared/constant/doctor-palette"
+import { CreateReservationDto } from "@root/reservation/dto/reservation.dto"
+
+@Injectable()
+export class DoctorPaletteRepository {
+  private readonly logger = new Logger(DoctorPaletteRepository.name)
+  private api: AxiosInstance
+
+  constructor(private readonly config: ConfigService) {
+    // const token = this.config.get<string>("DOCTOR_PALETTE_TOKEN")
+    const apiKey =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIyMzQ1Mjc2Yi0yMDgwLTQwZDgtODU4NC0wZWY4MWM5YmUzOGIiLCJzdWIiOiJHRU5FUkFMIiwic3ViX3R5cGUiOiJQQVJUTkVSX0FQSSIsImlhdCI6MTc2NTI2Njk3NX0.K5k22_CPZjpCIRrqUb2ZO7oBBfL2njpZ-NsbXqjLxoU"
+
+    if (!apiKey) {
+      this.logger.error("DOCTOR_PALETTE_TOKEN is missing!")
+    }
+
+    this.api = axios.create({
+      baseURL: "https://planner-api.pltt.cloud/planner/v1",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+    })
+  }
+
+  // ────────────────────────────────────
+  // Schedule
+  // ────────────────────────────────────
+
+  /** 스케줄 목록 조회 */
+  async getSchedules() {
+    try {
+      const res = await this.api.get("/schedule")
+      return res.data
+    } catch (e) {
+      this.logger.error("getSchedules failed", e)
+      throw new Error("getSchedules failed")
+    }
+  }
+
+  /** 특정 스케줄 정보 조회 */
+  async getSchedule(scheduleId: string) {
+    try {
+      const res = await this.api.get(`/schedule/${scheduleId}`)
+      return res.data
+    } catch (e) {
+      this.logger.error("getSchedule failed", e)
+      throw new Error("getSchedule failed")
+    }
+  }
+
+  /** 특정 날짜의 스케줄 슬롯 조회 */
+  async getScheduleSlots(date: string) {
+    try {
+      const res = await this.api.get(`/schedule/dateTime/${SCHEDULE_CODE}`, {
+        params: { date }, // 자동으로 ?date=YYYY-MM-DD 붙음
+      })
+      return res.data
+    } catch (e) {
+      this.logger.error("getScheduleSlots failed", e)
+      throw new Error("getScheduleSlots failed")
+    }
+  }
+
+  // ────────────────────────────────────
+  // Plan (예약)
+  // ────────────────────────────────────
+
+  /**
+   * 예약 생성
+   * patient.id → 페슈 내부 유저 ID 또는 memberId 등을 string으로 넘기면 됨
+   */
+  async createPlan(
+    customerName: string,
+    dto: CreateReservationDto & { userId?: string; phoneNumber?: string; email?: string },
+    eventNames: string[],
+    productNames: string[],
+  ) {
+    try {
+      // -------- dateTime 변환 (UTC → KST) --------
+      // dto.datetime은 Date 객체 (UTC 기준)
+      const dateObj = new Date(dto.datetime)
+
+      // KST(+9)
+      const kst = new Date(dateObj.getTime() + 9 * 60 * 60 * 1000)
+
+      // "YYYY-MM-DDTHH:mm" 형태로 포매팅
+      const year = kst.getFullYear()
+      const month = String(kst.getMonth() + 1).padStart(2, "0")
+      const day = String(kst.getDate()).padStart(2, "0")
+      const hours = String(kst.getHours()).padStart(2, "0")
+      const minutes = String(kst.getMinutes()).padStart(2, "0")
+
+      const formattedDateTime = `${year}-${month}-${day}T${hours}:${minutes}`
+
+      // -------- treatments 생성 --------
+      const treatments = [...eventNames, ...productNames]
+
+      // -------- patient phone or email --------
+      const phone = dto["phoneNumber"] || dto["email"] || ""
+
+      // -----------------------------------------
+      // 예약 API Body 생성
+      // -----------------------------------------
+      const payload = {
+        scheduleId: SCHEDULE_CODE,
+        patient: {
+          id: dto["id"],
+          name: customerName,
+          phone,
+        },
+        dateTime: formattedDateTime,
+        status: "REQUESTED",
+        treatments,
+        // requestMessage: dto.userMemo ?? undefined,
+      }
+
+      this.logger.log("Doctor Palette createPlan payload: " + JSON.stringify(payload))
+
+      const res = await this.api.post("/plan", payload)
+      return res.data
+    } catch (e) {
+      this.logger.error("createPlan failed", e.response?.data || e)
+      throw new Error("createPlan failed")
+    }
+  }
+
+  /** Plan 조회 */
+  async getPlan(planId: string) {
+    try {
+      const res = await this.api.get(`/plan/${planId}`)
+      return res.data
+    } catch (e) {
+      this.logger.error("getPlan failed", e)
+      throw new Error("getPlan failed")
+    }
+  }
+
+  /** Plan 수정 (시간/상태 변경 등) */
+  async updatePlan(
+    planId: string,
+    dto: Partial<{
+      scheduleId: string
+      dateTime: string
+      status: "REQUESTED" | "CONFIRMED" | "CANCELED"
+      requestMessage: string
+      meta: any
+    }>,
+  ) {
+    try {
+      const res = await this.api.patch(`/plan/${planId}`, dto)
+      return res.data
+    } catch (e) {
+      this.logger.error("updatePlan failed", e.response?.data || e)
+      throw new Error("updatePlan failed")
+    }
+  }
+
+  /** 예약 취소: status = CANCELED 로 변경 */
+  async cancelPlan(planId: string, cancelMessage?: string) {
+    try {
+      const body: any = {
+        status: "CANCELED",
+      }
+
+      if (cancelMessage) {
+        body.requestMessage = cancelMessage
+      }
+
+      const res = await this.api.patch(`/plan/${planId}`, body)
+      return res.data
+    } catch (e) {
+      this.logger.error("cancelPlan failed", e.response?.data || e)
+      throw new Error("cancelPlan failed")
+    }
+  }
+}

@@ -75,4 +75,9 @@ export class Reservation extends TimeStampEntity {
   @ApiProperty()
   @Column({ nullable: true })
   detailVisit?: string
+
+  // 닥터팔레트 plan id 저장
+  @ApiProperty()
+  @Column({ nullable: true })
+  palettePlanId?: string
 }
