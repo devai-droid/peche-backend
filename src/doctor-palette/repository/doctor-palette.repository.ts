@@ -158,22 +158,15 @@ export class DoctorPaletteRepository {
     }
   }
 
-  /** 예약 취소: status = CANCELED 로 변경 */
-  async cancelPlan(planId: string, cancelMessage?: string) {
+  async deletePlan(planId: string, body: { isNoShow: boolean; reason?: string }) {
     try {
-      const body: any = {
-        status: "CANCELED",
-      }
-
-      if (cancelMessage) {
-        body.requestMessage = cancelMessage
-      }
-
-      const res = await this.api.patch(`/plan/${planId}`, body)
+      const res = await this.api.delete(`/plan/${planId}`, {
+        data: body,
+      })
       return res.data
     } catch (e) {
-      this.logger.error("cancelPlan failed", e.response?.data || e)
-      throw new Error("cancelPlan failed")
+      this.logger.error("deletePlan failed", e.response?.data || e)
+      throw new Error("deletePlan failed")
     }
   }
 }

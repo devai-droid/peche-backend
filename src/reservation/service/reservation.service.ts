@@ -457,10 +457,23 @@ export class ReservationService {
 
   async remove(id: string) {
     const reservation = await this.findOne(id)
-    await this.repository.remove(reservation)
-    if (reservation.status == ReservationStatus.DONE && reservation.rid) {
+
+    if (reservation.palettePlanId) {
+      try {
+        await this.doctorPaletteRepository.deletePlan(reservation.palettePlanId, {
+          isNoShow: false,
+          reason: "사용자 취소",
+        })
+      } catch (e) {
+        console.error("Doctor Palette cancel failed:", e)
+      }
+    }
+    // await this.repository.remove(reservation)
+    if (reservation.status == ReservationStatus.DONE) {
       await this.cancelReservation(reservation)
     }
+    reservation.status = ReservationStatus.CANCELED
+    await this.repository.save(reservation)
   }
 
   async getDaysInMonth(year: number, month: number) {
