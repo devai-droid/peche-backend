@@ -56,9 +56,6 @@ export class KakaoNotificationService {
       case Building.BUILDING_1:
         template = KAKAO_TEMPLATE.RESERVATION_DAY_BEFO_BUILDING_1
         break
-      case Building.BUILDING_2:
-        template = KAKAO_TEMPLATE.RESERVATION_DAY_BEFO_BUILDING_2
-        break
       default: // BUILDING_3 or undefined
         template = KAKAO_TEMPLATE.RESERVATION_DAY_BEFO
     }
@@ -73,9 +70,6 @@ export class KakaoNotificationService {
       case Building.BUILDING_1:
         template = KAKAO_TEMPLATE.RESERVATION_INSTANT_BUILDING_1
         break
-      case Building.BUILDING_2:
-        template = KAKAO_TEMPLATE.RESERVATION_INSTANT_BUILDING_2
-        break
       default: // includes BUILDING_3 or undefined
         template = KAKAO_TEMPLATE.RESERVATION_INSTANT
     }
@@ -89,9 +83,6 @@ export class KakaoNotificationService {
     switch (building) {
       case Building.BUILDING_1:
         template = KAKAO_TEMPLATE.RESERVATION_THE_DAY_BUILDING_1
-        break
-      case Building.BUILDING_2:
-        template = KAKAO_TEMPLATE.RESERVATION_THE_DAY_BUILDING_2
         break
       default: // includes BUILDING_3 or undefined
         template = KAKAO_TEMPLATE.RESERVATION_THE_DAY

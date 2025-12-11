@@ -15,12 +15,12 @@
     "NEW_RESERVATION": "",
     "THE_DAY_BEFORE": "",
     "ON_THE_DAY": "",
-    "NEW_RESERVATION_LONG": "[Peche露岱皮肤科]<br><br>{name}，您好。 <br>您已成功预约{date} {time}的诊疗。 <br>地址：首尔特别市江南区德黑兰路8街8号 F&F大厦4层 Peche露岱皮肤科 <br><br>为提供专属私密的服务体验， <br>Peche露岱皮肤科选址于安保严密的大型企业办公楼内。 <br><br>进入大厦一楼需出示二维码， <br>我们将在就诊前1-2天通过微信发送给您， <br>敬请留意并提前确认:) <br><br>#在{name}驻留我院期间， <br>我们将以透明化的体系与臻于至善的准备， <br>助您焕现与生俱来的本真之美 <br>深度体验这场没有边界、不被定义的美学之旅。 <br><br>若您有任何问题， <br>欢迎通过Peche露岱皮肤科的微信咨询账号 <br>(微信URL: https://work.weixin.qq.com/ca/cawcde86c5d06ad046)",
-    "NEW_RESERVATION_LONG_BUILDING_1": "[Peche露岱皮肤科]<br><br>{name}，您好。 <br>您已成功预约{date} {time}的诊疗。 <br>地址：首尔特别市江南区德黑兰路8街8号 F&F大厦4层 Peche露岱皮肤科 <br><br>为提供专属私密的服务体验， <br>Peche露岱皮肤科选址于安保严密的大型企业办公楼内。 <br><br>进入大厦一楼需出示二维码， <br>我们将在就诊前1-2天通过微信发送给您， <br>敬请留意并提前确认:) <br><br>#在{name}驻留我院期间， <br>我们将以透明化的体系与臻于至善的准备， <br>助您焕现与生俱来的本真之美 <br>深度体验这场没有边界、不被定义的美学之旅。 <br><br>若您有任何问题， <br>欢迎通过Peche露岱皮肤科的微信咨询账号 <br>(微信URL: https://work.weixin.qq.com/ca/cawcde86c5d06ad046)",
-    "NEW_RESERVATION_LONG_BUILDING_2": "[Peche露岱皮肤科]<br><br>{name}，您好。 <br>您已成功预约{date} {time}的诊疗。 <br>地址：首尔特别市江南区德黑兰路8街8号 F&F大厦4层 Peche露岱皮肤科 <br><br>为提供专属私密的服务体验， <br>Peche露岱皮肤科选址于安保严密的大型企业办公楼内。 <br><br>进入大厦一楼需出示二维码， <br>我们将在就诊前1-2天通过微信发送给您， <br>敬请留意并提前确认:) <br><br>#在{name}驻留我院期间， <br>我们将以透明化的体系与臻于至善的准备， <br>助您焕现与生俱来的本真之美 <br>深度体验这场没有边界、不被定义的美学之旅。 <br><br>若您有任何问题， <br>欢迎通过Peche露岱皮肤科的微信咨询账号 <br>(微信URL: https://work.weixin.qq.com/ca/cawcde86c5d06ad046)",
-    "THE_DAY_BEFORE_LONG": "[Peche露岱皮肤科]<br><br>{name}，您好。 <br>特此确认{date}{time}的预约是否需作调整 :) <br>如需变更或取消预约，我们将全力协助安排。 <br><br>地址：首尔特别市江南区德黑兰路8街8号 F&F大厦4层 Peche露岱皮肤科 <br><br>如先前所述，为提供专属私密的服务体验， <br>Peche露岱皮肤科选址于安保严密的大型企业办公楼内。 <br><br>进入大厦一楼需出示二维码， <br>我们已将二维码发送至您预留的联系方式或微信账号，烦请留意并确认。 <br><br>#在{name}驻留我院期间， <br>我们将以透明化的体系与臻于至善的准备， <br>助您焕现与生俱来的本真之美 <br>深度体验这场没有边界、不被定义的美学之旅。",
-    "ON_THE_DAY_LONG": "[Peche露岱皮肤科]<br><br>{name}，您好。 <br>今天是您来访Peche露岱皮肤科的日子，期待{date}{time}与您相见。 <br>如需变更或取消预约，我们将全力协助安排 :) <br><br>地址：首尔特别市江南区德黑兰路8街8号 F&F大厦4层 Peche露岱皮肤科 <br><br>#在{name}驻留我院期间， <br>我们将以透明化的体系与臻于至善的准备， <br>助您焕现与生俱来的本真之美 <br>深度体验这场没有边界、不被定义的美学之旅。",
-    "RESERVATION_CANCELLATION": "您预约的{datetime}时段已取消。 <br>如需重新预约或有任何疑问， <br>欢迎随时通过微信频道与我们沟通：） <br><br>\n微信URL: https://work.weixin.qq.com/ca/cawcde86c5d06ad046 ",
+    "NEW_RESERVATION_LONG": "[Peche露岱皮肤科]",
+    "NEW_RESERVATION_LONG_BUILDING_1": "[Peche露岱皮肤科]",
+    "NEW_RESERVATION_LONG_BUILDING_2": "[Peche露岱皮肤科]",
+    "THE_DAY_BEFORE_LONG": "[Peche露岱皮肤科]",
+    "ON_THE_DAY_LONG": "[Peche露岱皮肤科]",
+    "RESERVATION_CANCELLATION": "",
     "RESERVATION_CONFIRMATION": ""
   }
 }

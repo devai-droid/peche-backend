@@ -72,6 +72,12 @@ export class ReservationController {
     return this.reservationService.getAvailableReservationByDay(query, user)
   }
 
+  @Get("doctor-palette/available-by-day")
+  @ApiOkResponse({ type: AvailableReservationResultDto, isArray: true })
+  async getAvailableReservationByDayPublic(@Query() query: AvailableReservationByDayDto) {
+    return this.reservationService.getAvailableReservationByDayFromDoctorPalette(query)
+  }
+
   @ApiOkResponse({ type: ReservationCountByDayResultDto, isArray: true })
   @Get("count-by-month")
   @Auth(AuthGuard(JWT_STRATEGY), SWAGGER_TOKEN_NAME, Role.ADMIN)

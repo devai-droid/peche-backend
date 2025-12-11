@@ -21,7 +21,6 @@ export class ReservationSlotService {
   }
 
   async bulkCreateOrUpdate(dtos: CreateReservationSlotDto[], user?: User) {
-    console.log(dtos)
     return await Promise.all(
       dtos.map(async (dto) => {
         return await this.createOrUpdate(dto, user)
