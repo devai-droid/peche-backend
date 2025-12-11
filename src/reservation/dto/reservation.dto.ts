@@ -16,6 +16,7 @@ export interface ReservationDto {
   adminMemo?: string
   pathVisit?: string
   detailVisit?: string
+  palettePlanId?: string
 }
 
 export class CreateReservationDto implements ReservationDto {
