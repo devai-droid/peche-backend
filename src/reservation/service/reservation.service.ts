@@ -166,6 +166,39 @@ export class ReservationService {
     }
   }
 
+  // 팔레트 웹훅 받고 예약 확정 알림 발송
+  async sendPaletteReservationConfirmationMessage(reservation: Reservation) {
+    const { user } = reservation
+    const lang = user.languageLocale ?? I18nContext.current().lang
+    const reservationBuilding = reservation.building
+    const title = this.i18n.t("MESSAGES.NOTIFICATION.TITLE", { lang })
+    const args = {
+      name: user.name ?? "",
+      date: dayjs(reservation.datetime).format("MM-DD"),
+      time: dayjs(reservation.datetime).format("A hh:mm"),
+    }
+
+    const translationKey = "MESSAGES.NOTIFICATION.RESERVATION_CONFIRMATION"
+
+    const longMessage = this.i18n.t(translationKey, { lang, args })
+
+    if (!user.phoneNumber && user.email) {
+      await this.sendSesEmail(user.email, title, longMessage)
+    } else if (user.phoneNumber && (user.provider == AuthProvider.KAKAO || lang == LanguageLocale.ko)) {
+      await this.kakaoService.sendReservationConfirmationMessage(
+        [user.phoneNumber],
+        {
+          [KAKAO_TEMPLATE.FIELD_NAME]: args.name,
+          [KAKAO_TEMPLATE.FIELD_RESERVATION_DATE]: args.date,
+          [KAKAO_TEMPLATE.FIELD_RESERVATION_TIME]: args.time,
+        },
+        reservation.building,
+      )
+    } else if (user.phoneNumber) {
+      await this.smsService.sendConfirmReservationSms(user.phoneNumber, reservation.datetime, reservation.building)
+    }
+  }
+
   async sendReservationTheDayMessage() {
     const kstToday = dayjs().add(9, "hour").toDate()
     const { startDatetime, endDatetime } = this.dayRange(kstToday)

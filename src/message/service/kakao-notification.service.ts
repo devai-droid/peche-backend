@@ -77,6 +77,24 @@ export class KakaoNotificationService {
     return await this.sendNotification(template, phoneNumbers, params)
   }
 
+  async sendReservationConfirmationMessage(
+    phoneNumbers: string[],
+    params?: { [key: string]: string },
+    building?: Building,
+  ) {
+    let template
+    // 예약 관에 따라 다른 템플릿을 사용
+    switch (building) {
+      case Building.BUILDING_1:
+        template = KAKAO_TEMPLATE.RESERVATION_CONFIRMATION
+        break
+      default: // includes BUILDING_3 or undefined
+        template = KAKAO_TEMPLATE.RESERVATION_CONFIRMATION
+    }
+
+    return await this.sendNotification(template, phoneNumbers, params)
+  }
+
   async sendReservationTheDayMessage(phoneNumbers: string[], params?: { [key: string]: string }, building?: Building) {
     let template
     // 예약 관에 따라 다른 템플릿을 사용

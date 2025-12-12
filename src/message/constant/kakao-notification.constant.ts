@@ -17,6 +17,7 @@ export const KAKAO_TEMPLATE = {
   RESERVATION_INSTANT_BUILDING_1: "reservation_inst_1",
   RESERVATION_THE_DAY: "reservation_the_day",
   RESERVATION_THE_DAY_BUILDING_1: "reservation_day_1",
+  RESERVATION_CONFIRMATION: "reservation_confirm",
 
   FIELD_NAME: "이름",
   FIELD_RESERVATION_DATE: "예약일",

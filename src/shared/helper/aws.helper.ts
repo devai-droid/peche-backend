@@ -122,6 +122,7 @@ export class AwsHelper {
       KAKAO_BIZ_MSG_APP_KEY: await this.getParameter(`${basePath}/kakao-biz/msg-app-key`),
       KAKAO_BIZ_MSG_APP_SECRET: await this.getParameter(`${basePath}/kakao-biz/msg-app-secret`, true),
       KAKAO_BIZ_MSG_SENDER_KEY: await this.getParameter(`${basePath}/kakao-biz/msg-sender-key`, true),
+      DOCTOR_PALETTE_WEBHOOK_SECRET: await this.getParameter(`${basePath}/auth/palette/secret`),
     }
   }
 
