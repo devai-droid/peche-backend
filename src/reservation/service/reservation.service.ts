@@ -102,9 +102,14 @@ export class ReservationService {
         (UserHelper.isAdmin(user) && dto.status == ReservationStatus.DONE)
       ) {
         if (!dto.status) {
-          dto.status = ReservationStatus.DONE
+          // 일단 WAITING 으로 세팅. 팔레트 측에서 확정할 것 임.
+          dto.status = ReservationStatus.WAITING
         }
         const customerName = await this.getCustomerName(user)
+        const customerId = await this.getCustomerId(user)
+        const phone = await this.getCustomerPhone(user)
+        const email = await this.getCustomerEmail(user)
+        const contact = phone || email
         // 이벤트 이름, 상품 이름 조회
         if (dto.eventIds && dto.eventIds.length > 0) {
           eventObjs = await this.eventService.findManyByIds(dto.eventIds)
@@ -115,7 +120,14 @@ export class ReservationService {
         const eventNames = eventObjs?.map((e) => e.name)
         const productNames = productObjs?.map((p) => p.name)
         // 닥터팔레트 예약
-        planId = await this.postReservationAndGetPlanId(customerName, dto, eventNames, productNames)
+        planId = await this.postReservationAndGetPlanId(
+          customerName,
+          customerId,
+          contact,
+          dto,
+          eventNames,
+          productNames,
+        )
       } else {
         dto.status = ReservationStatus.WAITING
       }
@@ -1176,13 +1188,30 @@ export class ReservationService {
     return accountUser.name
   }
 
+  private async getCustomerId(user: User) {
+    const accountUser = await this.userService.findOne(user.id)
+    return accountUser.id
+  }
+
+  private async getCustomerPhone(user: User) {
+    const accountUser = await this.userService.findOne(user.id)
+    return accountUser.phoneNumber
+  }
+
+  private async getCustomerEmail(user: User) {
+    const accountUser = await this.userService.findOne(user.id)
+    return accountUser.email
+  }
+
   private async postReservationAndGetPlanId(
     customerName: string,
+    customerId: string,
+    phone: string,
     dto: CreateReservationDto,
     eventNames: [],
     productNames: [],
   ) {
-    return await this.doctorPaletteRepository.createPlan(customerName, dto, eventNames, productNames)
+    return await this.doctorPaletteRepository.createPlan(customerName, customerId, phone, dto, eventNames, productNames)
   }
 
   private async postReservationAndGetRid(

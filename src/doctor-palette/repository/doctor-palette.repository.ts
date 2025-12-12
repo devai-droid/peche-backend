@@ -76,6 +76,8 @@ export class DoctorPaletteRepository {
    */
   async createPlan(
     customerName: string,
+    customerId: string,
+    phone: string,
     dto: CreateReservationDto & { userId?: string; phoneNumber?: string; email?: string },
     eventNames: string[],
     productNames: string[],
@@ -84,7 +86,6 @@ export class DoctorPaletteRepository {
       // -------- dateTime 변환 (UTC → KST) --------
       // dto.datetime은 Date 객체 (UTC 기준)
       const dateObj = new Date(dto.datetime)
-      console.log("dateObj: ", dateObj)
 
       const year = dateObj.getFullYear()
       const month = String(dateObj.getMonth() + 1).padStart(2, "0")
@@ -93,13 +94,9 @@ export class DoctorPaletteRepository {
       const minutes = String(dateObj.getMinutes()).padStart(2, "0")
 
       const formattedDateTime = `${year}-${month}-${day}T${hours}:${minutes}`
-      console.log("formattedDate: ", formattedDateTime)
 
       // -------- treatments 생성 --------
       const treatments = [...(eventNames ?? []), ...(productNames ?? [])]
-
-      // -------- patient phone or email --------
-      const phone = dto["phoneNumber"] || dto["email"] || ""
 
       // -----------------------------------------
       // 예약 API Body 생성
@@ -107,7 +104,7 @@ export class DoctorPaletteRepository {
       const payload = {
         scheduleId: SCHEDULE_CODE,
         patient: {
-          id: dto["id"],
+          id: customerId,
           name: customerName,
           phone,
         },

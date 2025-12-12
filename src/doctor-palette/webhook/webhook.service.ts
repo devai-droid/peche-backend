@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common"
+import { forwardRef, Inject, Injectable } from "@nestjs/common"
 import { PaletteWebhookDto } from "./palette-webhook.dto"
 import { Reservation } from "@root/reservation/entities/reservation.entity"
 import { ReservationService } from "@root/reservation/service/reservation.service"
@@ -6,12 +6,14 @@ import { InjectRepository } from "@nestjs/typeorm"
 import { Repository } from "typeorm"
 import * as dayjs from "dayjs"
 import { ConfigService } from "@nestjs/config"
+import { ReservationStatus } from "@root/shared/enum/reservation"
 
 @Injectable()
 export class WebhookService {
   constructor(
     @InjectRepository(Reservation)
     private reservationRepo: Repository<Reservation>,
+    @Inject(forwardRef(() => ReservationService))
     private readonly reservationService: ReservationService,
     private config: ConfigService,
   ) {}
@@ -33,18 +35,16 @@ export class WebhookService {
     const reservation = await this.reservationRepo.findOne({
       where: { palettePlanId: data.id },
     })
-    if (!reservation) return { message: "Reservation not found" }
+    if (!reservation) {
+      return { message: "Reservation not found" }
+    }
 
-    // 3. DB 업데이트
-    // reservation.status = data.status
-    // reservation.datetime = data.dateTime
-    reservation.datetime = dayjs(data.dateTime).toDate()
-    await this.reservationRepo.save(reservation)
-
-    // 4. 메시지 발송 등 처리
-    if (data.status === "CONFIRMED") {
-      const user = reservation.user // eager 로 이미 로드됨
-      console.log("Send message to:", user.phoneNumber)
+    // 예약 확정 케이스. 메시지 발송 등 처리
+    if (data.status === "CONFIRMED" && reservation.status === ReservationStatus.WAITING) {
+      // 예약 시간, 예약 status DB 업데이트
+      reservation.datetime = dayjs(data.dateTime).toDate()
+      reservation.status = ReservationStatus.DONE
+      await this.reservationRepo.save(reservation)
       // 메시지 발송 서비스 호출
       await this.reservationService.sendPaletteReservationConfirmationMessage(reservation)
     }

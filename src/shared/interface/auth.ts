@@ -5,6 +5,7 @@ import { CertSigningKey, RsaSigningKey } from "jwks-rsa"
 export interface JwtPayload {
   id?: string
   phoneNumber?: string
+  email?: string
   iss?: string
   exp?: number
   iat?: number
