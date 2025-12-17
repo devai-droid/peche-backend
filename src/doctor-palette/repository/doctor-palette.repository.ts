@@ -135,11 +135,10 @@ export class DoctorPaletteRepository {
     }
   }
 
-  /** Plan 수정 (시간/상태 변경 등) */
+  // 닥터 팔레트 Plan 수정 (scheduleId는 항상 SCHEDULE_CODE로 자동 세팅)
   async updatePlan(
     planId: string,
     dto: Partial<{
-      scheduleId: string
       dateTime: string
       status: "REQUESTED" | "CONFIRMED" | "CANCELED"
       requestMessage: string
@@ -147,7 +146,14 @@ export class DoctorPaletteRepository {
     }>,
   ) {
     try {
-      const res = await this.api.patch(`/plan/${planId}`, dto)
+      const payload = {
+        scheduleId: SCHEDULE_CODE, // 항상 같은 스케줄 ID 사용
+        ...dto,
+      }
+
+      this.logger.log("Doctor Palette updatePlan payload: " + JSON.stringify(payload))
+
+      const res = await this.api.patch(`/plan/${planId}`, payload)
       return res.data
     } catch (e) {
       this.logger.error("updatePlan failed", e.response?.data || e)

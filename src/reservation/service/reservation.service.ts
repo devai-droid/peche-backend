@@ -149,7 +149,7 @@ export class ReservationService {
   async sendNewReservationMessage(reservation: Reservation) {
     const { user } = reservation
     const lang = user.languageLocale ?? I18nContext.current().lang
-    const reservationBuilding = reservation.building
+    // const reservationBuilding = reservation.building
     const title = this.i18n.t("MESSAGES.NOTIFICATION.TITLE", { lang })
     const args = {
       name: user.name ?? "",
@@ -436,7 +436,6 @@ export class ReservationService {
   // 예약 업데이트
   async update(id: string, dto: UpdateReservationDto, user?: User) {
     const reservation = await this.findOneWithEvents(id)
-    const categoryGroup = reservation.integratedCrmCategory
     let building: Building
     if (dto.datetime) {
       if (reservation.events && reservation.events.length > 0) {
@@ -445,7 +444,7 @@ export class ReservationService {
           dto.datetime,
         )
       }
-      building = await this.checkAvailableAndGetBuilding(dto.datetime, categoryGroup, reservation.user)
+      building = Building.BUILDING_1
       const datetime = new Date(dto.datetime)
       dto.datetime = new Date(
         datetime.getFullYear(),
@@ -458,38 +457,20 @@ export class ReservationService {
     } else {
       building = reservation.building
     }
-    const rid = undefined
-    if (reservation.status != ReservationStatus.DONE && dto.status == ReservationStatus.DONE) {
-    }
-    const status = reservation.status
+
     const saved = await this.repository.save(
       Object.assign(reservation, dto, {
+        status: ReservationStatus.WAITING, // 예약 변경 '요청' 이기 때문에 WAITING 으로
         updatedBy: user?.id,
         ...(building && { building: building }),
-        ...(rid && { rid: rid }),
       }),
     )
-    if (
-      status == ReservationStatus.DONE &&
-      (dto.status == ReservationStatus.CANCELED || dto.status == ReservationStatus.WAITING) &&
-      reservation.rid
-    ) {
-      await this.cancelReservation(reservation)
-      saved.rid = null
-      await this.repository.save(saved)
-    } else if (
-      status == ReservationStatus.DONE &&
-      (dto.status == ReservationStatus.DONE || !dto.status) &&
-      reservation.rid &&
-      (dto.datetime || dto.userMemo || dto.adminMemo)
-    ) {
-    }
+    // 팔레트 api 콜
+    await this.updateReservationAndGetPlanId(reservation.palettePlanId, dto)
+
     // 예약 변경 후 메시지 전송
     const newReservation = await this.findOne(reservation.id)
-    if (
-      newReservation.rid &&
-      (newReservation.status == ReservationStatus.DONE || newReservation.status == ReservationStatus.WAITING)
-    ) {
+    if (newReservation.status == ReservationStatus.WAITING) {
       await this.sendNewReservationMessage(newReservation)
     }
     return saved
@@ -1203,6 +1184,7 @@ export class ReservationService {
     return accountUser.email
   }
 
+  // 닥터 팔레트 예약(플랜) 생성
   private async postReservationAndGetPlanId(
     customerName: string,
     customerId: string,
@@ -1212,6 +1194,37 @@ export class ReservationService {
     productNames: [],
   ) {
     return await this.doctorPaletteRepository.createPlan(customerName, customerId, phone, dto, eventNames, productNames)
+  }
+
+  // 닥터 팔레트 예약(플랜) 수정
+  private async updateReservationAndGetPlanId(planId: string, dto: UpdateReservationDto) {
+    // 전달할 payload 생성 (닥터팔레트는 REQUESTED/CONFIRMED만 허용)
+    const payload: any = {}
+
+    // dateTime 수정 시 팔레트 포맷 적용
+    if (dto.datetime) {
+      payload.dateTime = this.formatPaletteDateTime(dto.datetime)
+    }
+
+    // 내부는 WAITING이지만, 팔레트에는 REQUESTED로 통일
+    payload.status = "REQUESTED"
+
+    // 메모가 있을 경우
+    if (dto.userMemo) {
+      payload.requestMessage = dto.userMemo
+    }
+
+    return await this.doctorPaletteRepository.updatePlan(planId, payload)
+  }
+
+  // yyyy-MM-ddTHH:mm:00 형태로 변환
+  private formatPaletteDateTime(date: Date) {
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, "0")
+    const d = String(date.getDate()).padStart(2, "0")
+    const h = String(date.getHours()).padStart(2, "0")
+    const min = String(date.getMinutes()).padStart(2, "0")
+    return `${y}-${m}-${d}T${h}:${min}:00`
   }
 
   private async postReservationAndGetRid(
