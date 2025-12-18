@@ -57,6 +57,10 @@ async function bootstrap() {
   const sitemapPath = join(__dirname, "..", "public", "sitemap.xml") // Adjust the path as needed
   app.use("/sitemap.xml", express.static(sitemapPath))
 
+  // Serve favicon.ico
+  const faviconPath = join(__dirname, "..", "public", "favicon.ico")
+  app.use("/favicon.ico", express.static(faviconPath))
+
   await app.startAllMicroservices()
   await AwsHelper.prepareSmsMessage()
   await app.listen(port, "0.0.0.0")
