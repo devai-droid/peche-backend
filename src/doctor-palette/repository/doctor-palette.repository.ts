@@ -111,7 +111,7 @@ export class DoctorPaletteRepository {
         dateTime: formattedDateTime,
         status: "REQUESTED",
         treatments,
-        // requestMessage: dto.userMemo ?? undefined,
+        requestMessage: dto.userMemo ?? undefined,
       }
 
       this.logger.log("Doctor Palette createPlan payload: " + JSON.stringify(payload))
