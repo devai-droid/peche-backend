@@ -38,7 +38,7 @@ services:
       - POSTGRES_PASSWORD=local_postgres
       - POSTGRES_USER=postgres
     volumes:
-      - ./data/postgres:/var/lib/postgresql/data
+      - peche_postgres_data:/var/lib/postgresql/data
     ports:
       - "5440:5432"
 
@@ -47,3 +47,6 @@ services:
     command: redis-server
     ports:
       - "6386:6379"
+
+volumes:
+  peche_postgres_data:
