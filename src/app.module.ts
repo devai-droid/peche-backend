@@ -19,6 +19,8 @@ import { SystemModule } from "@root/system/system.module"
 import { LoggerMiddleware } from "@root/shared/middleware/logger.middleware"
 import { AdminModule } from "@root/admin/auth.module"
 import { ScheduleModule } from "@nestjs/schedule"
+import { BlogModule } from "@root/blog/blog.module"
+import { UploadModule } from "@root/upload/upload.module"
 
 @Module({
   imports: [
@@ -48,6 +50,8 @@ import { ScheduleModule } from "@nestjs/schedule"
     ReservationModule,
     SystemModule,
     AdminModule,
+    BlogModule,
+    UploadModule,
   ],
   controllers: [],
   providers: [],
