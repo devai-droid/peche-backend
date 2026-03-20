@@ -9,7 +9,7 @@ export class AddBlogKeywords1774005406812 implements MigrationInterface {
         await queryRunner.query(`DROP INDEX "public"."IDX_blog_post_categories_post"`);
         await queryRunner.query(`DROP INDEX "public"."IDX_blog_post_categories_category"`);
         await queryRunner.query(`ALTER TABLE "blog_post" ADD "keywords" character varying`);
-        await queryRunner.query(`ALTER TABLE "blog_category" DROP COLUMN "event_category_id"`);
+        await queryRunner.query(`ALTER TABLE "blog_category" DROP COLUMN IF EXISTS "event_category_id"`);
         await queryRunner.query(`ALTER TABLE "blog_category" ADD "event_category_id" character varying`);
         await queryRunner.query(`CREATE INDEX "IDX_f146b7b8536abfac92308b66c1" ON "blog_post_categories_blog_category" ("blog_post_id") `);
         await queryRunner.query(`CREATE INDEX "IDX_425a1f24435bbec055119a123e" ON "blog_post_categories_blog_category" ("blog_category_id") `);
