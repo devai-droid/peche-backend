@@ -18,6 +18,13 @@ AWS_USER_ID ?= $(shell aws $(AWS_PROFILE_OPT) sts get-caller-identity --query Ac
 
 ECR_REGISTRY = $(AWS_USER_ID).dkr.ecr.$(AWS_REGION).amazonaws.com
 ECR_REPOSITORY = $(ECR_REGISTRY)/$(SERVICE_NAME)-api
+
+# EC2 배포 설정 (dev 전용)
+EC2_HOST ?= 13.209.165.249
+EC2_USER ?= ec2-user
+EC2_KEY ?= ~/.ssh/peche-prod-key.pem
+
+# ECS 배포 설정 (prod 전용)
 ECS_CLUSTER_NAME ?= $(shell aws $(AWS_PROFILE_OPT) ssm get-parameter --name \
 	"/$(SERVICE_NAME)/$(STAGE)/$(API_NAME)/ecs/cluster" | jq '.Parameter | .Value')
 ECS_SERVICE_NAME ?= $(shell aws $(AWS_PROFILE_OPT) ssm get-parameter --name \
@@ -32,8 +39,19 @@ build: login-ecr clean
 	docker buildx build --platform linux/amd64 --load -t $(ECR_REPOSITORY):$(STAGE) .
 	docker push $(ECR_REPOSITORY):$(STAGE)
 
-deploy:
-	aws $(AWS_PROFILE_OPT) ecs update-service --cluster $(ECS_CLUSTER_NAME) --service $(ECS_SERVICE_NAME) --force-new-deployment
+ensure-ssh-key:
+	@test -f $(EC2_KEY) || (echo "SSH key not found. Downloading from SSM..." && \
+		aws $(AWS_PROFILE_OPT) ssm get-parameter --name "/peche/ec2/ssh-key" --with-decryption --query "Parameter.Value" --output text > $(EC2_KEY) && \
+		chmod 600 $(EC2_KEY) && \
+		echo "SSH key saved to $(EC2_KEY)")
+
+deploy: ensure-ssh-key
+	ssh -i $(EC2_KEY) $(EC2_USER)@$(EC2_HOST) '\
+		aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin $(ECR_REGISTRY) && \
+		cd /opt/peche && \
+		TAG=$(STAGE) docker compose -f docker-compose.prod.yml pull backend && \
+		TAG=$(STAGE) docker compose -f docker-compose.prod.yml up -d --no-deps backend && \
+		docker image prune -f'
 
 init:
 	npm install -g pnpm
