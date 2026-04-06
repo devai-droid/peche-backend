@@ -86,12 +86,7 @@ export class GoogleSpreadsheetHelper {
             ...(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.DISCOUNT_PRICE).value && {
               discountPrice: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.DISCOUNT_PRICE).value),
             }),
-            order: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.ORDER).value),
-            orderEN: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.ORDER_EN).value),
-            orderZH: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.ORDER_ZH).value),
-            orderZHTW: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.ORDER_ZHTW).value),
-            orderJA: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.ORDER_JA).value),
-            orderTH: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.ORDER_TH).value),
+            order: i,
           }),
         )
       }
@@ -223,12 +218,7 @@ export class GoogleSpreadsheetHelper {
             ...(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.DISCOUNT_PRICE).value && {
               discountPrice: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.DISCOUNT_PRICE).value),
             }),
-            order: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.ORDER).value),
-            orderEN: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.ORDER_EN).value),
-            orderZH: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.ORDER_ZH).value),
-            orderZHTW: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.ORDER_ZHTW).value),
-            orderJA: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.ORDER_JA).value),
-            orderTH: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.ORDER_TH).value),
+            order: i,
           }),
         )
       }
@@ -316,12 +306,7 @@ export class GoogleSpreadsheetHelper {
             ...(sheet.getCell(i, EVENT_COLUMN_NUMBER.DISCOUNT_PRICE).value && {
               discountPrice: Number(sheet.getCell(i, EVENT_COLUMN_NUMBER.DISCOUNT_PRICE).value),
             }),
-            order: Number(sheet.getCell(i, EVENT_COLUMN_NUMBER.ORDER).value),
-            orderEN: Number(sheet.getCell(i, EVENT_COLUMN_NUMBER.ORDER_EN).value),
-            orderZH: Number(sheet.getCell(i, EVENT_COLUMN_NUMBER.ORDER_ZH).value),
-            orderZHTW: Number(sheet.getCell(i, EVENT_COLUMN_NUMBER.ORDER_ZHTW).value),
-            orderJA: Number(sheet.getCell(i, EVENT_COLUMN_NUMBER.ORDER_JA).value),
-            orderTH: Number(sheet.getCell(i, EVENT_COLUMN_NUMBER.ORDER_TH).value),
+            order: i,
             ...(label.length > 0 && { label: label }),
           }),
         )
