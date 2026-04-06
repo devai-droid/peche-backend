@@ -153,14 +153,35 @@ export class ProductService {
 
     // 시트에서 새 상품 생성
     const products = await GoogleSpreadsheetHelper.getProductsFromSpreadsheet(dto.url)
-    if (products.length > 0) {
-      return await Promise.all(
-        products.map(async (dto) => {
-          return await this.createFromGoogleSpreadsheet(dto)
-        }),
-      )
+    if (products.length === 0) return []
+
+    // 시트에 있는 대분류/상세페이지 이름 수집
+    const sheetCategoryNames = new Set(products.map((p) => p.categoryName).filter(Boolean))
+    const sheetDetailPageNames = new Set(products.map((p) => p.detailPageName).filter(Boolean))
+
+    const createdProducts = await Promise.all(
+      products.map(async (dto) => {
+        return await this.createFromGoogleSpreadsheet(dto)
+      }),
+    )
+
+    // 시트에 없는 대분류 삭제
+    const allCategories = await this.productCategoryService.findAllActive()
+    for (const category of allCategories) {
+      if (!sheetCategoryNames.has(category.name)) {
+        await this.productCategoryService.remove(category.id)
+      }
     }
-    return []
+
+    // 시트에 없는 상세페이지 삭제
+    const allDetailPages = await this.productDetailPageService.findAllActive()
+    for (const detailPage of allDetailPages) {
+      if (!sheetDetailPageNames.has(detailPage.name)) {
+        await this.productDetailPageService.remove(detailPage.id)
+      }
+    }
+
+    return createdProducts
   }
 
   async importFromGoogleSpreadsheetV2(dto: ImportFromGoogleSpreadsheetProductV2Dto) {

@@ -174,14 +174,35 @@ export class EventService {
 
     // 시트에서 새 이벤트 생성
     const events = await GoogleSpreadsheetHelper.getEventsFromSpreadsheet(dto.url, dto.bundleId)
-    if (events.length > 0) {
-      return await Promise.all(
-        events.map(async (dto) => {
-          return await this.createFromGoogleSpreadsheet(dto)
-        }),
-      )
+    if (events.length === 0) return []
+
+    // 시트에 있는 대분류/상세페이지 이름 수집
+    const sheetCategoryNames = new Set(events.map((e) => e.categoryName).filter(Boolean))
+    const sheetDetailPageNames = new Set(events.map((e) => e.detailPageName).filter(Boolean))
+
+    const createdEvents = await Promise.all(
+      events.map(async (dto) => {
+        return await this.createFromGoogleSpreadsheet(dto)
+      }),
+    )
+
+    // 시트에 없는 이벤트 대분류 삭제
+    const allCategories = await this.eventCategoryService.findAllActive()
+    for (const category of allCategories) {
+      if (!sheetCategoryNames.has(category.name)) {
+        await this.eventCategoryService.remove(category.id)
+      }
     }
-    return []
+
+    // 시트에 없는 상세페이지 삭제
+    const allDetailPages = await this.productDetailPageService.findAllActive()
+    for (const detailPage of allDetailPages) {
+      if (!sheetDetailPageNames.has(detailPage.name)) {
+        await this.productDetailPageService.remove(detailPage.id)
+      }
+    }
+
+    return createdEvents
   }
 
   async checkAvailableEvents(ids: string[], reservationDate: Date) {
