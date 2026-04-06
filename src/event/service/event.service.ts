@@ -89,7 +89,7 @@ export class EventService {
         ...(query?.visibleJA && { visibleJA: query.visibleJA }),
         ...(query?.visibleTH && { visibleTH: query.visibleTH }),
       },
-      order: query.orderByOptions(),
+      order: { bundle: { order: "ASC" }, order: "ASC" },
     }
     return await paginate<Event>(this.repository, query.paginationOptions(), findOptions)
   }
