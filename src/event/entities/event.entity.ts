@@ -29,7 +29,7 @@ export class Event extends TimeStampEntity {
   integratedCrmCategory?: IntegratedCrmCategory
 
   @ApiProperty()
-  @ManyToOne(() => EventBundle, { nullable: true })
+  @ManyToOne(() => EventBundle, { nullable: true, eager: true })
   @JoinColumn()
   bundle?: EventBundle
 
