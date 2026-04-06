@@ -52,4 +52,11 @@ export class EventController {
   async import(@Body() dto: ImportFromGoogleSpreadsheetEventDto) {
     return this.eventService.importFromGoogleSpreadsheet(dto)
   }
+
+  @ApiOkResponse({ type: Event, isArray: true })
+  @Post("import-from-google-spreadsheet-all")
+  @Auth(AuthGuard(JWT_STRATEGY), SWAGGER_TOKEN_NAME, Role.ADMIN)
+  async importAll(@Body() dto: { url: string }) {
+    return this.eventService.importFromGoogleSpreadsheetAllSheets(dto)
+  }
 }

@@ -314,4 +314,69 @@ export class GoogleSpreadsheetHelper {
     }
     return events
   }
+
+  static async getEventsFromAllSheets(url: string) {
+    const spreadsheetId = url.match(/\/d\/(.+)\//)[1]
+    const doc = new GoogleSpreadsheet(spreadsheetId, this.config)
+
+    await doc.loadInfo()
+
+    function safeString(value: any): string {
+      return value ? value.toString().trim() : ""
+    }
+
+    const result: { sheetName: string; events: CreateEventFromGoogleSpreadsheetDto[] }[] = []
+
+    for (let s = 0; s < doc.sheetCount; s++) {
+      const sheet = doc.sheetsByIndex[s]
+      await sheet.loadCells()
+
+      const events: CreateEventFromGoogleSpreadsheetDto[] = []
+      for (let i = 1; i < sheet.rowCount; i++) {
+        if (sheet.getCell(i, EVENT_COLUMN_NUMBER.NAME).value && sheet.getCell(i, EVENT_COLUMN_NUMBER.NAME).value != "") {
+          const label = []
+          if (sheet.getCell(i, EVENT_COLUMN_NUMBER.LABEL_NEW).value && sheet.getCell(i, EVENT_COLUMN_NUMBER.LABEL_NEW).value == SHEET_TRUE_KEY) label.push(EventLabel.NEW)
+          if (sheet.getCell(i, EVENT_COLUMN_NUMBER.LABEL_POP).value && sheet.getCell(i, EVENT_COLUMN_NUMBER.LABEL_POP).value == SHEET_TRUE_KEY) label.push(EventLabel.POP)
+          if (sheet.getCell(i, EVENT_COLUMN_NUMBER.LABEL_BEST).value && sheet.getCell(i, EVENT_COLUMN_NUMBER.LABEL_BEST).value == SHEET_TRUE_KEY) label.push(EventLabel.BEST)
+          if (sheet.getCell(i, EVENT_COLUMN_NUMBER.LABEL_KAKAO).value && sheet.getCell(i, EVENT_COLUMN_NUMBER.LABEL_KAKAO).value == SHEET_TRUE_KEY) label.push(EventLabel.KAKAO)
+          events.push(
+            Object.assign(new CreateEventFromGoogleSpreadsheetDto(), {
+              visible: sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE).value && sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE).value == SHEET_TRUE_KEY,
+              visibleEN: sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_EN).value && sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_EN).value == SHEET_TRUE_KEY,
+              visibleZH: sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_ZH).value && sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_ZH).value == SHEET_TRUE_KEY,
+              visibleZHTW: sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_ZHTW).value && sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_ZHTW).value == SHEET_TRUE_KEY,
+              visibleJA: sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_JA).value && sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_JA).value == SHEET_TRUE_KEY,
+              visibleTH: sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_TH).value && sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_TH).value == SHEET_TRUE_KEY,
+              categoryName: safeString(sheet.getCell(i, EVENT_COLUMN_NUMBER.CATEGORY).value),
+              detailPageName: safeString(sheet.getCell(i, EVENT_COLUMN_NUMBER.DETAIL_PAGE).value),
+              name: sheet.getCell(i, EVENT_COLUMN_NUMBER.NAME).value,
+              nameEN: sheet.getCell(i, EVENT_COLUMN_NUMBER.NAME_EN).value,
+              nameZH: sheet.getCell(i, EVENT_COLUMN_NUMBER.NAME_ZH).value,
+              nameZHTW: sheet.getCell(i, EVENT_COLUMN_NUMBER.NAME_ZHTW).value,
+              nameJA: sheet.getCell(i, EVENT_COLUMN_NUMBER.NAME_JA).value,
+              nameTH: sheet.getCell(i, EVENT_COLUMN_NUMBER.NAME_TH).value,
+              description: sheet.getCell(i, EVENT_COLUMN_NUMBER.DESCRIPTION).value,
+              descriptionEN: sheet.getCell(i, EVENT_COLUMN_NUMBER.DESCRIPTION_EN).value,
+              descriptionZH: sheet.getCell(i, EVENT_COLUMN_NUMBER.DESCRIPTION_ZH).value,
+              descriptionZHTW: sheet.getCell(i, EVENT_COLUMN_NUMBER.DESCRIPTION_ZHTW).value,
+              descriptionJA: sheet.getCell(i, EVENT_COLUMN_NUMBER.DESCRIPTION_JA).value,
+              descriptionTH: sheet.getCell(i, EVENT_COLUMN_NUMBER.DESCRIPTION_TH).value,
+              price: Number(sheet.getCell(i, EVENT_COLUMN_NUMBER.PRICE).value),
+              ...(sheet.getCell(i, EVENT_COLUMN_NUMBER.DISCOUNT_PRICE).value && {
+                discountPrice: Number(sheet.getCell(i, EVENT_COLUMN_NUMBER.DISCOUNT_PRICE).value),
+              }),
+              order: i,
+              ...(label.length > 0 && { label: label }),
+            }),
+          )
+        }
+      }
+
+      if (events.length > 0) {
+        result.push({ sheetName: sheet.title, events })
+      }
+    }
+
+    return result
+  }
 }

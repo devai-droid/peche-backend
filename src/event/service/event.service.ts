@@ -185,6 +185,31 @@ export class EventService {
     return createdEvents
   }
 
+  async importFromGoogleSpreadsheetAllSheets(dto: { url: string }) {
+    const sheets = await GoogleSpreadsheetHelper.getEventsFromAllSheets(dto.url)
+    const allCreatedEvents = []
+
+    for (const { sheetName, events } of sheets) {
+      // 탭 이름으로 번들 찾거나 생성
+      const bundle = await this.eventBundleService.findOrCreateByName(sheetName)
+
+      // 해당 번들의 기존 이벤트 삭제
+      await this.removeByBundleId(bundle.id)
+
+      // 이벤트 생성 (bundleId 설정)
+      const createdEvents = await Promise.all(
+        events.map(async (eventDto) => {
+          eventDto.bundleId = bundle.id
+          return await this.createFromGoogleSpreadsheet(eventDto)
+        }),
+      )
+
+      allCreatedEvents.push(...createdEvents)
+    }
+
+    return allCreatedEvents
+  }
+
   async checkAvailableEvents(ids: string[], reservationDate: Date) {
     const events = await this.repository.find({ relations: ["bundle", "category"], where: { id: In(ids) } })
     const date = new Date(reservationDate)

@@ -37,6 +37,20 @@ export class EventBundleService {
     return this.repository.findOneOrFail({ where: { id: id } })
   }
 
+  async findOrCreateByName(name: string) {
+    const existing = await this.repository.findOne({ where: { name } })
+    if (existing) return existing
+    const today = new Date()
+    const nextYear = new Date(today.getFullYear() + 4, today.getMonth(), today.getDate())
+    return await this.repository.save({
+      name,
+      postStartDate: today,
+      postEndDate: nextYear,
+      startDate: today,
+      endDate: nextYear,
+    })
+  }
+
   async findVisible() {
     const entityName = "event_bundle"
     const queryBuilder = this.repository.createQueryBuilder(entityName)
