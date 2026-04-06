@@ -50,24 +50,12 @@ export class GoogleSpreadsheetHelper {
       ) {
         products.push(
           Object.assign(new CreateProductFromGoogleSpreadsheetDto(), {
-            visible:
-              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE).value &&
-              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE).value == SHEET_TRUE_KEY,
-            visibleEN:
-              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_EN).value &&
-              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_EN).value == SHEET_TRUE_KEY,
-            visibleZH:
-              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_ZH).value &&
-              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_ZH).value == SHEET_TRUE_KEY,
-            visibleZHTW:
-              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_ZHTW).value &&
-              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_ZHTW).value == SHEET_TRUE_KEY,
-            visibleJA:
-              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_JA).value &&
-              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_JA).value == SHEET_TRUE_KEY,
-            visibleTH:
-              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_TH).value &&
-              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_TH).value == SHEET_TRUE_KEY,
+            visible: true,
+            visibleEN: true,
+            visibleZH: true,
+            visibleZHTW: true,
+            visibleJA: true,
+            visibleTH: true,
             categoryName: safeString(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.CATEGORY).value),
             detailPageName: safeString(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.DETAIL_PAGE).value),
             name: sheet.getCell(i, PRODUCT_COLUMN_NUMBER.NAME).value,
@@ -182,24 +170,12 @@ export class GoogleSpreadsheetHelper {
       ) {
         products.push(
           Object.assign(new CreateProductFromGoogleSpreadsheetDto(), {
-            visible:
-              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE).value &&
-              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE).value == SHEET_TRUE_KEY,
-            visibleEN:
-              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_EN).value &&
-              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_EN).value == SHEET_TRUE_KEY,
-            visibleZH:
-              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_ZH).value &&
-              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_ZH).value == SHEET_TRUE_KEY,
-            visibleZHTW:
-              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_ZHTW).value &&
-              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_ZHTW).value == SHEET_TRUE_KEY,
-            visibleJA:
-              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_JA).value &&
-              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_JA).value == SHEET_TRUE_KEY,
-            visibleTH:
-              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_TH).value &&
-              sheet.getCell(i, PRODUCT_COLUMN_NUMBER.VISIBLE_TH).value == SHEET_TRUE_KEY,
+            visible: true,
+            visibleEN: true,
+            visibleZH: true,
+            visibleZHTW: true,
+            visibleJA: true,
+            visibleTH: true,
             categoryName: safeString(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.CATEGORY).value),
             detailPageName: safeString(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.DETAIL_PAGE).value),
             name: sheet.getCell(i, PRODUCT_COLUMN_NUMBER.NAME).value,
@@ -269,26 +245,14 @@ export class GoogleSpreadsheetHelper {
         }
         events.push(
           Object.assign(new CreateEventFromGoogleSpreadsheetDto(), {
-            visible:
-              sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE).value &&
-              sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE).value == SHEET_TRUE_KEY,
-            visibleEN:
-              sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_EN).value &&
-              sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_EN).value == SHEET_TRUE_KEY,
-            visibleZH:
-              sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_ZH).value &&
-              sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_ZH).value == SHEET_TRUE_KEY,
-            visibleZHTW:
-              sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_ZHTW).value &&
-              sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_ZHTW).value == SHEET_TRUE_KEY,
-            visibleJA:
-              sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_JA).value &&
-              sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_JA).value == SHEET_TRUE_KEY,
-            visibleTH:
-              sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_TH).value &&
-              sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_TH).value == SHEET_TRUE_KEY,
+            visible: true,
+            visibleEN: true,
+            visibleZH: true,
+            visibleZHTW: true,
+            visibleJA: true,
+            visibleTH: true,
             categoryName: safeString(sheet.getCell(i, EVENT_COLUMN_NUMBER.CATEGORY).value),
-            detailPageName: sheet.getCell(i, EVENT_COLUMN_NUMBER.DETAIL_PAGE).value.toString().trim(),
+            detailPageName: safeString(sheet.getCell(i, EVENT_COLUMN_NUMBER.DETAIL_PAGE).value),
             bundleId: bundleId,
             name: sheet.getCell(i, EVENT_COLUMN_NUMBER.NAME).value,
             nameEN: sheet.getCell(i, EVENT_COLUMN_NUMBER.NAME_EN).value,
@@ -341,12 +305,12 @@ export class GoogleSpreadsheetHelper {
           if (sheet.getCell(i, EVENT_COLUMN_NUMBER.LABEL_KAKAO).value && sheet.getCell(i, EVENT_COLUMN_NUMBER.LABEL_KAKAO).value == SHEET_TRUE_KEY) label.push(EventLabel.KAKAO)
           events.push(
             Object.assign(new CreateEventFromGoogleSpreadsheetDto(), {
-              visible: sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE).value && sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE).value == SHEET_TRUE_KEY,
-              visibleEN: sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_EN).value && sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_EN).value == SHEET_TRUE_KEY,
-              visibleZH: sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_ZH).value && sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_ZH).value == SHEET_TRUE_KEY,
-              visibleZHTW: sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_ZHTW).value && sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_ZHTW).value == SHEET_TRUE_KEY,
-              visibleJA: sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_JA).value && sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_JA).value == SHEET_TRUE_KEY,
-              visibleTH: sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_TH).value && sheet.getCell(i, EVENT_COLUMN_NUMBER.VISIBLE_TH).value == SHEET_TRUE_KEY,
+              visible: true,
+              visibleEN: true,
+              visibleZH: true,
+              visibleZHTW: true,
+              visibleJA: true,
+              visibleTH: true,
               categoryName: safeString(sheet.getCell(i, EVENT_COLUMN_NUMBER.CATEGORY).value),
               detailPageName: safeString(sheet.getCell(i, EVENT_COLUMN_NUMBER.DETAIL_PAGE).value),
               name: sheet.getCell(i, EVENT_COLUMN_NUMBER.NAME).value,
