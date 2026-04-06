@@ -9,6 +9,7 @@ import { ProductService } from "@root/product/service/product.service"
 import {
   CreateProductDto,
   ImportFromGoogleSpreadsheetProductDto,
+  ImportFromGoogleSpreadsheetProductV2Dto,
   ProductList,
   UpdateProductDto,
 } from "@root/product/dto/product.dto"
@@ -51,5 +52,12 @@ export class ProductController {
   @Auth(AuthGuard(JWT_STRATEGY), SWAGGER_TOKEN_NAME, Role.ADMIN)
   async import(@Body() dto: ImportFromGoogleSpreadsheetProductDto) {
     return this.productService.importFromGoogleSpreadsheet(dto)
+  }
+
+  @ApiOkResponse({ type: Product, isArray: true })
+  @Post("import-from-google-spreadsheet-v2")
+  @Auth(AuthGuard(JWT_STRATEGY), SWAGGER_TOKEN_NAME, Role.ADMIN)
+  async importV2(@Body() dto: ImportFromGoogleSpreadsheetProductV2Dto) {
+    return this.productService.importFromGoogleSpreadsheetV2(dto)
   }
 }

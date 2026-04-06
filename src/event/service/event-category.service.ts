@@ -53,8 +53,14 @@ export class EventCategoryService {
   async findOneByNameOrNull(name: string) {
     const entityName = "event_category"
     const queryBuilder = this.repository.createQueryBuilder(entityName)
-    queryBuilder.andWhere(`REPLACE(name, ' ', '') LIKE '${name.replaceAll(" ", "")}'`)
+    queryBuilder.andWhere(`REPLACE(name, ' ', '') LIKE :name`, { name: name.replaceAll(" ", "") })
     return queryBuilder.getOne()
+  }
+
+  async findOrCreateByName(name: string) {
+    const existing = await this.findOneByNameOrNull(name)
+    if (existing) return existing
+    return await this.repository.save({ name })
   }
 
   async update(id: string, dto: UpdateEventCategoryDto, user?: User) {

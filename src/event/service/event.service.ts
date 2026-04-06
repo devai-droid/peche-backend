@@ -51,20 +51,16 @@ export class EventService {
   async createFromGoogleSpreadsheet(dto: CreateEventFromGoogleSpreadsheetDto) {
     const bundle = dto.bundleId ? await this.eventBundleService.findOne(dto.bundleId) : undefined
     const category = dto.categoryName
-      ? await this.eventCategoryService.findOneByNameOrNull(dto.categoryName)
+      ? await this.eventCategoryService.findOrCreateByName(dto.categoryName)
       : undefined
     const detailPage = dto.detailPageName
-      ? await this.productDetailPageService.findOneByNameOrNull(dto.detailPageName)
-      : undefined
-    const integratedCrmCategory = dto.integratedCrmCategoryName
-      ? await this.integratedCrmCategoryService.findOneByNameOrNull(dto.integratedCrmCategoryName)
+      ? await this.productDetailPageService.findOrCreateByName({ name: dto.detailPageName })
       : undefined
     return await this.repository.save(
       Object.assign(dto, {
         ...(bundle && { bundle: bundle }),
         ...(category && { category: category }),
         ...(detailPage && { detailPage: detailPage }),
-        ...(integratedCrmCategory && { integratedCrmCategory: integratedCrmCategory }),
       }),
     )
   }
@@ -173,6 +169,10 @@ export class EventService {
   }
 
   async importFromGoogleSpreadsheet(dto: ImportFromGoogleSpreadsheetEventDto) {
+    // 해당 번들의 기존 이벤트 전체 삭제
+    await this.removeByBundleId(dto.bundleId)
+
+    // 시트에서 새 이벤트 생성
     const events = await GoogleSpreadsheetHelper.getEventsFromSpreadsheet(dto.url, dto.bundleId)
     if (events.length > 0) {
       return await Promise.all(

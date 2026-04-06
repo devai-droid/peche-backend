@@ -3,6 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm"
 import { FindManyOptions, Repository } from "typeorm"
 import { Injectable } from "@nestjs/common"
 import { CreateProductCategoryDto, UpdateProductCategoryDto } from "@root/product/dto/product-category.dto"
+import { CreateCategoryFromSheetDto } from "@root/product/dto/product.dto"
 import { ProductCategoryQueryDto } from "@root/product/dto/product-category-query.dto"
 import { paginate } from "@root/shared/pagination"
 import { ProductCategoryStatus } from "@root/shared/enum/product"
@@ -37,6 +38,12 @@ export class ProductCategoryService {
 
   async findOneByNameOrNull(name: string) {
     return this.repository.findOne({ relations: ["detailPages"], where: { name: name } })
+  }
+
+  async findOrCreateByName(dto: CreateCategoryFromSheetDto) {
+    const existing = await this.findOneByNameOrNull(dto.name)
+    if (existing) return existing
+    return await this.repository.save(Object.assign(new ProductCategory(), dto))
   }
 
   async update(id: string, dto: UpdateProductCategoryDto, user?: User) {

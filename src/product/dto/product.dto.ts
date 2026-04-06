@@ -107,8 +107,8 @@ export class CreateProductFromGoogleSpreadsheetDto {
   visibleZHTW?: boolean
   visibleJA?: boolean
   visibleTH?: boolean
+  categoryName?: string
   detailPageName?: string
-  integratedCrmCategoryName?: string
   name?: string
   nameEN?: string
   nameZH?: string
@@ -132,4 +132,35 @@ export class CreateProductFromGoogleSpreadsheetDto {
 
 export class ImportFromGoogleSpreadsheetProductDto {
   @ApiProperty() url?: string
+}
+
+export class ImportFromGoogleSpreadsheetProductV2Dto {
+  @ApiProperty() url?: string
+}
+
+export class CreateCategoryFromSheetDto {
+  name?: string
+  nameEN?: string
+  nameZH?: string
+  nameZHTW?: string
+  nameJA?: string
+  nameTH?: string
+  order?: number
+}
+
+export class CreateDetailPageFromSheetDto {
+  categoryName?: string
+  name?: string
+  nameEN?: string
+  nameZH?: string
+  nameZHTW?: string
+  nameJA?: string
+  nameTH?: string
+  description?: string
+  descriptionEN?: string
+  descriptionZH?: string
+  descriptionZHTW?: string
+  descriptionJA?: string
+  descriptionTH?: string
+  order?: number
 }

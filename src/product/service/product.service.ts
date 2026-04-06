@@ -8,6 +8,7 @@ import {
   CreateProductDto,
   CreateProductFromGoogleSpreadsheetDto,
   ImportFromGoogleSpreadsheetProductDto,
+  ImportFromGoogleSpreadsheetProductV2Dto,
   UpdateProductDto,
 } from "@root/product/dto/product.dto"
 import { ProductCategoryService } from "@root/product/service/product-category.service"
@@ -44,16 +45,16 @@ export class ProductService {
   }
 
   async createFromGoogleSpreadsheet(dto: CreateProductFromGoogleSpreadsheetDto) {
-    const detailPage = dto.detailPageName
-      ? await this.productDetailPageService.findOneByNameOrNull(dto.detailPageName)
+    const category = dto.categoryName
+      ? await this.productCategoryService.findOrCreateByName({ name: dto.categoryName })
       : undefined
-    const integratedCrmCategory = dto.integratedCrmCategoryName
-      ? await this.integratedCrmCategoryService.findOneByNameOrNull(dto.integratedCrmCategoryName)
+    const detailPage = dto.detailPageName
+      ? await this.productDetailPageService.findOrCreateByName({ name: dto.detailPageName }, category)
       : undefined
     return await this.repository.save(
       Object.assign(dto, {
-        ...(detailPage && { detailPage: detailPage }),
-        ...(integratedCrmCategory && { integratedCrmCategory: integratedCrmCategory }),
+        ...(category && { category }),
+        ...(detailPage && { detailPage }),
       }),
     )
   }
@@ -144,6 +145,13 @@ export class ProductService {
   }
 
   async importFromGoogleSpreadsheet(dto: ImportFromGoogleSpreadsheetProductDto) {
+    // 기존 상품 전체 삭제
+    const existingProducts = await this.repository.find()
+    if (existingProducts.length > 0) {
+      await this.repository.remove(existingProducts)
+    }
+
+    // 시트에서 새 상품 생성
     const products = await GoogleSpreadsheetHelper.getProductsFromSpreadsheet(dto.url)
     if (products.length > 0) {
       return await Promise.all(
@@ -153,5 +161,42 @@ export class ProductService {
       )
     }
     return []
+  }
+
+  async importFromGoogleSpreadsheetV2(dto: ImportFromGoogleSpreadsheetProductV2Dto) {
+    // Phase 1: 대분류 처리
+    const categoryDtos = await GoogleSpreadsheetHelper.getCategoriesFromSpreadsheet(dto.url)
+    const categoryMap = new Map()
+    for (const catDto of categoryDtos) {
+      const category = await this.productCategoryService.findOrCreateByName(catDto)
+      categoryMap.set(catDto.name, category)
+    }
+
+    // Phase 2: 상세페이지 처리
+    const detailPageDtos = await GoogleSpreadsheetHelper.getDetailPagesFromSpreadsheet(dto.url)
+    const detailPageMap = new Map()
+    for (const dpDto of detailPageDtos) {
+      const category = dpDto.categoryName ? categoryMap.get(dpDto.categoryName) : undefined
+      const detailPage = await this.productDetailPageService.findOrCreateByName(dpDto, category)
+      detailPageMap.set(dpDto.name, detailPage)
+    }
+
+    // Phase 3: 상품 처리
+    const productDtos = await GoogleSpreadsheetHelper.getProductsFromSpreadsheetByTitle(dto.url)
+    if (productDtos.length === 0) return []
+
+    return await Promise.all(
+      productDtos.map(async (pDto) => {
+        const detailPage = pDto.detailPageName
+          ? detailPageMap.get(pDto.detailPageName) ??
+            (await this.productDetailPageService.findOneByNameOrNull(pDto.detailPageName))
+          : undefined
+        return await this.repository.save(
+          Object.assign(pDto, {
+            ...(detailPage && { detailPage }),
+          }),
+        )
+      }),
+    )
   }
 }

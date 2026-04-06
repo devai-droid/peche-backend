@@ -6,7 +6,9 @@ import { paginate } from "@root/shared/pagination"
 import { ProductDetailPageStatus } from "@root/shared/enum/product"
 import { User } from "@root/shared/interface/user"
 import { ProductDetailPage } from "@root/product/entities/product-detail-page.entity"
+import { ProductCategory } from "@root/product/entities/product-category.entity"
 import { CreateProductDetailPageDto, UpdateProductDetailPageDto } from "@root/product/dto/product-detail-page.dto"
+import { CreateDetailPageFromSheetDto } from "@root/product/dto/product.dto"
 import { ProductDetailPageQueryDto } from "@root/product/dto/product-detail-page-query.dto"
 import { RelatedProductDetailPageService } from "@root/product/service/related-product-detail-page.service"
 import { ProductService } from "@root/product/service/product.service"
@@ -71,8 +73,17 @@ export class ProductDetailPageService {
   async findOneByNameOrNull(name: string) {
     const entityName = "product_detail_page"
     const queryBuilder = this.repository.createQueryBuilder(entityName)
-    queryBuilder.andWhere(`REPLACE(name, ' ', '') LIKE '${name.replaceAll(" ", "")}'`)
+    queryBuilder.andWhere(`REPLACE(name, ' ', '') LIKE :name`, { name: name.replaceAll(" ", "") })
     return queryBuilder.getOne()
+  }
+
+  async findOrCreateByName(dto: CreateDetailPageFromSheetDto, category?: ProductCategory) {
+    const existing = dto.name ? await this.findOneByNameOrNull(dto.name) : null
+    if (existing) return existing
+    const { categoryName, ...fields } = dto
+    return await this.repository.save(
+      Object.assign(new ProductDetailPage(), fields, category ? { category } : {}),
+    )
   }
 
   async findByIds(ids: string[]) {
