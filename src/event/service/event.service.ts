@@ -76,6 +76,7 @@ export class EventService {
 
   async findManyWithPaginationQuery(query?: EventQueryDto) {
     const findOptions = <FindManyOptions<Event>>{
+      relations: ["bundle"],
       where: {
         ...(query?.bundleId && { bundle: { id: query.bundleId } }),
         ...(query?.categoryId && { category: { id: query.categoryId } }),
