@@ -86,6 +86,10 @@ export class ProductDetailPageService {
     )
   }
 
+  async updateOrder(id: string, order: number) {
+    return this.repository.update(id, { order })
+  }
+
   async findByIds(ids: string[]) {
     return await this.repository.findBy({ id: In(ids) })
   }

@@ -40,6 +40,10 @@ export class ProductCategoryService {
     return this.repository.findOne({ relations: ["detailPages"], where: { name: name } })
   }
 
+  async updateOrder(id: string, order: number) {
+    return this.repository.update(id, { order })
+  }
+
   async findOrCreateByName(dto: CreateCategoryFromSheetDto) {
     const existing = await this.findOneByNameOrNull(dto.name)
     if (existing) return existing

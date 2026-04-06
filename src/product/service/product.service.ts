@@ -159,11 +159,43 @@ export class ProductService {
     const sheetCategoryNames = new Set(products.map((p) => p.categoryName).filter(Boolean))
     const sheetDetailPageNames = new Set(products.map((p) => p.detailPageName).filter(Boolean))
 
+    // 상세페이지/대분류 첫 등장 순서 추적
+    const detailPageOrder = new Map<string, number>()
+    const categoryOrder = new Map<string, number>()
+    let dpIdx = 0
+    let catIdx = 0
+    for (const p of products) {
+      if (p.detailPageName && !detailPageOrder.has(p.detailPageName)) {
+        detailPageOrder.set(p.detailPageName, dpIdx++)
+      }
+      if (p.categoryName && !categoryOrder.has(p.categoryName)) {
+        categoryOrder.set(p.categoryName, catIdx++)
+      }
+    }
+
     const createdProducts = await Promise.all(
       products.map(async (dto) => {
         return await this.createFromGoogleSpreadsheet(dto)
       }),
     )
+
+    // 상세페이지 order 업데이트
+    const allDetailPagesForOrder = await this.productDetailPageService.findAllActive()
+    for (const dp of allDetailPagesForOrder) {
+      const order = detailPageOrder.get(dp.name)
+      if (order !== undefined && dp.order !== order) {
+        await this.productDetailPageService.updateOrder(dp.id, order)
+      }
+    }
+
+    // 대분류 order 업데이트
+    const allCategoriesForOrder = await this.productCategoryService.findAllActive()
+    for (const cat of allCategoriesForOrder) {
+      const order = categoryOrder.get(cat.name)
+      if (order !== undefined && cat.order !== order) {
+        await this.productCategoryService.updateOrder(cat.id, order)
+      }
+    }
 
     // 시트에 없는 상세페이지 먼저 삭제 (대분류 FK 참조 해제)
     const allDetailPages = await this.productDetailPageService.findAllActive()
