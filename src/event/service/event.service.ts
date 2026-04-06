@@ -54,7 +54,7 @@ export class EventService {
       ? await this.eventCategoryService.findOrCreateByName(dto.categoryName)
       : undefined
     const detailPage = dto.detailPageName
-      ? await this.productDetailPageService.findOrCreateByName({ name: dto.detailPageName })
+      ? await this.productDetailPageService.findOneByNameOrNull(dto.detailPageName)
       : undefined
     return await this.repository.save(
       Object.assign(dto, {
