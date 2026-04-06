@@ -80,6 +80,10 @@ export class Product extends TimeStampEntity {
 
   @ApiProperty()
   @Column({ nullable: true })
+  discountPrice?: number
+
+  @ApiProperty()
+  @Column({ nullable: true })
   order?: number
 
   @ApiProperty()
