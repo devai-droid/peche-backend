@@ -45,11 +45,6 @@ export class EventBundleService {
         sqb.where(`${entityName}.postStartDate < now()`).andWhere(`${entityName}.postEndDate > now()`)
       }),
     )
-    queryBuilder.andWhere(
-      new Brackets((sqb) => {
-        sqb.where(`${entityName}.visibleFirst = true`).orWhere(`${entityName}.visibleSecond = true`)
-      }),
-    )
     return queryBuilder.getMany()
   }
 
