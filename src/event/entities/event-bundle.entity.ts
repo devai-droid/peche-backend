@@ -30,6 +30,10 @@ export class EventBundle extends TimeStampEntity {
   endDate: Date
 
   @ApiProperty()
+  @Column({ nullable: true })
+  order?: number
+
+  @ApiProperty()
   @Column({ nullable: true, default: false })
   visibleFirst?: boolean
 

@@ -37,13 +37,20 @@ export class EventBundleService {
     return this.repository.findOneOrFail({ where: { id: id } })
   }
 
-  async findOrCreateByName(name: string) {
+  async findOrCreateByName(name: string, order?: number) {
     const existing = await this.repository.findOne({ where: { name } })
-    if (existing) return existing
+    if (existing) {
+      if (order !== undefined && existing.order !== order) {
+        existing.order = order
+        await this.repository.save(existing)
+      }
+      return existing
+    }
     const today = new Date()
     const nextYear = new Date(today.getFullYear() + 4, today.getMonth(), today.getDate())
     return await this.repository.save({
       name,
+      order,
       postStartDate: today,
       postEndDate: nextYear,
       startDate: today,

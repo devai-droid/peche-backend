@@ -189,9 +189,10 @@ export class EventService {
     const sheets = await GoogleSpreadsheetHelper.getEventsFromAllSheets(dto.url)
     const allCreatedEvents = []
 
-    for (const { sheetName, events } of sheets) {
-      // 탭 이름으로 번들 찾거나 생성
-      const bundle = await this.eventBundleService.findOrCreateByName(sheetName)
+    for (let sheetIndex = 0; sheetIndex < sheets.length; sheetIndex++) {
+      const { sheetName, events } = sheets[sheetIndex]
+      // 탭 이름으로 번들 찾거나 생성 + 탭 순서 반영
+      const bundle = await this.eventBundleService.findOrCreateByName(sheetName, sheetIndex)
 
       // 해당 번들의 기존 이벤트 삭제
       await this.removeByBundleId(bundle.id)
