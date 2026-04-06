@@ -66,6 +66,7 @@ export class EventBundleService {
         sqb.where(`${entityName}.postStartDate < now()`).andWhere(`${entityName}.postEndDate > now()`)
       }),
     )
+    queryBuilder.orderBy(`${entityName}.order`, "ASC")
     return queryBuilder.getMany()
   }
 
