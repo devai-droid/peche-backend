@@ -165,19 +165,19 @@ export class ProductService {
       }),
     )
 
+    // 시트에 없는 상세페이지 먼저 삭제 (대분류 FK 참조 해제)
+    const allDetailPages = await this.productDetailPageService.findAllActive()
+    for (const detailPage of allDetailPages) {
+      if (!sheetDetailPageNames.has(detailPage.name)) {
+        await this.productDetailPageService.remove(detailPage.id)
+      }
+    }
+
     // 시트에 없는 대분류 삭제
     const allCategories = await this.productCategoryService.findAllActive()
     for (const category of allCategories) {
       if (!sheetCategoryNames.has(category.name)) {
         await this.productCategoryService.remove(category.id)
-      }
-    }
-
-    // 시트에 없는 상세페이지 삭제
-    const allDetailPages = await this.productDetailPageService.findAllActive()
-    for (const detailPage of allDetailPages) {
-      if (!sheetDetailPageNames.has(detailPage.name)) {
-        await this.productDetailPageService.remove(detailPage.id)
       }
     }
 

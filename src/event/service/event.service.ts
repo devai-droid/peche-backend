@@ -186,19 +186,19 @@ export class EventService {
       }),
     )
 
+    // 시트에 없는 상세페이지 먼저 삭제
+    const allDetailPages = await this.productDetailPageService.findAllActive()
+    for (const detailPage of allDetailPages) {
+      if (!sheetDetailPageNames.has(detailPage.name)) {
+        await this.productDetailPageService.remove(detailPage.id)
+      }
+    }
+
     // 시트에 없는 이벤트 대분류 삭제
     const allCategories = await this.eventCategoryService.findAllActive()
     for (const category of allCategories) {
       if (!sheetCategoryNames.has(category.name)) {
         await this.eventCategoryService.remove(category.id)
-      }
-    }
-
-    // 시트에 없는 상세페이지 삭제
-    const allDetailPages = await this.productDetailPageService.findAllActive()
-    for (const detailPage of allDetailPages) {
-      if (!sheetDetailPageNames.has(detailPage.name)) {
-        await this.productDetailPageService.remove(detailPage.id)
       }
     }
 
