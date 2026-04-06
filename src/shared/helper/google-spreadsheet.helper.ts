@@ -83,6 +83,9 @@ export class GoogleSpreadsheetHelper {
             descriptionJA: sheet.getCell(i, PRODUCT_COLUMN_NUMBER.DESCRIPTION_JA).value,
             descriptionTH: sheet.getCell(i, PRODUCT_COLUMN_NUMBER.DESCRIPTION_TH).value,
             price: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.PRICE).value),
+            ...(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.DISCOUNT_PRICE).value && {
+              discountPrice: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.DISCOUNT_PRICE).value),
+            }),
             order: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.ORDER).value),
             orderEN: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.ORDER_EN).value),
             orderZH: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.ORDER_ZH).value),
@@ -217,6 +220,9 @@ export class GoogleSpreadsheetHelper {
             descriptionJA: sheet.getCell(i, PRODUCT_COLUMN_NUMBER.DESCRIPTION_JA).value,
             descriptionTH: sheet.getCell(i, PRODUCT_COLUMN_NUMBER.DESCRIPTION_TH).value,
             price: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.PRICE).value),
+            ...(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.DISCOUNT_PRICE).value && {
+              discountPrice: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.DISCOUNT_PRICE).value),
+            }),
             order: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.ORDER).value),
             orderEN: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.ORDER_EN).value),
             orderZH: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.ORDER_ZH).value),

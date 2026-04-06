@@ -122,6 +122,7 @@ export class CreateProductFromGoogleSpreadsheetDto {
   descriptionJA?: string
   descriptionTH?: string
   price?: number
+  discountPrice?: number
   order?: number
   orderEN?: number
   orderZH?: number
