@@ -75,39 +75,23 @@ export class EventService {
   }
 
   async findManyWithPaginationQuery(query?: EventQueryDto) {
-    const qb = this.repository
-      .createQueryBuilder("event")
-      .leftJoinAndSelect("event.bundle", "bundle")
-      .where("1 = 1")
-
-    // bundle 게시기간 필터 (null이면 무제한 취급). 어드민은 includeExpired=true 로 우회 가능
-    if (!query?.includeExpired) {
-      qb.andWhere(
-        new Brackets((sqb) => {
-          sqb
-            .where("(bundle.postStartDate IS NULL OR bundle.postStartDate <= NOW())")
-            .andWhere("(bundle.postEndDate IS NULL OR bundle.postEndDate >= NOW())")
-        }),
-      )
+    const findOptions = <FindManyOptions<Event>>{
+      relations: ["bundle"],
+      where: {
+        ...(query?.bundleId && { bundle: { id: query.bundleId } }),
+        ...(query?.categoryId && { category: { id: query.categoryId } }),
+        ...(query?.detailPageId && { detailPage: { id: query.detailPageId } }),
+        ...(query?.integratedCrmCategoryId && { integratedCrmCategory: { id: query.integratedCrmCategoryId } }),
+        ...(query?.visible && { visible: query.visible }),
+        ...(query?.visibleEN && { visibleEN: query.visibleEN }),
+        ...(query?.visibleZH && { visibleZH: query.visibleZH }),
+        ...(query?.visibleZHTW && { visibleZHTW: query.visibleZHTW }),
+        ...(query?.visibleJA && { visibleJA: query.visibleJA }),
+        ...(query?.visibleTH && { visibleTH: query.visibleTH }),
+      },
+      order: { bundle: { order: "ASC" }, order: "ASC" },
     }
-
-    if (query?.bundleId) qb.andWhere("bundle.id = :bundleId", { bundleId: query.bundleId })
-    if (query?.categoryId) qb.andWhere('event."category_id" = :categoryId', { categoryId: query.categoryId })
-    if (query?.detailPageId)
-      qb.andWhere('event."detail_page_id" = :detailPageId', { detailPageId: query.detailPageId })
-    if (query?.integratedCrmCategoryId)
-      qb.andWhere('event."integrated_crm_category_id" = :icId', { icId: query.integratedCrmCategoryId })
-    if (query?.visible !== undefined) qb.andWhere("event.visible = :v", { v: query.visible })
-    if (query?.visibleEN !== undefined) qb.andWhere('event."visible_en" = :vEN', { vEN: query.visibleEN })
-    if (query?.visibleZH !== undefined) qb.andWhere('event."visible_zh" = :vZH', { vZH: query.visibleZH })
-    if (query?.visibleZHTW !== undefined)
-      qb.andWhere('event."visible_zhtw" = :vZHTW', { vZHTW: query.visibleZHTW })
-    if (query?.visibleJA !== undefined) qb.andWhere('event."visible_ja" = :vJA', { vJA: query.visibleJA })
-    if (query?.visibleTH !== undefined) qb.andWhere('event."visible_th" = :vTH', { vTH: query.visibleTH })
-
-    qb.orderBy("bundle.order", "ASC").addOrderBy("event.order", "ASC")
-
-    return await paginate<Event>(qb, query.paginationOptions())
+    return await paginate<Event>(this.repository, query.paginationOptions(), findOptions)
   }
 
   async findOne(id: string) {

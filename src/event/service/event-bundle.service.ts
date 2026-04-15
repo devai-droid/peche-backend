@@ -59,15 +59,7 @@ export class EventBundleService {
   }
 
   async findVisible() {
-    const entityName = "event_bundle"
-    const queryBuilder = this.repository.createQueryBuilder(entityName)
-    queryBuilder.andWhere(
-      new Brackets((sqb) => {
-        sqb.where(`${entityName}.postStartDate < now()`).andWhere(`${entityName}.postEndDate > now()`)
-      }),
-    )
-    queryBuilder.orderBy(`${entityName}.order`, "ASC")
-    return queryBuilder.getMany()
+    return this.repository.find({ order: { order: "ASC" } })
   }
 
   async update(id: string, dto: UpdateEventBundleDto) {
