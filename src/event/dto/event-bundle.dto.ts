@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger"
-import { IsOptional } from "class-validator"
+import { IsDate, IsOptional } from "class-validator"
+import { Type } from "class-transformer"
 import { Paginated } from "@root/shared/dto/base-list.ro"
 import { EventBundle } from "@root/event/entities/event-bundle.entity"
 
@@ -13,10 +14,10 @@ export class CreateEventBundleDto implements EventBundleDto {
 
 export class UpdateEventBundleDto implements EventBundleDto {
   @ApiPropertyOptional() @IsOptional() readonly name?: string
-  @ApiPropertyOptional() @IsOptional() postStartDate?: Date
-  @ApiPropertyOptional() @IsOptional() postEndDate?: Date
-  @ApiPropertyOptional() @IsOptional() startDate?: Date
-  @ApiPropertyOptional() @IsOptional() endDate?: Date
+  @ApiPropertyOptional() @IsOptional() @Type(() => Date) @IsDate() postStartDate?: Date
+  @ApiPropertyOptional() @IsOptional() @Type(() => Date) @IsDate() postEndDate?: Date
+  @ApiPropertyOptional() @IsOptional() @Type(() => Date) @IsDate() startDate?: Date
+  @ApiPropertyOptional() @IsOptional() @Type(() => Date) @IsDate() endDate?: Date
   @ApiPropertyOptional() @IsOptional() visibleFirst?: boolean
   @ApiPropertyOptional() @IsOptional() visibleSecond?: boolean
 }
