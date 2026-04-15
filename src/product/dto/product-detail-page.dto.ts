@@ -20,6 +20,11 @@ export interface ProductDetailPageDto {
   descriptionJA?: string
   descriptionTH?: string
   referenceUrl?: string
+  referenceUrlEN?: string
+  referenceUrlZH?: string
+  referenceUrlZHTW?: string
+  referenceUrlJA?: string
+  referenceUrlTH?: string
   procedure?: string
   procedureEN?: string
   procedureZH?: string
@@ -59,6 +64,11 @@ export interface ProductDetailPageDto {
   relatedDetailPageIds?: string[]
   order?: number
   imageId?: string
+  imageENId?: string
+  imageZHId?: string
+  imageZHTWId?: string
+  imageJAId?: string
+  imageTHId?: string
 }
 
 export class CreateProductDetailPageDto implements ProductDetailPageDto {
@@ -82,6 +92,11 @@ export class CreateProductDetailPageDto implements ProductDetailPageDto {
   @ApiPropertyOptional() @IsOptional() readonly descriptionJA?: string
   @ApiPropertyOptional() @IsOptional() readonly descriptionTH?: string
   @ApiPropertyOptional() @IsOptional() readonly referenceUrl?: string
+  @ApiPropertyOptional() @IsOptional() readonly referenceUrlEN?: string
+  @ApiPropertyOptional() @IsOptional() readonly referenceUrlZH?: string
+  @ApiPropertyOptional() @IsOptional() readonly referenceUrlZHTW?: string
+  @ApiPropertyOptional() @IsOptional() readonly referenceUrlJA?: string
+  @ApiPropertyOptional() @IsOptional() readonly referenceUrlTH?: string
   @ApiPropertyOptional() @IsOptional() readonly procedure?: string
   @ApiPropertyOptional() @IsOptional() readonly procedureEN?: string
   @ApiPropertyOptional() @IsOptional() readonly procedureZH?: string
@@ -121,6 +136,11 @@ export class CreateProductDetailPageDto implements ProductDetailPageDto {
   @ApiPropertyOptional() @IsOptional() readonly relatedDetailPageIds?: string[]
   @ApiPropertyOptional() @IsOptional() order?: number
   @ApiPropertyOptional() @IsOptional() @IsUUID() readonly imageId?: string
+  @ApiPropertyOptional() @IsOptional() @IsUUID() readonly imageENId?: string
+  @ApiPropertyOptional() @IsOptional() @IsUUID() readonly imageZHId?: string
+  @ApiPropertyOptional() @IsOptional() @IsUUID() readonly imageZHTWId?: string
+  @ApiPropertyOptional() @IsOptional() @IsUUID() readonly imageJAId?: string
+  @ApiPropertyOptional() @IsOptional() @IsUUID() readonly imageTHId?: string
 }
 
 export class UpdateProductDetailPageDto implements ProductDetailPageDto {
@@ -144,6 +164,11 @@ export class UpdateProductDetailPageDto implements ProductDetailPageDto {
   @ApiPropertyOptional() @IsOptional() readonly descriptionJA?: string
   @ApiPropertyOptional() @IsOptional() readonly descriptionTH?: string
   @ApiPropertyOptional() @IsOptional() readonly referenceUrl?: string
+  @ApiPropertyOptional() @IsOptional() readonly referenceUrlEN?: string
+  @ApiPropertyOptional() @IsOptional() readonly referenceUrlZH?: string
+  @ApiPropertyOptional() @IsOptional() readonly referenceUrlZHTW?: string
+  @ApiPropertyOptional() @IsOptional() readonly referenceUrlJA?: string
+  @ApiPropertyOptional() @IsOptional() readonly referenceUrlTH?: string
   @ApiPropertyOptional() @IsOptional() readonly procedure?: string
   @ApiPropertyOptional() @IsOptional() readonly procedureEN?: string
   @ApiPropertyOptional() @IsOptional() readonly procedureZH?: string
@@ -183,6 +208,11 @@ export class UpdateProductDetailPageDto implements ProductDetailPageDto {
   @ApiPropertyOptional() @IsOptional() readonly relatedDetailPageIds?: string[]
   @ApiPropertyOptional() @IsOptional() order?: number
   @ApiPropertyOptional() @IsOptional() @IsUUID() readonly imageId?: string
+  @ApiPropertyOptional() @IsOptional() @IsUUID() readonly imageENId?: string
+  @ApiPropertyOptional() @IsOptional() @IsUUID() readonly imageZHId?: string
+  @ApiPropertyOptional() @IsOptional() @IsUUID() readonly imageZHTWId?: string
+  @ApiPropertyOptional() @IsOptional() @IsUUID() readonly imageJAId?: string
+  @ApiPropertyOptional() @IsOptional() @IsUUID() readonly imageTHId?: string
 }
 
 export class ProductDetailPageList extends Paginated {

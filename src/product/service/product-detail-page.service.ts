@@ -30,11 +30,21 @@ export class ProductDetailPageService {
 
     // 이미지 처리
     const image = dto.imageId ? await this.fileService.findOne(dto.imageId) : undefined
+    const imageEN = dto.imageENId ? await this.fileService.findOne(dto.imageENId) : undefined
+    const imageZH = dto.imageZHId ? await this.fileService.findOne(dto.imageZHId) : undefined
+    const imageZHTW = dto.imageZHTWId ? await this.fileService.findOne(dto.imageZHTWId) : undefined
+    const imageJA = dto.imageJAId ? await this.fileService.findOne(dto.imageJAId) : undefined
+    const imageTH = dto.imageTHId ? await this.fileService.findOne(dto.imageTHId) : undefined
 
     const productDetailPage = await this.repository.save(
       Object.assign(dto, {
         category,
         ...(image && { image }),
+        ...(imageEN && { imageEN }),
+        ...(imageZH && { imageZH }),
+        ...(imageZHTW && { imageZHTW }),
+        ...(imageJA && { imageJA }),
+        ...(imageTH && { imageTH }),
       }),
     )
 
@@ -101,6 +111,11 @@ export class ProductDetailPageService {
 
     // 이미지 처리
     const image = dto.imageId ? await this.fileService.findOne(dto.imageId) : undefined
+    const imageEN = dto.imageENId ? await this.fileService.findOne(dto.imageENId) : undefined
+    const imageZH = dto.imageZHId ? await this.fileService.findOne(dto.imageZHId) : undefined
+    const imageZHTW = dto.imageZHTWId ? await this.fileService.findOne(dto.imageZHTWId) : undefined
+    const imageJA = dto.imageJAId ? await this.fileService.findOne(dto.imageJAId) : undefined
+    const imageTH = dto.imageTHId ? await this.fileService.findOne(dto.imageTHId) : undefined
 
     const relatedDetailPages = dto.relatedDetailPageIds ? await this.findByIds(dto.relatedDetailPageIds) : undefined
 
@@ -114,6 +129,11 @@ export class ProductDetailPageService {
         updatedBy: user?.id,
         category: category,
         ...(image && { image }),
+        ...(imageEN && { imageEN }),
+        ...(imageZH && { imageZH }),
+        ...(imageZHTW && { imageZHTW }),
+        ...(imageJA && { imageJA }),
+        ...(imageTH && { imageTH }),
       }),
     )
   }

@@ -79,6 +79,26 @@ export class ProductDetailPage extends TimeStampEntity {
 
   @ApiProperty()
   @Column({ nullable: true })
+  referenceUrlEN: string
+
+  @ApiProperty()
+  @Column({ nullable: true })
+  referenceUrlZH: string
+
+  @ApiProperty()
+  @Column({ nullable: true })
+  referenceUrlZHTW: string
+
+  @ApiProperty()
+  @Column({ nullable: true })
+  referenceUrlJA: string
+
+  @ApiProperty()
+  @Column({ nullable: true })
+  referenceUrlTH: string
+
+  @ApiProperty()
+  @Column({ nullable: true })
   procedure: string
 
   @ApiProperty()
@@ -237,4 +257,29 @@ export class ProductDetailPage extends TimeStampEntity {
   @ManyToOne(() => FileObject, { nullable: true, eager: true })
   @JoinColumn()
   image?: FileObject
+
+  @ApiProperty()
+  @ManyToOne(() => FileObject, { nullable: true, eager: true })
+  @JoinColumn()
+  imageEN?: FileObject
+
+  @ApiProperty()
+  @ManyToOne(() => FileObject, { nullable: true, eager: true })
+  @JoinColumn()
+  imageZH?: FileObject
+
+  @ApiProperty()
+  @ManyToOne(() => FileObject, { nullable: true, eager: true })
+  @JoinColumn()
+  imageZHTW?: FileObject
+
+  @ApiProperty()
+  @ManyToOne(() => FileObject, { nullable: true, eager: true })
+  @JoinColumn()
+  imageJA?: FileObject
+
+  @ApiProperty()
+  @ManyToOne(() => FileObject, { nullable: true, eager: true })
+  @JoinColumn()
+  imageTH?: FileObject
 }
