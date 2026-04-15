@@ -80,14 +80,16 @@ export class EventService {
       .leftJoinAndSelect("event.bundle", "bundle")
       .where("1 = 1")
 
-    // bundle 게시기간 필터 (null이면 무제한 취급, bundle 자체가 없으면 제외)
-    qb.andWhere(
-      new Brackets((sqb) => {
-        sqb
-          .where("(bundle.postStartDate IS NULL OR bundle.postStartDate <= NOW())")
-          .andWhere("(bundle.postEndDate IS NULL OR bundle.postEndDate >= NOW())")
-      }),
-    )
+    // bundle 게시기간 필터 (null이면 무제한 취급). 어드민은 includeExpired=true 로 우회 가능
+    if (!query?.includeExpired) {
+      qb.andWhere(
+        new Brackets((sqb) => {
+          sqb
+            .where("(bundle.postStartDate IS NULL OR bundle.postStartDate <= NOW())")
+            .andWhere("(bundle.postEndDate IS NULL OR bundle.postEndDate >= NOW())")
+        }),
+      )
+    }
 
     if (query?.bundleId) qb.andWhere("bundle.id = :bundleId", { bundleId: query.bundleId })
     if (query?.categoryId) qb.andWhere('event."category_id" = :categoryId', { categoryId: query.categoryId })

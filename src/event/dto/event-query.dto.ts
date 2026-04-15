@@ -16,6 +16,7 @@ export class EventQueryDto extends DefaultPaginationQuery {
   @ApiPropertyOptional() @IsOptional() readonly visibleJA?: boolean
   @ApiPropertyOptional() @IsOptional() readonly visibleTH?: boolean
   @ApiPropertyOptional() @IsOptional() readonly detailPageShow?: boolean
+  @ApiPropertyOptional() @IsOptional() readonly includeExpired?: boolean
 
   @ApiProperty({
     default: [SortOrder.DESC],
