@@ -51,4 +51,12 @@ export class MainPopup extends TimeStampEntity {
   @ApiProperty()
   @Column({ nullable: true })
   order?: number
+
+  @ApiProperty()
+  @Column({ type: "timestamptz", nullable: true })
+  startDate?: Date | null
+
+  @ApiProperty()
+  @Column({ type: "timestamptz", nullable: true })
+  endDate?: Date | null
 }

@@ -1,6 +1,6 @@
 import { forwardRef, Inject, Injectable } from "@nestjs/common"
 import { InjectRepository } from "@nestjs/typeorm"
-import { FindManyOptions, Repository } from "typeorm"
+import { FindManyOptions, Raw, Repository } from "typeorm"
 import { FileService } from "@root/file/service/files.service"
 import { paginate } from "@root/shared/pagination"
 import { User } from "@root/shared/interface/user"
@@ -36,9 +36,14 @@ export class MainPopupService {
   }
 
   async findManyWithPaginationQuery(query?: MainPopupQueryDto) {
+    const isActiveOnly = query?.status === MainPopupStatus.ACTIVE
     const findOptions = <FindManyOptions<MainPopup>>{
       where: {
         ...(query?.status && { status: query.status }),
+        ...(isActiveOnly && {
+          startDate: Raw((alias) => `(${alias} IS NULL OR ${alias} <= NOW())`),
+          endDate: Raw((alias) => `(${alias} IS NULL OR ${alias} >= NOW())`),
+        }),
       },
       order: query.orderByOptions(),
     }

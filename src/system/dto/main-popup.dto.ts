@@ -14,6 +14,8 @@ export interface MainPopupDto {
   imageJAId?: string
   imageTHId?: string
   order?: number
+  startDate?: Date | null
+  endDate?: Date | null
 }
 
 export class CreateMainPopupDto implements MainPopupDto {
@@ -29,6 +31,8 @@ export class CreateMainPopupDto implements MainPopupDto {
   @ApiPropertyOptional() @IsOptional() @IsUUID() readonly imageJAId?: string
   @ApiPropertyOptional() @IsOptional() @IsUUID() readonly imageTHId?: string
   @ApiPropertyOptional() @IsOptional() readonly order?: number
+  @ApiPropertyOptional() @IsOptional() readonly startDate?: Date | null
+  @ApiPropertyOptional() @IsOptional() readonly endDate?: Date | null
 }
 
 export class UpdateMainPopupDto implements MainPopupDto {
@@ -44,6 +48,8 @@ export class UpdateMainPopupDto implements MainPopupDto {
   @ApiPropertyOptional() @IsOptional() @IsUUID() readonly imageJAId?: string
   @ApiPropertyOptional() @IsOptional() @IsUUID() readonly imageTHId?: string
   @ApiPropertyOptional() @IsOptional() readonly order?: number
+  @ApiPropertyOptional() @IsOptional() readonly startDate?: Date | null
+  @ApiPropertyOptional() @IsOptional() readonly endDate?: Date | null
 }
 
 export class MainPopupList extends Paginated {
