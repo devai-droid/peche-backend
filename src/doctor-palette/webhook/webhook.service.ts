@@ -50,13 +50,21 @@ export class WebhookService {
       await this.reservationService.sendPaletteReservationConfirmationMessage(reservation)
     }
 
-    // 예약 취소/거절 케이스
-    if (data.status === "CANCELED" && reservation.status !== ReservationStatus.CANCELED) {
-      console.log(`[Webhook] Processing CANCELED for planId=${data.id}, user=${reservation.user?.name}, phone=${reservation.user?.phoneNumber}`)
+    // 예약 취소 (확정 후 취소)
+    if (data.status === "CANCELED" && reservation.status === ReservationStatus.DONE) {
+      console.log(`[Webhook] Processing CANCEL for planId=${data.id}, user=${reservation.user?.name}`)
       reservation.status = ReservationStatus.CANCELED
       await this.reservationRepo.save(reservation)
       await this.reservationService.sendCancelReservationMessage(reservation)
       console.log(`[Webhook] Cancel message sent for planId=${data.id}`)
+    }
+
+    // 예약 거부 (확정 전 거부) — 거부 템플릿 심사 승인 후 알림톡 추가 예정
+    if (data.status === "CANCELED" && reservation.status === ReservationStatus.WAITING) {
+      console.log(`[Webhook] Processing REJECT for planId=${data.id}, user=${reservation.user?.name}, reason=${data.cancelInfo?.reason}`)
+      reservation.status = ReservationStatus.CANCELED
+      await this.reservationRepo.save(reservation)
+      // TODO: 거부 알림톡 템플릿 승인 후 발송 로직 추가
     }
   }
 }
