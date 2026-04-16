@@ -107,7 +107,7 @@ export class EventService {
   }
 
   async findManyByIds(ids: string[]) {
-    return this.repository.find({ relations: ["bundle"], where: { id: In(ids) } })
+    return this.repository.find({ relations: ["bundle", "category"], where: { id: In(ids) } })
   }
 
   async findManyByQuery(query: string) {

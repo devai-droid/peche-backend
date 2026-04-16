@@ -117,7 +117,9 @@ export class ReservationService {
         if (dto.productIds && dto.productIds.length > 0) {
           productObjs = await this.productService.findManyByIds(dto.productIds)
         }
-        const eventNames = eventObjs?.map((e) => e.name)
+        const eventNames = eventObjs?.map((e) =>
+          e.category?.name ? `[${e.category.name}] ${e.name}` : e.name,
+        )
         const productNames = productObjs?.map((p) => p.name)
         // 닥터팔레트 예약
         planId = await this.postReservationAndGetPlanId(
