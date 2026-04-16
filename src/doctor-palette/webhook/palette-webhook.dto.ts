@@ -4,7 +4,7 @@ export class PaletteWebhookDto {
   patientId: string
   scheduleId: string
   dateTime: string
-  status: "REQUESTED" | "CONFIRMED"
+  status: "REQUESTED" | "CONFIRMED" | "CANCELED" | "ENCOUNTERED" | "COMPLETED"
   treatments: string[]
   requestMessage?: string
   cancelInfo?: any
