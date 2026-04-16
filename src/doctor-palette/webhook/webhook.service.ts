@@ -33,6 +33,7 @@ export class WebhookService {
     }
     // 2. planId 로 우리 예약 찾기
     const reservation = await this.reservationRepo.findOne({
+      relations: ["user"],
       where: { palettePlanId: data.id },
     })
     if (!reservation) {
@@ -47,6 +48,13 @@ export class WebhookService {
       await this.reservationRepo.save(reservation)
       // 메시지 발송 서비스 호출
       await this.reservationService.sendPaletteReservationConfirmationMessage(reservation)
+    }
+
+    // 예약 취소/거절 케이스
+    if (data.status === "CANCELED" && reservation.status !== ReservationStatus.CANCELED) {
+      reservation.status = ReservationStatus.CANCELED
+      await this.reservationRepo.save(reservation)
+      await this.reservationService.sendCancelReservationMessage(reservation)
     }
   }
 }
