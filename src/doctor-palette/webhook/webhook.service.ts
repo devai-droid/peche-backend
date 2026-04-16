@@ -52,9 +52,11 @@ export class WebhookService {
 
     // 예약 취소/거절 케이스
     if (data.status === "CANCELED" && reservation.status !== ReservationStatus.CANCELED) {
+      console.log(`[Webhook] Processing CANCELED for planId=${data.id}, user=${reservation.user?.name}, phone=${reservation.user?.phoneNumber}`)
       reservation.status = ReservationStatus.CANCELED
       await this.reservationRepo.save(reservation)
       await this.reservationService.sendCancelReservationMessage(reservation)
+      console.log(`[Webhook] Cancel message sent for planId=${data.id}`)
     }
   }
 }

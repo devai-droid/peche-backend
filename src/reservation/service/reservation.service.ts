@@ -309,7 +309,7 @@ export class ReservationService {
         await this.smsService.sendCancelReservationSms(user.phoneNumber, reservation.datetime)
       }
     } catch (e) {
-      console.log("Error sending cancel reservation message", e)
+      console.error("[sendCancelReservationMessage] FAILED:", e?.message || e, JSON.stringify(e?.response?.data || ""))
     }
   }
 
