@@ -59,12 +59,13 @@ export class WebhookService {
       console.log(`[Webhook] Cancel message sent for planId=${data.id}`)
     }
 
-    // 예약 거부 (확정 전 거부) — 거부 템플릿 심사 승인 후 알림톡 추가 예정
+    // 예약 거부 (확정 전 거부)
     if (data.status === "CANCELED" && reservation.status === ReservationStatus.WAITING) {
       console.log(`[Webhook] Processing REJECT for planId=${data.id}, user=${reservation.user?.name}, reason=${data.cancelInfo?.reason}`)
       reservation.status = ReservationStatus.CANCELED
       await this.reservationRepo.save(reservation)
-      // TODO: 거부 알림톡 템플릿 승인 후 발송 로직 추가
+      await this.reservationService.sendRejectReservationMessage(reservation)
+      console.log(`[Webhook] Reject message sent for planId=${data.id}`)
     }
   }
 }

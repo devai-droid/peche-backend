@@ -113,6 +113,10 @@ export class KakaoNotificationService {
     return await this.sendNotification(KAKAO_TEMPLATE.RESERVATION_CANCEL, phoneNumbers, params)
   }
 
+  async sendReservationRejectMessage(phoneNumbers: string[], params?: { [key: string]: string }) {
+    return await this.sendNotification(KAKAO_TEMPLATE.RESERVATION_REJECT, phoneNumbers, params)
+  }
+
   async sendNotification(templateCode: string, phoneNumbers: string[], params?: { [key: string]: string }) {
     const [id, message] = this.createMessage(templateCode, phoneNumbers, params)
     const savedMessage = await this.saveMessage(id, message)

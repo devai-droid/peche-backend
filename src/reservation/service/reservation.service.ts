@@ -313,6 +313,19 @@ export class ReservationService {
     }
   }
 
+  async sendRejectReservationMessage(reservation: Reservation) {
+    try {
+      const user = reservation.user
+      if (user.phoneNumber && (user.phoneNumber.startsWith("+82") || user.provider == AuthProvider.KAKAO)) {
+        await this.kakaoService.sendReservationRejectMessage([user.phoneNumber], {
+          [KAKAO_TEMPLATE.FIELD_NAME]: user.name ?? "고객",
+        })
+      }
+    } catch (e) {
+      console.error("[sendRejectReservationMessage] FAILED:", e?.message || e, JSON.stringify(e?.response?.data || ""))
+    }
+  }
+
   async refreshAndFindReservation(query?: ReservationQueryDto, user?: User) {
     if (user !== undefined) {
       const accountUser = await this.userService.findOne(user.id)

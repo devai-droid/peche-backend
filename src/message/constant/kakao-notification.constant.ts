@@ -13,6 +13,7 @@ export const KAKAO_TEMPLATE = {
   RESERVATION_DAY_BEFO: "reservation_day_befo",
   RESERVATION_DAY_BEFO_BUILDING_1: "res_day_before_1",
   RESERVATION_CANCEL: "reservation_cancel",
+  RESERVATION_REJECT: "reservation_reject",
   RESERVATION_INSTANT: "reservation_instant",
   RESERVATION_INSTANT_BUILDING_1: "reservation_inst_1",
   RESERVATION_THE_DAY: "reservation_the_day",
