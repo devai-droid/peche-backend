@@ -217,6 +217,13 @@ export class ProductService {
   }
 
   async importFromGoogleSpreadsheetV2(dto: ImportFromGoogleSpreadsheetProductV2Dto) {
+    // Phase 0: 기존 상품 삭제 (상담하기 제외) — 이벤트 import와 동일하게 누적 방지
+    const existingProducts = await this.repository.find()
+    const deletableProducts = existingProducts.filter((p) => !p.name?.includes("상담하기"))
+    if (deletableProducts.length > 0) {
+      await this.repository.remove(deletableProducts)
+    }
+
     // Phase 1: 대분류 처리
     const categoryDtos = await GoogleSpreadsheetHelper.getCategoriesFromSpreadsheet(dto.url)
     const categoryMap = new Map()

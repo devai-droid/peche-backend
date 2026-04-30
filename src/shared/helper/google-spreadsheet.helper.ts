@@ -75,6 +75,11 @@ export class GoogleSpreadsheetHelper {
               discountPrice: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.DISCOUNT_PRICE).value),
             }),
             order: i,
+            orderEN: i,
+            orderZH: i,
+            orderZHTW: i,
+            orderJA: i,
+            orderTH: i,
           }),
         )
       }
@@ -195,6 +200,11 @@ export class GoogleSpreadsheetHelper {
               discountPrice: Number(sheet.getCell(i, PRODUCT_COLUMN_NUMBER.DISCOUNT_PRICE).value),
             }),
             order: i,
+            orderEN: i,
+            orderZH: i,
+            orderZHTW: i,
+            orderJA: i,
+            orderTH: i,
           }),
         )
       }
