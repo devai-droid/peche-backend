@@ -188,6 +188,16 @@ export class EventService {
 
   async importFromGoogleSpreadsheetAllSheets(dto: { url: string }) {
     const sheets = await GoogleSpreadsheetHelper.getEventsFromAllSheets(dto.url)
+    const sheetBundleNames = new Set(sheets.map((s) => s.sheetName))
+
+    // 시트에 없는 기존 번들은 통째로 삭제 (시트 = SSOT)
+    const existingBundles = await this.eventBundleService.findVisible()
+    for (const bundle of existingBundles) {
+      if (!sheetBundleNames.has(bundle.name)) {
+        await this.eventBundleService.remove(bundle.id)
+      }
+    }
+
     const allCreatedEvents = []
 
     for (let sheetIndex = 0; sheetIndex < sheets.length; sheetIndex++) {
