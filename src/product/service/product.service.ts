@@ -145,10 +145,11 @@ export class ProductService {
   }
 
   async importFromGoogleSpreadsheet(dto: ImportFromGoogleSpreadsheetProductDto) {
-    // 기존 상품 전체 삭제
+    // 기존 상품 삭제 (상담하기 제외)
     const existingProducts = await this.repository.find()
-    if (existingProducts.length > 0) {
-      await this.repository.remove(existingProducts)
+    const deletableProducts = existingProducts.filter((p) => !p.name?.includes("상담하기"))
+    if (deletableProducts.length > 0) {
+      await this.repository.remove(deletableProducts)
     }
 
     // 시트에서 새 상품 생성
