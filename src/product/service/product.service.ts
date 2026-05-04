@@ -148,7 +148,10 @@ export class ProductService {
     // 기존 상품 삭제 (상담하기 / 보유권 사용 제외)
     const existingProducts = await this.repository.find()
     const deletableProducts = existingProducts.filter(
-      (p) => !p.name?.includes("상담하기") && !p.name?.includes("보유권 사용"),
+      (p) =>
+        !p.name?.includes("상담하기") &&
+        !p.name?.includes("보유권 사용") &&
+        !p.name?.includes("방문 후 상담"),
     )
     if (deletableProducts.length > 0) {
       await this.repository.remove(deletableProducts)
@@ -223,7 +226,10 @@ export class ProductService {
     // Phase 0: 기존 상품 삭제 (상담하기 / 보유권 사용 제외) — 이벤트 import와 동일하게 누적 방지
     const existingProducts = await this.repository.find()
     const deletableProducts = existingProducts.filter(
-      (p) => !p.name?.includes("상담하기") && !p.name?.includes("보유권 사용"),
+      (p) =>
+        !p.name?.includes("상담하기") &&
+        !p.name?.includes("보유권 사용") &&
+        !p.name?.includes("방문 후 상담"),
     )
     if (deletableProducts.length > 0) {
       await this.repository.remove(deletableProducts)
