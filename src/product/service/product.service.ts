@@ -145,9 +145,11 @@ export class ProductService {
   }
 
   async importFromGoogleSpreadsheet(dto: ImportFromGoogleSpreadsheetProductDto) {
-    // 기존 상품 삭제 (상담하기 제외)
+    // 기존 상품 삭제 (상담하기 / 보유권 사용 제외)
     const existingProducts = await this.repository.find()
-    const deletableProducts = existingProducts.filter((p) => !p.name?.includes("상담하기"))
+    const deletableProducts = existingProducts.filter(
+      (p) => !p.name?.includes("상담하기") && !p.name?.includes("보유권 사용"),
+    )
     if (deletableProducts.length > 0) {
       await this.repository.remove(deletableProducts)
     }
@@ -218,9 +220,11 @@ export class ProductService {
   }
 
   async importFromGoogleSpreadsheetV2(dto: ImportFromGoogleSpreadsheetProductV2Dto) {
-    // Phase 0: 기존 상품 삭제 (상담하기 제외) — 이벤트 import와 동일하게 누적 방지
+    // Phase 0: 기존 상품 삭제 (상담하기 / 보유권 사용 제외) — 이벤트 import와 동일하게 누적 방지
     const existingProducts = await this.repository.find()
-    const deletableProducts = existingProducts.filter((p) => !p.name?.includes("상담하기"))
+    const deletableProducts = existingProducts.filter(
+      (p) => !p.name?.includes("상담하기") && !p.name?.includes("보유권 사용"),
+    )
     if (deletableProducts.length > 0) {
       await this.repository.remove(deletableProducts)
     }
