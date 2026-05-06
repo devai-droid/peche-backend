@@ -20,6 +20,7 @@ import { LoggerMiddleware } from "@root/shared/middleware/logger.middleware"
 import { AdminModule } from "@root/admin/auth.module"
 import { ScheduleModule } from "@nestjs/schedule"
 import { BlogModule } from "@root/blog/blog.module"
+import { BlogV2Module } from "@root/blog-v2/blog-v2.module"
 import { UploadModule } from "@root/upload/upload.module"
 
 @Module({
@@ -51,6 +52,7 @@ import { UploadModule } from "@root/upload/upload.module"
     SystemModule,
     AdminModule,
     BlogModule,
+    BlogV2Module,
     UploadModule,
   ],
   controllers: [],
