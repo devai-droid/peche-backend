@@ -93,4 +93,16 @@ export class BlogPostV2 extends TimeStampEntity {
   @ApiProperty()
   @Column({ name: "view_count", type: "int", default: 0 })
   viewCount: number
+
+  @ApiProperty({ required: false, description: "글 주인공 JSON-LD (마케터 medical_schema). 렌더 시 head 주입" })
+  @Column({ name: "extra_jsonld", type: "jsonb", nullable: true })
+  extraJsonld?: Record<string, unknown>
+
+  @ApiProperty({ required: false, description: "MedicalProcedure/MedicalCondition/HowTo/Article" })
+  @Column({ name: "schema_type", length: 50, nullable: true })
+  schemaType?: string
+
+  @ApiProperty({ required: false, description: "관련 글 섹션 [{anchor, slug}]" })
+  @Column({ name: "internal_links", type: "jsonb", nullable: true })
+  internalLinks?: Array<{ anchor: string; slug: string }>
 }

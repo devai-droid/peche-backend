@@ -1,4 +1,5 @@
 import { NestFactory } from "@nestjs/core"
+import { NestExpressApplication } from "@nestjs/platform-express"
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger"
 import { ConfigService } from "@nestjs/config"
 import { join } from "path"
@@ -18,7 +19,18 @@ import { json, urlencoded } from "body-parser"
 
 async function bootstrap() {
   STATIC_CONFIG.JWT_INFO = await AwsHelper.getJWTInfo()
-  const app = await NestFactory.create(AppModule, { cors: true })
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { cors: true })
+
+  // 로컬 환경: S3 fallback 이미지 정적 서빙 (admin 8087에서 로드 가능하게 CORP 완화)
+  if (process.env.IS_LOCAL_ENV === "1") {
+    app.useStaticAssets(join(process.cwd(), "uploads"), {
+      prefix: "/uploads",
+      setHeaders: (res) => {
+        res.set("Cross-Origin-Resource-Policy", "cross-origin")
+        res.set("Access-Control-Allow-Origin", "*")
+      },
+    })
+  }
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle(`${SERVICE_NAME.toUpperCase()} API`)

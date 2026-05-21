@@ -4,11 +4,18 @@ import { Repository } from "typeorm"
 import { BlogPostV2 } from "@root/blog-v2/entities/post.entity"
 import { BlogPostCitation } from "@root/blog-v2/entities/post-citation.entity"
 import { BlogPostSlugHistory } from "@root/blog-v2/entities/post-slug-history.entity"
+import { BlogDoctor } from "@root/blog-v2/entities/doctor.entity"
+import { BlogKeyword } from "@root/blog-v2/entities/keyword.entity"
 import { BlogSlugService } from "@root/blog-v2/services/slug.service"
 import { BlogSummaryService } from "@root/blog-v2/services/summary.service"
 import { BlogImageUploadService } from "@root/blog-v2/services/blog-image-upload.service"
 import { BlogPostLang, BlogPostStatus } from "@root/blog-v2/enum/blog-v2.enum"
-import { parseBlogMarkdown } from "@root/blog-v2/utils/markdown.util"
+import {
+  extractSummaryFromBody,
+  parseBlogMarkdown,
+  parseMedicalSchema,
+  renderMarkdownToHtml,
+} from "@root/blog-v2/utils/markdown.util"
 import { UploadBlogPostDto } from "@root/blog-v2/dto/upload-blog-post.dto"
 import { QueryBlogPostDto } from "@root/blog-v2/dto/query-blog-post.dto"
 import { User } from "@root/shared/interface/user"
@@ -28,51 +35,91 @@ export class BlogV2PostService {
     @InjectRepository(BlogPostV2) private readonly postRepo: Repository<BlogPostV2>,
     @InjectRepository(BlogPostCitation) private readonly citationRepo: Repository<BlogPostCitation>,
     @InjectRepository(BlogPostSlugHistory) private readonly historyRepo: Repository<BlogPostSlugHistory>,
+    @InjectRepository(BlogDoctor) private readonly doctorRepo: Repository<BlogDoctor>,
+    @InjectRepository(BlogKeyword) private readonly keywordRepo: Repository<BlogKeyword>,
     private readonly slugService: BlogSlugService,
     private readonly summaryService: BlogSummaryService,
     private readonly imageUpload: BlogImageUploadService,
   ) {}
 
   /**
-   * multipart로 받은 .md + 이미지 파일들 → 이미지 S3 업로드 + URL 치환 → 초안 저장.
+   * multipart로 받은 .md + 이미지 파일들 → 이미지 S3 업로드 + 본문/썸네일 URL 치환 → 초안 저장.
    */
-  async uploadFromFiles(files: Express.Multer.File[], user: User): Promise<{ id: string; slug: string; status: string }> {
+  async uploadFromFiles(files: Express.Multer.File[], user: User): Promise<{ id: string; slug: string; status: string; warnings: string[] }> {
     const mdFile = files.find((f) => f.originalname.toLowerCase().endsWith(".md"))
     if (!mdFile) throw new BadRequestException(".md 파일이 multipart에 없음")
 
     const attachments = files.filter((f) => f !== mdFile)
     const rawMarkdown = mdFile.buffer.toString("utf-8")
-    const markdown = await this.imageUpload.processImages(rawMarkdown, attachments)
+    const urlMap = await this.imageUpload.uploadAttachments(attachments)
+    const bodyReplaced = this.imageUpload.replacePaths(rawMarkdown, urlMap)
 
-    return this.upload({ markdown }, user)
+    return this.createFromMarkdown(bodyReplaced, user, urlMap)
+  }
+
+  /** 마크다운 텍스트만 업로드 (이미지 없음). */
+  async upload(dto: UploadBlogPostDto, user: User): Promise<{ id: string; slug: string; status: string; warnings: string[] }> {
+    return this.createFromMarkdown(dto.markdown, user)
   }
 
   /**
-   * 마크다운 텍스트 → DB 초안 저장.
-   * frontmatter 누락 필드는 자동 생성 hook으로 채움 (slug/summary).
+   * 마크다운 → frontmatter 매핑(이름→ID) + 자동 hook(slug/summary) → 초안 저장.
+   * 매핑 실패는 발행 막지 않고 warnings로 반환 (graceful).
    */
-  async upload(dto: UploadBlogPostDto, user: User): Promise<{ id: string; slug: string; status: string }> {
-    const { frontmatter, bodyMd } = parseBlogMarkdown(dto.markdown)
+  private async createFromMarkdown(
+    markdown: string,
+    user: User,
+    urlMap?: Map<string, string>,
+  ): Promise<{ id: string; slug: string; status: string; warnings: string[] }> {
+    const { frontmatter, bodyMd } = parseBlogMarkdown(markdown)
+    const warnings: string[] = []
 
     if (!frontmatter.title) throw new BadRequestException("frontmatter.title 필수")
     if (!bodyMd) throw new BadRequestException("본문 비어있음")
+
+    // 이름 → ID 매핑 (직접 ID 입력이 있으면 우선)
+    const authorDoctorId =
+      frontmatter.author_doctor_id ?? (await this.resolveDoctorId(frontmatter.author_doctor, warnings))
+    const keywordId = frontmatter.keyword_id ?? (await this.resolveKeywordId(frontmatter.keyword, warnings))
+
+    // 썸네일: 업로드 맵에서 해결, 없으면 frontmatter 원본
+    const thumbnailUrl = urlMap
+      ? this.imageUpload.resolveSingle(frontmatter.thumbnail, urlMap)
+      : frontmatter.thumbnail
+
+    // 핵심 요약: frontmatter 우선 → 본문 ## 💡 핵심 요약 → (없으면 LLM fallback)
+    const summaryText =
+      frontmatter.summary ?? frontmatter.meta_description ?? extractSummaryFromBody(bodyMd) ?? undefined
+
+    // medical_schema / main_schema → extra_jsonld
+    const extraJsonld = parseMedicalSchema(frontmatter.medical_schema ?? frontmatter.main_schema)
+    if ((frontmatter.medical_schema || frontmatter.main_schema) && !extraJsonld) {
+      warnings.push("medical_schema JSON 파싱 실패 — extra_jsonld 미저장")
+    }
 
     const lang = (frontmatter.lang as BlogPostLang) ?? BlogPostLang.KO
     const post = this.postRepo.create({
       title: frontmatter.title,
       subtitle: frontmatter.subtitle,
       bodyMd,
-      thumbnailUrl: frontmatter.thumbnail,
+      bodyHtml: renderMarkdownToHtml(bodyMd),
+      thumbnailUrl,
       lang,
       status: BlogPostStatus.DRAFT,
       targetSite: "peche",
       mainKeyword: frontmatter.main_keyword,
       subKeywords: frontmatter.meta_keywords ?? frontmatter.sub_keywords,
-      summaryText: frontmatter.summary ?? frontmatter.meta_description,
+      summaryText,
       slug: frontmatter.slug,
-      keywordId: frontmatter.keyword_id,
+      keywordId,
       productCategoryId: frontmatter.product_category_id,
-      authorDoctorId: frontmatter.author_doctor_id,
+      authorDoctorId,
+      schemaType: frontmatter.schema_type,
+      extraJsonld: extraJsonld ?? undefined,
+      internalLinks: Array.isArray(frontmatter.internal_links)
+        ? frontmatter.internal_links.map((l) => ({ anchor: l.anchor, slug: l.slug }))
+        : undefined,
+      publishedAt: frontmatter.published_at ? new Date(frontmatter.published_at) : undefined,
       createdBy: user?.id,
       updatedBy: user?.id,
     })
@@ -110,7 +157,35 @@ export class BlogV2PostService {
       if (citations.length > 0) await this.citationRepo.save(citations)
     }
 
-    return { id: saved.id, slug: saved.slug, status: saved.status }
+    return { id: saved.id, slug: saved.slug, status: saved.status, warnings }
+  }
+
+  /** 감수의사 이름 → blog.doctors ID. 못 찾으면 경고 + undefined (발행 진행). */
+  private async resolveDoctorId(name: string | undefined, warnings: string[]): Promise<string | undefined> {
+    if (!name) return undefined
+    const doc = await this.doctorRepo
+      .createQueryBuilder("d")
+      .where("d.name = :name OR :name ILIKE d.name || ' %' OR d.name ILIKE :pattern", {
+        name,
+        pattern: `${name.split(" ")[0]}%`,
+      })
+      .getOne()
+    if (!doc) {
+      warnings.push(`감수의사 매칭 실패: "${name}" — 감수의사 풀에 먼저 등록 필요`)
+      return undefined
+    }
+    return doc.id
+  }
+
+  /** 키워드 이름 → blog.keywords ID. 못 찾으면 경고 + undefined. */
+  private async resolveKeywordId(name: string | undefined, warnings: string[]): Promise<string | undefined> {
+    if (!name) return undefined
+    const kw = await this.keywordRepo.findOne({ where: { keyword: name } })
+    if (!kw) {
+      warnings.push(`키워드 매칭 실패: "${name}" — 키워드 풀에 먼저 등록 필요`)
+      return undefined
+    }
+    return kw.id
   }
 
   async findOne(id: string): Promise<BlogPostV2> {
