@@ -9,7 +9,7 @@ import { AppModule } from "./app.module"
 import { SERVICE_NAME, STATIC_CONFIG } from "./shared/constant/static-config"
 import { Env } from "./shared/enum/env"
 import { SWAGGER_TOKEN_NAME } from "./shared/constant/auth"
-import { BadRequestException, Logger, ValidationError, ValidationPipe } from "@nestjs/common"
+import { BadRequestException, Logger, RequestMethod, ValidationError, ValidationPipe } from "@nestjs/common"
 import { ClassTransformInterceptor } from "./shared/interceptor/class-transform.interceptor"
 import { EntityPropertyNotFoundFilter } from "./shared/exception/entity-property-not-found.filter"
 import { EntityNotFoundFilter } from "./shared/exception/entity-not-found.filter"
@@ -44,7 +44,13 @@ async function bootstrap() {
   const port = config.get<number>(Env.PORT)
   const globalPrefix = config.get<string>(Env.GLOBAL_PREFIX, "api")
 
-  app.setGlobalPrefix(globalPrefix)
+  app.setGlobalPrefix(globalPrefix, {
+    // 공개 블로그 SSR은 /api 프리픽스 없이 /{lang}/blog[/{slug}] 로 서빙
+    exclude: [
+      { path: ":lang/blog", method: RequestMethod.GET },
+      { path: ":lang/blog/:slug", method: RequestMethod.GET },
+    ],
+  })
   app.useGlobalPipes(
     new ValidationPipe({
       forbidNonWhitelisted: true,

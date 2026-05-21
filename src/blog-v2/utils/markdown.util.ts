@@ -22,6 +22,24 @@ export function renderMarkdownToHtml(bodyMd: string): string {
     $el.replaceWith($("<h2></h2>").html($el.html() ?? ""))
   })
 
+  // "💡 핵심 요약" 섹션 제거 — 페이지 상단 요약 박스(summary_text)와 중복.
+  // 헤딩 + 내용 + 바로 뒤 구분선(hr)까지만 제거하고, 그 다음 인트로는 유지.
+  const $summary = $("h2, h3")
+    .filter((_, el) => /핵심\s*요약/.test($(el).text()))
+    .first()
+  if ($summary.length) {
+    let $n = $summary.next()
+    $summary.remove()
+    while ($n.length) {
+      const $tmp = $n.next()
+      const isHr = $n.is("hr")
+      if ($n.is("h2, h3")) break // 다음 섹션 헤딩 만나면 중단 (안전장치)
+      $n.remove()
+      if (isHr) break // 핵심요약 직후 첫 구분선까지만
+      $n = $tmp
+    }
+  }
+
   const counter: Record<string, number> = {}
   $("h2, h3").each((_, el) => {
     const $el = $(el)
@@ -53,6 +71,7 @@ export interface BlogPostFrontmatter {
   // 분류 (마케터는 이름으로 입력)
   hospital?: string
   department?: string
+  product_category?: string
   keyword?: string
   main_keyword?: string
   sub_keywords?: string[]

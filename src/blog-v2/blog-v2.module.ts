@@ -15,11 +15,13 @@ import { BlogImageUploadService } from "@root/blog-v2/services/blog-image-upload
 import { BlogV2PostController } from "@root/blog-v2/controller/blog-v2-post.controller"
 import { BlogKeywordController } from "@root/blog-v2/controller/blog-keyword.controller"
 import { BlogDoctorController } from "@root/blog-v2/controller/blog-doctor.controller"
+import { BlogPublicController } from "@root/blog-v2/controller/blog-public.controller"
+import { BlogRenderService } from "@root/blog-v2/services/blog-render.service"
 import { UploadService } from "@root/upload/upload.service"
 
 @Module({
   imports: [TypeOrmModule.forFeature([BlogPostV2, BlogKeyword, BlogDoctor, BlogPostSlugHistory, BlogPostCitation])],
-  controllers: [BlogV2PostController, BlogKeywordController, BlogDoctorController],
+  controllers: [BlogV2PostController, BlogKeywordController, BlogDoctorController, BlogPublicController],
   providers: [
     AnthropicService,
     BlogSlugService,
@@ -28,6 +30,7 @@ import { UploadService } from "@root/upload/upload.service"
     BlogKeywordService,
     BlogDoctorService,
     BlogImageUploadService,
+    BlogRenderService,
     UploadService,
   ],
   exports: [

@@ -81,6 +81,11 @@ export class BlogV2PostService {
     const authorDoctorId =
       frontmatter.author_doctor_id ?? (await this.resolveDoctorId(frontmatter.author_doctor, warnings))
     const keywordId = frontmatter.keyword_id ?? (await this.resolveKeywordId(frontmatter.keyword, warnings))
+    // 시술 대분류: department(시술 중심 사이트는 시술 대분류명) → public.product_category 매칭
+    // → 전체시술 페이지의 해당 대분류 안에 글이 노출됨
+    const productCategoryId =
+      frontmatter.product_category_id ??
+      (await this.resolveProductCategoryId(frontmatter.product_category ?? frontmatter.department, warnings))
 
     // 썸네일: 업로드 맵에서 해결, 없으면 frontmatter 원본
     const thumbnailUrl = urlMap
@@ -112,7 +117,7 @@ export class BlogV2PostService {
       summaryText,
       slug: frontmatter.slug,
       keywordId,
-      productCategoryId: frontmatter.product_category_id,
+      productCategoryId,
       authorDoctorId,
       schemaType: frontmatter.schema_type,
       extraJsonld: extraJsonld ?? undefined,
@@ -188,6 +193,24 @@ export class BlogV2PostService {
     return kw.id
   }
 
+  /**
+   * 시술 대분류명 → public.product_category id (읽기 전용 raw query, 운영 테이블 무손).
+   * 전체시술 페이지의 해당 대분류 안에 글이 노출되도록 매칭.
+   * 못 찾으면 경고 + undefined (발행 진행).
+   */
+  private async resolveProductCategoryId(name: string | undefined, warnings: string[]): Promise<string | undefined> {
+    if (!name) return undefined
+    const rows: Array<{ id: string }> = await this.postRepo.query(
+      `SELECT id FROM public.product_category WHERE name = $1 AND status = 'ACTIVE' LIMIT 1`,
+      [name],
+    )
+    if (!rows.length) {
+      warnings.push(`시술 대분류 매칭 실패: "${name}" — 전체시술 페이지 대분류명과 정확히 일치해야 함`)
+      return undefined
+    }
+    return rows[0].id
+  }
+
   async findOne(id: string): Promise<BlogPostV2> {
     const post = await this.postRepo.findOne({
       where: { id },
@@ -195,6 +218,19 @@ export class BlogV2PostService {
     })
     if (!post) throw new NotFoundException(`blog post ${id} not found`)
     return post
+  }
+
+  /** 공개 페이지용: slug + lang으로 조회 (관계 포함). */
+  async findBySlug(slug: string, lang: string): Promise<BlogPostV2 | null> {
+    return this.postRepo.findOne({
+      where: { slug, lang: lang as BlogPostLang },
+      relations: ["keyword", "authorDoctor"],
+    })
+  }
+
+  /** 출처 인용 목록 (공개 페이지 citation). */
+  async findCitations(postId: string): Promise<BlogPostCitation[]> {
+    return this.citationRepo.find({ where: { postId }, order: { orderNum: "ASC" } })
   }
 
   async findMany(query: QueryBlogPostDto): Promise<PaginatedResult<BlogPostV2>> {
