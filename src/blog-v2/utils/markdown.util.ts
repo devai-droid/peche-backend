@@ -1,4 +1,4 @@
-import matter from "gray-matter"
+import * as matter from "gray-matter"
 
 export interface BlogPostFrontmatter {
   title?: string

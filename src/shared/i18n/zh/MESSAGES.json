@@ -8,19 +8,25 @@
   "VALIDATION": {
   },
   "AUTHENTICATION": {
-    "VERIFICATION_CODE": "【Peche Clinic】 验证码"
+    "VERIFICATION_CODE": "[佩舒皮肤科] 您的身份验证码通知",
+    "VERIFICATION_CODE_BODY": "[佩舒皮肤科]<br><br>您的身份验证码为 {code}。<br>为了保护您的个人信息安全，请勿透露给他人。<br><br>谢谢。"
   },
   "NOTIFICATION": {
     "TITLE": "[Peche Clinic]\n",
+    "SUBJECT_NEW_RESERVATION": "[佩舒皮肤科] 您的预约申请已受理",
+    "SUBJECT_REJECTION": "[佩舒皮肤科] 预约时间已满及调整通知",
+    "SUBJECT_CONFIRMATION": "[佩舒皮肤科] 您的预约已确认",
+    "SUBJECT_CANCELLATION": "[佩舒皮肤科] 您的预约已取消",
     "NEW_RESERVATION": "",
     "THE_DAY_BEFORE": "",
     "ON_THE_DAY": "",
-    "NEW_RESERVATION_LONG": "[Peche露岱皮肤科]",
-    "NEW_RESERVATION_LONG_BUILDING_1": "[Peche露岱皮肤科]",
-    "NEW_RESERVATION_LONG_BUILDING_2": "[Peche露岱皮肤科]",
-    "THE_DAY_BEFORE_LONG": "[Peche露岱皮肤科]",
-    "ON_THE_DAY_LONG": "[Peche露岱皮肤科]",
-    "RESERVATION_CANCELLATION": "",
-    "RESERVATION_CONFIRMATION": "[페슈의원] 예약이 확정되었습니다<br><br>안녕하세요 {name} 고객님,<br>페슈의원입니다.<br><br>고객님의 예약이 아래와 같이 확정되었습니다.<br><br>예약일시: {date} {time}<br><br>시술 종류에 따라 대기 시간이<br>약 10~30분 정도 발생할 수 있습니다.<br><br>예약 변경이나 취소가 필요하신 경우<br>미리 연락 부탁드립니다.<br><br>내원 일정에 맞춰 성심껏 준비하겠습니다.<br><br>편안한 마음으로 뵐 수 있길 바랍니다.<br><br>[위치안내]<br>서울특별시 강남구 강남대로 364, 3층 전체(역삼동, 미왕빌딩)<br><br>[주차안내]<br>건물 내 지하주차장 이용 가능<br><br>감사합니다.<br>페슈의원 드림"
+    "NEW_RESERVATION_LONG": "[佩舒皮肤科]<br>您好！过程通透，美愈清晰——这里是佩舒皮肤科。🍑<br><br>{name} 顾客<br>我们在确认您申请的预约时间后，将通过电子邮件再次通知您预约成功与否（确定或约满）。<br><br>如有任何疑问，请随时与我们联系。<br><br>▷ 微信服务号：韩国江南佩舒皮肤科 Peche Clinic<br>▷ Website Link: https://pecheskin.clinic/zh/",
+    "NEW_RESERVATION_LONG_BUILDING_1": "[佩舒皮肤科]<br>您好！过程通透，美愈清晰——这里是佩舒皮肤科。🍑<br><br>{name} 顾客<br>我们在确认您申请的预约时间后，将通过电子邮件再次通知您预约成功与否（确定或约满）。<br><br>如有任何疑问，请随时与我们联系。<br><br>▷ 微信服务号：韩国江南佩舒皮肤科 Peche Clinic<br>▷ Website Link: https://pecheskin.clinic/zh/",
+    "NEW_RESERVATION_LONG_BUILDING_2": "",
+    "THE_DAY_BEFORE_LONG": "",
+    "ON_THE_DAY_LONG": "",
+    "RESERVATION_REJECTION": "[佩舒皮肤科]<br>您好！过程通透，美愈清晰——这里是佩舒皮肤科。🍑<br><br>{name} 顾客，<br>您申请的时间段目前已全部约满。<br>为您带来不便，我们深表歉意。<br><br>我们将协助您调整至其他日期和时间。<br>请与我们联系 :)<br><br>▷ 微信服务号：韩国江南佩舒皮肤科 Peche Clinic<br>▷ Website Link: https://pecheskin.clinic/zh/",
+    "RESERVATION_CANCELLATION": "[佩舒皮肤科]<br>您好！过程通透，美愈清晰——这里是佩舒皮肤科。🍑<br><br>{name} 顾客，<br>您原定于 {date} {time} 的预约已取消。<br><br>如果您需要重新预约其他日期，请随时与我们联系，我们将亲切地为您提供协助。<br><br>👉 来院路线<br>地址：首尔江南区江南大道364 美王大厦3楼<br>地铁：新盆唐线 江南站 4号出口 正旁边（美王大厦）<br><br>★停车<br>可使用大厦后门的机械式立体车库（仅限2.2吨以下车辆）。<br><br>▷ 微信服务号：韩国江南佩舒皮肤科 Peche Clinic<br>▷ Website Link: https://pecheskin.clinic/zh/",
+    "RESERVATION_CONFIRMATION": "[佩舒皮肤科]<br>您好！过程通透，美愈清晰——这里是佩舒皮肤科。🍑<br><br>{name} 顾客、<br>您的预约已成功确定：时间为 {date} {time}。<br>如有任何变动，请提前与我们联系。<br><br>我们将根据您的到院日程竭诚做好准备。<br>谢谢 :)<br><br>*请注意，每次到院均须携带有效的实体身份证件（护照或外国人登录证）。<br><br>👉 来院路线<br>地址：首尔江南区江南大道364 美王大厦3楼<br>地铁：新盆唐线 江南站 4号出口 正旁边（美王大厦）<br><br>★停车<br>可使用大厦后门的机械式立体车库（仅限2.2吨以下车辆）。<br><br>▷ 微信服务号：韩国江南佩舒皮肤科 Peche Clinic<br>▷ Website Link: https://pecheskin.clinic/zh/"
   }
 }

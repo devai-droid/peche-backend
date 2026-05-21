@@ -13,7 +13,7 @@ import { UploadBlogPostDto } from "@root/blog-v2/dto/upload-blog-post.dto"
 import { QueryBlogPostDto } from "@root/blog-v2/dto/query-blog-post.dto"
 import { User } from "@root/shared/interface/user"
 
-interface PaginatedResult<T> {
+export interface PaginatedResult<T> {
   items: T[]
   total: number
   page: number
