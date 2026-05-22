@@ -75,6 +75,11 @@ export interface BlogPostFrontmatter {
   product_category?: string
   // [시술 중심 의원] 상세페이지 — CTA 링크 대상 (사이트 실제 상세페이지명과 일치, 자동 매칭)
   product_page?: string
+  // 키워드 (신규 명칭) — 마케터 md 표준
+  topic_keyword?: string // 주제 키워드 (blog.keywords 매칭 + "OO 관련글 더보기" 헤딩)
+  title_keyword?: string // 제목 키워드 (main_keyword)
+  content_keywords?: string[] // 콘텐츠(보조) 키워드 (sub_keywords)
+  // 키워드 (구 명칭, 하위호환)
   keyword?: string
   main_keyword?: string
   sub_keywords?: string[]

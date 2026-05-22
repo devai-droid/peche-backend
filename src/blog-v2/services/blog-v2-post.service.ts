@@ -105,7 +105,9 @@ export class BlogV2PostService {
 
     const authorDoctorId =
       frontmatter.author_doctor_id ?? (await this.resolveDoctorId(frontmatter.author_doctor, warnings))
-    const keywordId = frontmatter.keyword_id ?? (await this.resolveKeywordId(frontmatter.keyword, warnings))
+    const keywordId =
+      frontmatter.keyword_id ??
+      (await this.resolveKeywordId(frontmatter.topic_keyword ?? frontmatter.keyword, warnings))
     const productCategoryId =
       frontmatter.product_category_id ??
       (await this.resolveProductCategoryId(frontmatter.product_category ?? frontmatter.department, warnings))
@@ -134,8 +136,9 @@ export class BlogV2PostService {
     post.bodyHtml = renderMarkdownToHtml(bodyMd)
     if (thumbnailUrl) post.thumbnailUrl = thumbnailUrl
     post.lang = (frontmatter.lang as BlogPostLang) ?? post.lang
-    post.mainKeyword = frontmatter.main_keyword
-    post.subKeywords = frontmatter.meta_keywords ?? frontmatter.sub_keywords
+    post.mainKeyword = frontmatter.title_keyword ?? frontmatter.main_keyword
+    post.subKeywords =
+      frontmatter.content_keywords ?? frontmatter.meta_keywords ?? frontmatter.sub_keywords
     post.summaryText = summaryText ?? post.summaryText
     post.slug = newSlug
     post.keywordId = keywordId
@@ -198,7 +201,9 @@ export class BlogV2PostService {
     // 이름 → ID 매핑 (직접 ID 입력이 있으면 우선)
     const authorDoctorId =
       frontmatter.author_doctor_id ?? (await this.resolveDoctorId(frontmatter.author_doctor, warnings))
-    const keywordId = frontmatter.keyword_id ?? (await this.resolveKeywordId(frontmatter.keyword, warnings))
+    const keywordId =
+      frontmatter.keyword_id ??
+      (await this.resolveKeywordId(frontmatter.topic_keyword ?? frontmatter.keyword, warnings))
     // 시술 대분류: department(시술 중심 사이트는 시술 대분류명) → public.product_category 매칭
     // → 전체시술 페이지의 해당 대분류 안에 글이 노출됨
     const productCategoryId =
@@ -230,8 +235,9 @@ export class BlogV2PostService {
       lang,
       status: BlogPostStatus.DRAFT,
       targetSite: "peche",
-      mainKeyword: frontmatter.main_keyword,
-      subKeywords: frontmatter.meta_keywords ?? frontmatter.sub_keywords,
+      mainKeyword: frontmatter.title_keyword ?? frontmatter.main_keyword,
+      subKeywords:
+        frontmatter.content_keywords ?? frontmatter.meta_keywords ?? frontmatter.sub_keywords,
       summaryText,
       slug: frontmatter.slug,
       keywordId,
