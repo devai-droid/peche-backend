@@ -8,25 +8,19 @@
   "VALIDATION": {
   },
   "AUTHENTICATION": {
-    "VERIFICATION_CODE": "[PECHE Clinic] 本人確認の認証番号のご案内",
-    "VERIFICATION_CODE_BODY": "[PECHE Clinic]<br>こんにちは。過程は透明に、美しさは鮮明に、PECHE Clinicです🍑<br><br>本人確認のための認証番号は {code} です。<br>個人情報保護のため、第三者に共有しないようご注意ください。<br><br>よろしくお願いいたします。"
+    "VERIFICATION_CODE": "[Peche Clinic] 検証コード"
   },
   "NOTIFICATION": {
     "TITLE": "[Peche Clinic]\n",
-    "SUBJECT_NEW_RESERVATION": "[PECHE Clinic] ご予約リクエスト受付完了のお知らせ",
-    "SUBJECT_REJECTION": "[PECHE Clinic] ご予約時間満員による日時変更のご案内",
-    "SUBJECT_CONFIRMATION": "[PECHE Clinic] ご予約確定のお知らせ",
-    "SUBJECT_CANCELLATION": "[PECHE Clinic] ご予約キャンセルのお知らせ",
     "NEW_RESERVATION": "{name}様、こんにちは。\n{date} {time}で予約されております。",
     "THE_DAY_BEFORE": "{name}様、こんにちは。\n{date} {time} ご予約に変更はございませんか。",
-    "ON_THE_DAY": "{name}様、こんにちは。\n本日 {time}お待ちしております。",
-    "NEW_RESERVATION_LONG": "[PECHE Clinic]<br>こんにちは。過程は透明に、美しさは鮮明に、PECHE Clinicです🍑<br><br>{name} 様<br>ご希望いただいたご予約時間を確認後、確定または満員による日程変更のご案内をメールにて改めてご連絡させていただきます。<br><br>ご不明な点がございましたら、いつでもお気軽にお問い合わせください。<br><br>▷ お問い合わせ : LINE @pecheclinic.jp<br>▷ Website Link: https://pecheskin.clinic/ja/",
-    "NEW_RESERVATION_LONG_BUILDING_1": "[PECHE Clinic]<br>こんにちは。過程は透明に、美しさは鮮明に、PECHE Clinicです🍑<br><br>{name} 様<br>ご希望いただいたご予約時間を確認後、確定または満員による日程変更のご案内をメールにて改めてご連絡させていただきます。<br><br>ご不明な点がございましたら、いつでもお気軽にお問い合わせください。<br><br>▷ お問い合わせ : LINE @pecheclinic.jp<br>▷ Website Link: https://pecheskin.clinic/ja/",
-    "NEW_RESERVATION_LONG_BUILDING_2": "",
-    "THE_DAY_BEFORE_LONG": "",
-    "ON_THE_DAY_LONG": "",
-    "RESERVATION_REJECTION": "[PECHE Clinic]<br>こんにちは。過程は透明に、美しさは鮮明に、PECHE Clinicです🍑<br><br>{name} 様、<br>ご希望いただいたお時間は、現在ご予約がすべて満員となっております。<br>ご不便をおかけし大変申し訳ございません。<br><br>別の日程への変更をご案内させていただきます。<br>お手数ですが、ご連絡をお願いいたします :)<br><br>▷ お問い合わせ : LINE @pecheclinic.jp<br>▷ Website Link: https://pecheskin.clinic/ja/",
-    "RESERVATION_CANCELLATION": "[PECHE Clinic]<br>こんにちは。過程は透明に、美しさは鮮明に、PECHE Clinicです🍑<br><br>{name} 様、<br>{date} {time} のご予約がキャンセルされました。<br><br>別の日程でのご予約をご希望の場合は、いつでもお気軽にお問い合わせください。丁寧にご案内いたします。<br><br>👉 アクセス<br>住所：ソウル特別市江南区江南大路364 美王ビル3階<br>地下鉄：新盆唐線 江南駅 4番出口 すぐ横（美王ビル）<br><br>★駐車場<br>ビル裏手の機械式駐車場をご利用いただけます（2.2トン以下の車両のみ可能）。<br><br>▷ お問い合わせ : LINE @pecheclinic.jp<br>▷ Website Link: https://pecheskin.clinic/ja/",
-    "RESERVATION_CONFIRMATION": "[PECHE Clinic]<br>こんにちは。過程は透明に、美しさは鮮明に、PECHE Clinicです🍑<br><br>{name} 様、<br>{date} {time} のご予約が確定いたしました。<br>ご変更がございましたら、お早めにご連絡をお願いいたします。<br><br>ご来院に合わせて誠心誠意ご準備いたします。<br>よろしくお願いいたします :)<br><br>*ご来院の際は毎回、有効な身分証明書の原本（パスポートまたは外国人登録証）を必ずご持参ください。<br><br>👉 アクセス<br>住所：ソウル特別市江南区江南大路364 美王ビル3階<br>地下鉄：新盆唐線 江南駅 4番出口 すぐ横（美王ビル）<br><br>★駐車場<br>ビル裏手の機械式駐車場をご利用いただけます（2.2トン以下の車両のみ可能）。<br><br>▷ お問い合わせ : LINE @pecheclinic.jp<br>▷ Website Link: https://pecheskin.clinic/ja/"
+    "ON_THE_DAY": "{name}様、こんにちは。\n本日 #{예약시간}お待ちしております。",
+    "NEW_RESERVATION_LONG": "[Peche Clinic]",
+    "NEW_RESERVATION_LONG_BUILDING_1": "[Peche Clinic]",
+    "NEW_RESERVATION_LONG_BUILDING_2": "[Peche Clinic]",
+    "THE_DAY_BEFORE_LONG": "[Peche Clinic]",
+    "ON_THE_DAY_LONG": "[Peche Clinic]",
+    "RESERVATION_CANCELLATION": "[Peche Clinic]",
+    "RESERVATION_CONFIRMATION": "[페슈의원] 예약이 확정되었습니다<br><br>안녕하세요 {name} 고객님,<br>페슈의원입니다.<br><br>고객님의 예약이 아래와 같이 확정되었습니다.<br><br>예약일시: {date} {time}<br><br>시술 종류에 따라 대기 시간이<br>약 10~30분 정도 발생할 수 있습니다.<br><br>예약 변경이나 취소가 필요하신 경우<br>미리 연락 부탁드립니다.<br><br>내원 일정에 맞춰 성심껏 준비하겠습니다.<br><br>편안한 마음으로 뵐 수 있길 바랍니다.<br><br>[위치안내]<br>서울특별시 강남구 강남대로 364, 3층 전체(역삼동, 미왕빌딩)<br><br>[주차안내]<br>건물 내 지하주차장 이용 가능<br><br>감사합니다.<br>페슈의원 드림"
   }
 }

@@ -152,7 +152,7 @@ export class ReservationService {
     const { user } = reservation
     const lang = user.languageLocale ?? I18nContext.current().lang
     // const reservationBuilding = reservation.building
-    const title = this.i18n.t("MESSAGES.NOTIFICATION.SUBJECT_NEW_RESERVATION", { lang })
+    const title = this.i18n.t("MESSAGES.NOTIFICATION.TITLE", { lang })
     const args = {
       name: user.name ?? "",
       date: dayjs(reservation.datetime).format("MM-DD"),
@@ -185,7 +185,7 @@ export class ReservationService {
     const { user } = reservation
     const lang = user.languageLocale ?? I18nContext.current().lang
     const reservationBuilding = reservation.building
-    const title = this.i18n.t("MESSAGES.NOTIFICATION.SUBJECT_CONFIRMATION", { lang })
+    const title = this.i18n.t("MESSAGES.NOTIFICATION.TITLE", { lang })
     const args = {
       name: user.name ?? "",
       date: dayjs(reservation.datetime).format("MM-DD"),
@@ -291,14 +291,10 @@ export class ReservationService {
       if (user.email) {
         await this.sendSesEmail(
           user.email,
-          this.i18n.t("MESSAGES.NOTIFICATION.SUBJECT_CANCELLATION", { lang }),
+          this.i18n.t("MESSAGES.NOTIFICATION.TITLE", { lang }),
           this.i18n.t("MESSAGES.NOTIFICATION.RESERVATION_CANCELLATION", {
             lang,
-            args: {
-              name: user.name ?? "",
-              date: dayjs(reservation.datetime).format("MM-DD"),
-              time: dayjs(reservation.datetime).format("A hh:mm"),
-            },
+            args: { datetime: dayjs(reservation.datetime).format("YYYY-MM-DD A hh:mm") },
           }),
         )
       }
@@ -320,21 +316,6 @@ export class ReservationService {
   async sendRejectReservationMessage(reservation: Reservation) {
     try {
       const user = reservation.user
-      const lang = user.languageLocale ?? I18nContext.current().lang
-      if (user.email) {
-        await this.sendSesEmail(
-          user.email,
-          this.i18n.t("MESSAGES.NOTIFICATION.SUBJECT_REJECTION", { lang }),
-          this.i18n.t("MESSAGES.NOTIFICATION.RESERVATION_REJECTION", {
-            lang,
-            args: {
-              name: user.name ?? "",
-              date: dayjs(reservation.datetime).format("MM-DD"),
-              time: dayjs(reservation.datetime).format("A hh:mm"),
-            },
-          }),
-        )
-      }
       if (user.phoneNumber && (user.phoneNumber.startsWith("+82") || user.provider == AuthProvider.KAKAO)) {
         await this.kakaoService.sendReservationRejectMessage([user.phoneNumber], {
           [KAKAO_TEMPLATE.FIELD_NAME]: user.name ?? "고객",

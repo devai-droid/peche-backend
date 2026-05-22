@@ -9,12 +9,8 @@ export class SesService {
   constructor(private readonly i18n: I18nService) {}
 
   async sendVerificationEmail(email: string, code: string) {
-    const lang = I18nContext.current().lang
-    const subject = this.i18n.t("MESSAGES.AUTHENTICATION.VERIFICATION_CODE", { lang })
-    const body = this.i18n.t("MESSAGES.AUTHENTICATION.VERIFICATION_CODE_BODY", {
-      lang,
-      args: { code },
-    })
+    const subject = this.i18n.t("MESSAGES.AUTHENTICATION.VERIFICATION_CODE", { lang: I18nContext.current().lang })
+    const body = `${subject}: ${code}`
     return await this.sendSesEmail(email, subject, body)
   }
 

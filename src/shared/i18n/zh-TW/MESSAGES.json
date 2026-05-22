@@ -8,25 +8,19 @@
   "VALIDATION": {
   },
   "AUTHENTICATION": {
-    "VERIFICATION_CODE": "[PECHE Clinic] 您的身分驗證碼通知",
-    "VERIFICATION_CODE_BODY": "[PECHE Clinic]<br>您好！過程透明，美麗清晰——這裡是PECHE Clinic。🍑<br><br>您的身分驗證碼為 {code}。<br>為了保護您的個人資訊安全，請勿透露給他人。<br><br>謝謝您。"
+    "VERIFICATION_CODE": "【Peche Clinic】 验证码"
   },
   "NOTIFICATION": {
     "TITLE": "[Peche Clinic]\n",
-    "SUBJECT_NEW_RESERVATION": "[PECHE Clinic] 您的預約申請已受理",
-    "SUBJECT_REJECTION": "[PECHE Clinic] 預約時間已滿及調整通知",
-    "SUBJECT_CONFIRMATION": "[PECHE Clinic] 您的預約已確認",
-    "SUBJECT_CANCELLATION": "[PECHE Clinic] 您的預約已取消",
     "NEW_RESERVATION": "",
     "THE_DAY_BEFORE": "",
     "ON_THE_DAY": "",
-    "NEW_RESERVATION_LONG": "[PECHE Clinic]<br>您好！過程透明，美麗清晰——這裡是PECHE Clinic。🍑<br><br>{name} 顧客<br>我們在確認您申請的預約時間後，將透過電子郵件再次通知您預約成功與否（確認或約滿）。<br><br>如有任何疑問，請隨時與我們聯絡。<br><br>▷ 諮詢管道 : LINE @pecheclinic.tw<br>▷ Website Link: https://pecheskin.clinic/tw/",
-    "NEW_RESERVATION_LONG_BUILDING_1": "[PECHE Clinic]<br>您好！過程透明，美麗清晰——這裡是PECHE Clinic。🍑<br><br>{name} 顧客<br>我們在確認您申請的預約時間後，將透過電子郵件再次通知您預約成功與否（確認或約滿）。<br><br>如有任何疑問，請隨時與我們聯絡。<br><br>▷ 諮詢管道 : LINE @pecheclinic.tw<br>▷ Website Link: https://pecheskin.clinic/tw/",
-    "NEW_RESERVATION_LONG_BUILDING_2": "",
-    "THE_DAY_BEFORE_LONG": "",
-    "ON_THE_DAY_LONG": "",
-    "RESERVATION_REJECTION": "[PECHE Clinic]<br>您好！過程透明，美麗清晰——這裡是PECHE Clinic。🍑<br><br>{name} 顧客，<br>您申請的時間段目前已全部約滿。<br>造成您的不便，我們深表歉意。<br><br>我們將協助您調整至其他日期和時間。<br>請與我們聯絡 :)<br><br>▷ 諮詢管道 : LINE @pecheclinic.tw<br>▷ Website Link: https://pecheskin.clinic/tw/",
-    "RESERVATION_CANCELLATION": "[PECHE Clinic]<br>您好！過程透明，美麗清晰——這裡是PECHE Clinic。🍑<br><br>{name} 顧客，<br>您原定於 {date} {time} 的預約已取消。<br><br>若您需要重新預約其他日期，請隨時與我們聯絡，我們將親切地為您提供協助。<br><br>👉 來院路線<br>地址：首爾江南區江南大道364 美王大樓3樓<br>捷運：新盆唐線 江南站 4號出口 正旁邊（美王大樓）<br><br>★停車<br>大樓後門設有機械式停車場可供使用（僅限2.2噸以下車輛）。<br><br>▷ 諮詢管道 : LINE @pecheclinic.tw<br>▷ Website Link: https://pecheskin.clinic/tw/",
-    "RESERVATION_CONFIRMATION": "[PECHE Clinic]<br>您好！過程透明，美麗清晰——這裡是PECHE Clinic。🍑<br><br>{name} 顧客、<br>您的預約已確認：時間為 {date} {time}。<br>若有任何變動，請提前與我們聯絡。<br><br>我們將依您的到院行程竭誠做好準備。<br>謝謝您 :)<br><br>*請注意，每次到院均須攜帶有效的實體身分證件（護照或外國人居留證）。<br><br>👉 來院路線<br>地址：首爾江南區江南大道364 美王大樓3樓<br>捷運：新盆唐線 江南站 4號出口 正旁邊（美王大樓）<br><br>★停車<br>大樓後門設有機械式停車場可供使用（僅限2.2噸以下車輛）。<br><br>▷ 諮詢管道 : LINE @pecheclinic.tw<br>▷ Website Link: https://pecheskin.clinic/tw/"
+    "NEW_RESERVATION_LONG": "[Peche露岱皮膚科]",
+    "NEW_RESERVATION_LONG_BUILDING_1": "[Peche露岱皮膚科]",
+    "NEW_RESERVATION_LONG_BUILDING_2": "[Peche露岱皮膚科]",
+    "THE_DAY_BEFORE_LONG": "[Peche露岱皮膚科]",
+    "ON_THE_DAY_LONG": "[Peche露岱皮膚科]",
+    "RESERVATION_CANCELLATION": "",
+    "RESERVATION_CONFIRMATION": "[페슈의원] 예약이 확정되었습니다<br><br>안녕하세요 {name} 고객님,<br>페슈의원입니다.<br><br>고객님의 예약이 아래와 같이 확정되었습니다.<br><br>예약일시: {date} {time}<br><br>시술 종류에 따라 대기 시간이<br>약 10~30분 정도 발생할 수 있습니다.<br><br>예약 변경이나 취소가 필요하신 경우<br>미리 연락 부탁드립니다.<br><br>내원 일정에 맞춰 성심껏 준비하겠습니다.<br><br>편안한 마음으로 뵐 수 있길 바랍니다.<br><br>[위치안내]<br>서울특별시 강남구 강남대로 364, 3층 전체(역삼동, 미왕빌딩)<br><br>[주차안내]<br>건물 내 지하주차장 이용 가능<br><br>감사합니다.<br>페슈의원 드림"
   }
 }

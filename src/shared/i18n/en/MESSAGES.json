@@ -8,25 +8,19 @@
   "VALIDATION": {
   },
   "AUTHENTICATION": {
-    "VERIFICATION_CODE": "[PECHE Clinic] Your verification code for identity verification",
-    "VERIFICATION_CODE_BODY": "[PECHE Clinic]<br>Hello! Transparent Process Radiant Beauty—this is PECHE Clinic. 🍑<br><br>Your verification code for identity verification is {code}.<br>For your privacy and security, please do not share this code with anyone.<br><br>Thank you."
+    "VERIFICATION_CODE": "[Peche Clinic] Verification Code"
   },
   "NOTIFICATION": {
     "TITLE": "[Peche Clinic]\n",
-    "SUBJECT_NEW_RESERVATION": "[PECHE Clinic] Your appointment request has been received",
-    "SUBJECT_REJECTION": "[PECHE Clinic] Your requested time is fully booked - Rescheduling notice",
-    "SUBJECT_CONFIRMATION": "[PECHE Clinic] Your appointment has been confirmed",
-    "SUBJECT_CANCELLATION": "[PECHE Clinic] Your appointment has been canceled",
     "NEW_RESERVATION": "Hello, {name}.\nYou have an appointment scheduled for {date} at {time}",
     "THE_DAY_BEFORE": "Hello, {name}.\nWe are checking in to see if you wish to have any modifications to your appointment on {date} at {time}",
     "ON_THE_DAY": "Hello, {name}.\nWe will meet you today at {time}",
-    "NEW_RESERVATION_LONG": "[PECHE Clinic]<br>Hello! Transparent Process Radiant Beauty—this is PECHE Clinic. 🍑<br><br>Dear {name},<br>We have successfully received your appointment request.<br>After checking the availability for your requested time, we will send you a follow-up email to either confirm your booking or let you know if the slot is fully booked.<br><br>If you have any questions, please feel free to contact us anytime.<br>▷ Inquiries : WhatsApp +82 10-5563-8176<br>▷ Website Link: https://pecheskin.clinic/en/",
-    "NEW_RESERVATION_LONG_BUILDING_1": "[PECHE Clinic]<br>Hello! Transparent Process Radiant Beauty—this is PECHE Clinic. 🍑<br><br>Dear {name},<br>We have successfully received your appointment request.<br>After checking the availability for your requested time, we will send you a follow-up email to either confirm your booking or let you know if the slot is fully booked.<br><br>If you have any questions, please feel free to contact us anytime.<br>▷ Inquiries : WhatsApp +82 10-5563-8176<br>▷ Website Link: https://pecheskin.clinic/en/",
+    "NEW_RESERVATION_LONG": "[Peche Dermatology]",
+    "NEW_RESERVATION_LONG_BUILDING_1": "[Peche Dermatology]",
     "NEW_RESERVATION_LONG_BUILDING_2": "",
     "THE_DAY_BEFORE_LONG": "",
-    "ON_THE_DAY_LONG": "",
-    "RESERVATION_REJECTION": "[PECHE Clinic]<br>Hello! Transparent Process Radiant Beauty—this is PECHE Clinic. 🍑<br><br>Dear {name},<br>The appointment time you requested is currently fully booked.<br>We sincerely apologize for any inconvenience this may cause.<br><br>We would be happy to assist you in rescheduling for another date or time.<br>Please feel free to contact us :)<br><br>▷ Inquiries : WhatsApp +82 10-5563-8176<br>▷ Website Link: https://pecheskin.clinic/en/",
-    "RESERVATION_CANCELLATION": "[PECHE Clinic]<br>Hello! Transparent Process Radiant Beauty—this is PECHE Clinic. 🍑<br><br>Dear {name},<br>Your appointment scheduled for {date} at {time} has been canceled.<br><br>If you would like to reschedule for another date, please feel free to contact us anytime, and we will gladly assist you.<br><br>👉 Directions<br>Address: 3F, Meewang Building, 364 Gangnam-daero, Gangnam-gu, Seoul<br>Subway: Located right next to Gangnam Station Exit 4 (Shinbundang Line).<br><br>★Parking<br>Mechanical parking is available at the back entrance of the building. (Only available for vehicles under 2.2 tons.)<br><br>▷ Inquiries : WhatsApp +82 10-5563-8176<br>▷ Website Link: https://pecheskin.clinic/en/",
-    "RESERVATION_CONFIRMATION": "[PECHE Clinic]<br>Hello! Transparent Process Radiant Beauty—this is PECHE Clinic. 🍑<br><br>Dear {name},<br><br>Your appointment has been confirmed for {date} at {time}.<br>If you need to make any changes to your schedule, please let us know in advance.<br><br>We look forward to welcoming you and will do our absolute best to prepare for your visit.<br>Thank you :)<br><br>*Please note that a valid physical ID (Passport or Alien Registration Card) is required for every visit.<br><br>👉 Directions<br>Address: 3F, Meewang Building, 364 Gangnam-daero, Gangnam-gu, Seoul<br>Subway: Located right next to Gangnam Station Exit 4 (Shinbundang Line).<br><br>★Parking<br>Mechanical parking is available at the back entrance of the building. (Only available for vehicles under 2.2 tons.)<br><br>▷ Inquiries : WhatsApp +82 10-5563-8176<br>▷ Website Link: https://pecheskin.clinic/en/"
+    "ON_THE_DAY_LONG": "[Peche Dermatology]",
+    "RESERVATION_CANCELLATION": "",
+    "RESERVATION_CONFIRMATION": "[페슈의원] 예약이 확정되었습니다<br><br>안녕하세요 {name} 고객님,<br>페슈의원입니다.<br><br>고객님의 예약이 아래와 같이 확정되었습니다.<br><br>예약일시: {date} {time}<br><br>시술 종류에 따라 대기 시간이<br>약 10~30분 정도 발생할 수 있습니다.<br><br>예약 변경이나 취소가 필요하신 경우<br>미리 연락 부탁드립니다.<br><br>내원 일정에 맞춰 성심껏 준비하겠습니다.<br><br>편안한 마음으로 뵐 수 있길 바랍니다.<br><br>[위치안내]<br>서울특별시 강남구 강남대로 364, 3층 전체(역삼동, 미왕빌딩)<br><br>[주차안내]<br>건물 내 지하주차장 이용 가능<br><br>감사합니다.<br>페슈의원 드림"
   }
 }
