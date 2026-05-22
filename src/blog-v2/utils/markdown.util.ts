@@ -115,7 +115,17 @@ export interface ParsedMarkdown {
  * 마케터가 frontmatter 위에 <!-- 주석 -->으로 GEO 메모를 두는 경우가 있어 먼저 제거.
  */
 export function parseBlogMarkdown(markdown: string): ParsedMarkdown {
-  const cleaned = markdown.replace(/^﻿/, "").replace(/^(\s*<!--[\s\S]*?-->\s*)+/, "")
+  // 1) 보이지 않는 문자(BOM·zero-width·제어문자) 제거 — 복붙 시 섞여 YAML 파싱 깨짐 방지
+  let cleaned = markdown
+    .replace(/[\u200B-\u200D\u2060\uFEFF]/g, "") // zero-width space/joiner·BOM
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "") // 제어문자(탭/개행 제외)
+    .replace(/^(\s*<!--[\s\S]*?-->\s*)+/, "") // 선행 GEO 메모 주석
+  // 2) frontmatter(YAML) 블록 안의 유니코드 공백(NBSP·전각공백 등)만 일반 공백으로 — 들여쓰기 깨짐 방지(본문 보존)
+  cleaned = cleaned.replace(
+    /^(---\r?\n)([\s\S]*?)(\r?\n---)/,
+    (_m, open: string, body: string, close: string) =>
+      open + body.replace(/[\u00A0\u2000-\u200A\u202F\u205F\u3000]/g, " ") + close,
+  )
   const parsed = matter(cleaned)
   return {
     frontmatter: (parsed.data || {}) as BlogPostFrontmatter,
