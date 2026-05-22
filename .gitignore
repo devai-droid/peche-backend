@@ -40,3 +40,6 @@ lerna-debug.log*
 .claude
 .serena
 CLAUDE.local.md
+
+# 블로그 로컬 이미지 fallback (S3 실패 시 로컬 저장)
+uploads/
