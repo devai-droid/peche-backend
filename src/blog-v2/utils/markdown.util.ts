@@ -1,3 +1,4 @@
+import { BadRequestException } from "@nestjs/common"
 import * as matter from "gray-matter"
 import * as cheerio from "cheerio"
 import MarkdownIt = require("markdown-it")
@@ -126,7 +127,16 @@ export function parseBlogMarkdown(markdown: string): ParsedMarkdown {
     (_m, open: string, body: string, close: string) =>
       open + body.replace(/[\u00A0\u2000-\u200A\u202F\u205F\u3000]/g, " ") + close,
   )
-  const parsed = matter(cleaned)
+  let parsed: matter.GrayMatterFile<string>
+  try {
+    parsed = matter(cleaned)
+  } catch (e) {
+    // YAML 문법 오류 등 → 500 대신 마케터가 고칠 수 있는 명확한 메시지(400)로 변환
+    const detail = (e as Error).message.split("\n").slice(0, 3).join(" ").replace(/\s+/g, " ").trim()
+    throw new BadRequestException(
+      `.md 상단 메타(frontmatter) YAML 형식 오류입니다. 들여쓰기·따옴표·줄바꿈을 확인하세요 — ${detail}`,
+    )
+  }
   return {
     frontmatter: (parsed.data || {}) as BlogPostFrontmatter,
     bodyMd: (parsed.content || "").trim(),

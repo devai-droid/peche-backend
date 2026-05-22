@@ -63,6 +63,13 @@ export class BlogPostV2 extends TimeStampEntity {
   @Column({ name: "sub_keywords", type: "text", array: true, nullable: true })
   subKeywords?: string[]
 
+  @ApiProperty({
+    required: false,
+    description: "주제 키워드 원본(frontmatter topic_keyword) — CTA 버튼명·'관련글 더보기' 헤딩에 사용. 마스터 등록과 무관하게 저장",
+  })
+  @Column({ name: "topic_keyword", length: 100, nullable: true })
+  topicKeyword?: string
+
   @ApiProperty({ required: false })
   @Column({ name: "keyword_id", type: "uuid", nullable: true })
   keywordId?: string

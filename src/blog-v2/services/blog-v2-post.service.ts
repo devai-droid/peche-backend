@@ -136,6 +136,7 @@ export class BlogV2PostService {
     post.bodyHtml = renderMarkdownToHtml(bodyMd)
     if (thumbnailUrl) post.thumbnailUrl = thumbnailUrl
     post.lang = (frontmatter.lang as BlogPostLang) ?? post.lang
+    post.topicKeyword = frontmatter.topic_keyword ?? frontmatter.keyword
     post.mainKeyword = frontmatter.title_keyword ?? frontmatter.main_keyword
     post.subKeywords =
       frontmatter.content_keywords ?? frontmatter.meta_keywords ?? frontmatter.sub_keywords
@@ -235,6 +236,7 @@ export class BlogV2PostService {
       lang,
       status: BlogPostStatus.DRAFT,
       targetSite: "peche",
+      topicKeyword: frontmatter.topic_keyword ?? frontmatter.keyword,
       mainKeyword: frontmatter.title_keyword ?? frontmatter.main_keyword,
       subKeywords:
         frontmatter.content_keywords ?? frontmatter.meta_keywords ?? frontmatter.sub_keywords,
