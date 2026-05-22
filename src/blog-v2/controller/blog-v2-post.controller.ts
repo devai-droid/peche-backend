@@ -67,6 +67,14 @@ export class BlogV2PostController {
     return post
   }
 
+  @ApiOperation({
+    summary: "미리보기 (id, 인증 불필요, 초안 포함) — 어드민 미리보기 iframe 전용. 페이지는 noindex 처리됨",
+  })
+  @Get("public/preview/:id")
+  async publicPreview(@Param("id", ParseUUIDPipe) id: string) {
+    return this.service.findOne(id)
+  }
+
   @ApiOperation({ summary: "블로그 글 목록 (어드민용)" })
   @Get()
   @Auth(AuthGuard(JWT_STRATEGY), SWAGGER_TOKEN_NAME, Role.ADMIN)
