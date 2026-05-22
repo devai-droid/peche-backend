@@ -24,6 +24,16 @@ export class QueryBlogPostDto {
   @IsUUID()
   keywordId?: string
 
+  @ApiProperty({ required: false, description: "상세페이지명 정확 일치 (product_page)" })
+  @IsOptional()
+  @IsString()
+  productPage?: string
+
+  @ApiProperty({ required: false, description: "상세페이지명 부분 일치 (product_page ILIKE)" })
+  @IsOptional()
+  @IsString()
+  productPageContains?: string
+
   @ApiProperty({ required: false, description: "제목·요약·본문 검색" })
   @IsOptional()
   @IsString()

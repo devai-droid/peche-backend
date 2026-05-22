@@ -248,6 +248,10 @@ export class BlogV2PostService {
     if (query.lang) qb.andWhere("p.lang = :lang", { lang: query.lang })
     if (query.productCategoryId) qb.andWhere("p.product_category_id = :pid", { pid: query.productCategoryId })
     if (query.keywordId) qb.andWhere("p.keyword_id = :kid", { kid: query.keywordId })
+    if (query.productPage) qb.andWhere("p.product_page = :pp", { pp: query.productPage })
+    if (query.productPageContains) {
+      qb.andWhere("p.product_page ILIKE :ppc", { ppc: `%${query.productPageContains}%` })
+    }
     if (query.q) {
       qb.andWhere("(p.title ILIKE :q OR p.summary_text ILIKE :q OR p.body_md ILIKE :q)", { q: `%${query.q}%` })
     }
