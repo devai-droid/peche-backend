@@ -281,6 +281,9 @@ export class BlogV2PostService {
       if (citations.length > 0) await this.citationRepo.save(citations)
     }
 
+    // 발행된 글 수정 시 검색엔진 재색인 요청(GEO/AEO 최신화). 초안은 발행 시 핑.
+    if (saved.status === BlogPostStatus.PUBLISHED) this.pingIndexNow(saved)
+
     return { id: saved.id, slug: saved.slug, status: saved.status, warnings }
   }
 
