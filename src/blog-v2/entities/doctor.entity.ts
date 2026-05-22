@@ -20,6 +20,10 @@ export class BlogDoctor extends TimeStampEntity {
   @Column({ name: "job_title", length: 200, nullable: true })
   jobTitle?: string
 
+  @ApiProperty({ required: false, description: "의료진 소개글 — 모든 블로그 글 하단 의료진 카드에 공통 노출" })
+  @Column({ type: "text", nullable: true })
+  bio?: string
+
   @ApiProperty({ required: false, type: [String] })
   @Column("text", { array: true, nullable: true })
   associations?: string[]

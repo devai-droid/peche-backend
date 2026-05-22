@@ -51,6 +51,23 @@ export class BlogV2PostController {
     return this.service.upload(dto, user)
   }
 
+  @ApiOperation({
+    summary: "기존 글 재업로드(수정) — 목록에서 글 선택 후 새 폴더로 덮어쓰기",
+    description: "그 글을 새 .md + 이미지로 갱신. 최초 등록일·작성일 유지, 수정일만 갱신, 발행 상태 유지.",
+  })
+  @ApiConsumes("multipart/form-data")
+  @ApiBody({ schema: { type: "object", properties: { files: { type: "array", items: { type: "string", format: "binary" } } } } })
+  @Post(":id/reupload")
+  @UseInterceptors(FilesInterceptor("files", MAX_FILES, { limits: { fileSize: MAX_FILE_SIZE } }))
+  @Auth(AuthGuard(JWT_STRATEGY), SWAGGER_TOKEN_NAME, Role.ADMIN)
+  async reupload(
+    @Param("id", ParseUUIDPipe) id: string,
+    @UploadedFiles() files: Express.Multer.File[],
+    @AuthUser() user: User,
+  ) {
+    return this.service.updateFromFiles(id, files, user)
+  }
+
   @ApiOperation({ summary: "공개 글 목록 (인증 불필요, 발행 글만) — frontend 블로그 목록용" })
   @Get("public/list")
   async publicList(@Query() query: QueryBlogPostDto) {

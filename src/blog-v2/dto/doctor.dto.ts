@@ -21,6 +21,12 @@ export class CreateBlogDoctorDto {
   @MaxLength(200)
   jobTitle?: string
 
+  @ApiProperty({ required: false, description: "의료진 소개글 (블로그 의료진 카드 공통 노출)" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  bio?: string
+
   @ApiProperty({ required: false, type: [String] })
   @IsOptional()
   @IsArray()

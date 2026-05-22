@@ -38,6 +38,18 @@ export class BlogDoctorService {
     return found
   }
 
+  /**
+   * 대표 의료진 1명 (블로그 글 하단 공통 의료진 카드용).
+   * 글에 author_doctor가 지정 안 된 경우 이 의료진으로 카드를 채운다.
+   * 노출(isVisible) 의료진 중 가장 먼저 등록된 1명. 없으면 null.
+   */
+  async findRepresentative(): Promise<BlogDoctor | null> {
+    return this.repo.findOne({
+      where: { isVisible: true, targetSite: "peche" },
+      order: { createdAt: "ASC" },
+    })
+  }
+
   async update(id: string, dto: UpdateBlogDoctorDto, user: User): Promise<BlogDoctor> {
     const found = await this.findOne(id)
     Object.assign(found, dto, { updatedBy: user?.id })

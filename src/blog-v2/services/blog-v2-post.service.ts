@@ -64,6 +64,123 @@ export class BlogV2PostService {
   }
 
   /**
+   * 기존 글 재업로드(수정). 목록에서 글을 선택 → 새 .md(+이미지)로 그 글을 덮어쓴다.
+   * createdAt(시스템 최초 등록일)·publishedAt(최초 작성일)은 유지, updatedAt(최근 수정일)만 갱신.
+   */
+  async updateFromFiles(
+    id: string,
+    files: Express.Multer.File[],
+    user: User,
+  ): Promise<{ id: string; slug: string; status: string; warnings: string[] }> {
+    const mdFile = files.find((f) => f.originalname.toLowerCase().endsWith(".md"))
+    if (!mdFile) throw new BadRequestException(".md 파일이 multipart에 없음")
+
+    const attachments = files.filter((f) => f !== mdFile)
+    const rawMarkdown = mdFile.buffer.toString("utf-8")
+    const urlMap = await this.imageUpload.uploadAttachments(attachments)
+    const bodyReplaced = this.imageUpload.replacePaths(rawMarkdown, urlMap)
+
+    return this.updateFromMarkdown(id, bodyReplaced, user, urlMap)
+  }
+
+  /**
+   * 기존 글에 새 마크다운을 반영(수정). 본문/메타/스키마 전부 새 파일 기준으로 갱신하되,
+   * - createdAt(최초 등록일): TypeORM @CreateDateColumn → 변경 안 됨
+   * - publishedAt(최초 작성일): 기존 값 유지(없을 때만 frontmatter로 채움)
+   * - updatedAt(최근 수정일): 저장 시 자동 갱신
+   * - status: 기존 상태 유지(발행 글은 발행 유지)
+   */
+  private async updateFromMarkdown(
+    id: string,
+    markdown: string,
+    user: User,
+    urlMap?: Map<string, string>,
+  ): Promise<{ id: string; slug: string; status: string; warnings: string[] }> {
+    const post = await this.findOne(id)
+    const { frontmatter, bodyMd } = parseBlogMarkdown(markdown)
+    const warnings: string[] = []
+
+    if (!frontmatter.title) throw new BadRequestException("frontmatter.title 필수")
+    if (!bodyMd) throw new BadRequestException("본문 비어있음")
+
+    const authorDoctorId =
+      frontmatter.author_doctor_id ?? (await this.resolveDoctorId(frontmatter.author_doctor, warnings))
+    const keywordId = frontmatter.keyword_id ?? (await this.resolveKeywordId(frontmatter.keyword, warnings))
+    const productCategoryId =
+      frontmatter.product_category_id ??
+      (await this.resolveProductCategoryId(frontmatter.product_category ?? frontmatter.department, warnings))
+
+    const thumbnailUrl = urlMap
+      ? this.imageUpload.resolveSingle(frontmatter.thumbnail, urlMap)
+      : frontmatter.thumbnail
+
+    const summaryText =
+      frontmatter.summary ?? frontmatter.meta_description ?? extractSummaryFromBody(bodyMd) ?? undefined
+
+    const extraJsonld = parseMedicalSchema(frontmatter.medical_schema ?? frontmatter.main_schema)
+    if ((frontmatter.medical_schema || frontmatter.main_schema) && !extraJsonld) {
+      warnings.push("medical_schema JSON 파싱 실패 — extra_jsonld 미저장")
+    }
+
+    // slug 변경 시 history 기록(301 리다이렉트용)
+    const newSlug = frontmatter.slug || post.slug
+    if (newSlug !== post.slug) {
+      await this.recordSlugChange(post.id, post.slug, post.lang)
+    }
+
+    post.title = frontmatter.title
+    post.subtitle = frontmatter.subtitle
+    post.bodyMd = bodyMd
+    post.bodyHtml = renderMarkdownToHtml(bodyMd)
+    if (thumbnailUrl) post.thumbnailUrl = thumbnailUrl
+    post.lang = (frontmatter.lang as BlogPostLang) ?? post.lang
+    post.mainKeyword = frontmatter.main_keyword
+    post.subKeywords = frontmatter.meta_keywords ?? frontmatter.sub_keywords
+    post.summaryText = summaryText ?? post.summaryText
+    post.slug = newSlug
+    post.keywordId = keywordId
+    post.productCategoryId = productCategoryId
+    post.authorDoctorId = authorDoctorId
+    post.schemaType = frontmatter.schema_type
+    post.extraJsonld = extraJsonld ?? undefined
+    post.internalLinks = Array.isArray(frontmatter.internal_links)
+      ? frontmatter.internal_links.map((l) => ({ anchor: l.anchor, slug: l.slug }))
+      : undefined
+    post.productPage = frontmatter.product_page
+    // 최초 작성일(publishedAt)은 유지 — 없을 때만 frontmatter로 채움
+    post.publishedAt =
+      post.publishedAt ?? (frontmatter.published_at ? new Date(frontmatter.published_at) : undefined)
+    post.updatedBy = user?.id
+
+    if (!post.summaryText) {
+      const generated = await this.summaryService.generate({ title: post.title, bodyMd: post.bodyMd })
+      if (generated) post.summaryText = generated
+    }
+
+    const saved = await this.postRepo.save(post)
+
+    // 인용: 기존 전부 삭제 후 새 frontmatter 기준으로 재등록
+    await this.citationRepo.delete({ postId: saved.id })
+    if (Array.isArray(frontmatter.citations) && frontmatter.citations.length > 0) {
+      const citations = frontmatter.citations
+        .filter((c) => c?.url)
+        .map((c, i) =>
+          this.citationRepo.create({
+            postId: saved.id,
+            url: c.url,
+            title: c.title,
+            publisher: c.publisher,
+            quote: c.quote,
+            orderNum: i,
+          }),
+        )
+      if (citations.length > 0) await this.citationRepo.save(citations)
+    }
+
+    return { id: saved.id, slug: saved.slug, status: saved.status, warnings }
+  }
+
+  /**
    * 마크다운 → frontmatter 매핑(이름→ID) + 자동 hook(slug/summary) → 초안 저장.
    * 매핑 실패는 발행 막지 않고 warnings로 반환 (graceful).
    */
