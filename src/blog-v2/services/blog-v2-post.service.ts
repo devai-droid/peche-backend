@@ -106,7 +106,8 @@ export class BlogV2PostService {
     }
 
     const authorDoctorId =
-      frontmatter.author_doctor_id ?? (await this.resolveDoctorId(frontmatter.author_doctor, warnings))
+      frontmatter.author_doctor_id ??
+      (await this.resolveDoctorId(frontmatter.author_doctor, (frontmatter.lang as string) || "ko", warnings))
     const keywordId =
       frontmatter.keyword_id ??
       (await this.resolveKeywordId(frontmatter.topic_keyword ?? frontmatter.keyword, warnings))
@@ -233,7 +234,8 @@ export class BlogV2PostService {
 
     // 이름 → ID 매핑 (직접 ID 입력이 있으면 우선)
     const authorDoctorId =
-      frontmatter.author_doctor_id ?? (await this.resolveDoctorId(frontmatter.author_doctor, warnings))
+      frontmatter.author_doctor_id ??
+      (await this.resolveDoctorId(frontmatter.author_doctor, (frontmatter.lang as string) || "ko", warnings))
     const keywordId =
       frontmatter.keyword_id ??
       (await this.resolveKeywordId(frontmatter.topic_keyword ?? frontmatter.keyword, warnings))
@@ -340,18 +342,29 @@ export class BlogV2PostService {
     return { id: saved.id, slug: saved.slug, status: saved.status, warnings }
   }
 
-  /** 감수의사 이름 → blog.doctors ID. 못 찾으면 경고 + undefined (발행 진행). */
-  private async resolveDoctorId(name: string | undefined, warnings: string[]): Promise<string | undefined> {
+  /**
+   * 의료진 이름 → blog.doctors ID. 글 언어(lang)의 의료진을 우선 매칭, 없으면 언어 무관 매칭.
+   * 못 찾으면 경고 + undefined (발행 진행).
+   */
+  private async resolveDoctorId(
+    name: string | undefined,
+    lang: string,
+    warnings: string[],
+  ): Promise<string | undefined> {
     if (!name) return undefined
-    const doc = await this.doctorRepo
-      .createQueryBuilder("d")
-      .where("d.name = :name OR :name ILIKE d.name || ' %' OR d.name ILIKE :pattern", {
-        name,
-        pattern: `${name.split(" ")[0]}%`,
-      })
-      .getOne()
+    const match = (langFilter: boolean) => {
+      const qb = this.doctorRepo
+        .createQueryBuilder("d")
+        .where("(d.name = :name OR :name ILIKE d.name || ' %' OR d.name ILIKE :pattern)", {
+          name,
+          pattern: `${name.split(" ")[0]}%`,
+        })
+      if (langFilter) qb.andWhere("d.lang = :lang", { lang })
+      return qb.getOne()
+    }
+    const doc = (await match(true)) ?? (await match(false))
     if (!doc) {
-      warnings.push(`감수의사 매칭 실패: "${name}" — 감수의사 풀에 먼저 등록 필요`)
+      warnings.push(`의료진 매칭 실패: "${name}" — 의료진 정보에 먼저 등록 필요`)
       return undefined
     }
     return doc.id

@@ -1,7 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger"
 import { IsEnum, IsInt, IsOptional, IsString, IsUUID, Max, Min } from "class-validator"
 import { Type } from "class-transformer"
-import { BlogPostLang, BlogPostStatus } from "@root/blog-v2/enum/blog-v2.enum"
+import { BlogPostStatus } from "@root/blog-v2/enum/blog-v2.enum"
 
 export class QueryBlogPostDto {
   @ApiProperty({ required: false, enum: BlogPostStatus })
@@ -9,10 +9,10 @@ export class QueryBlogPostDto {
   @IsEnum(BlogPostStatus)
   status?: BlogPostStatus
 
-  @ApiProperty({ required: false, enum: BlogPostLang })
+  @ApiProperty({ required: false, description: "언어 코드 (ko/en/zh/tw/ja/th)" })
   @IsOptional()
-  @IsEnum(BlogPostLang)
-  lang?: BlogPostLang
+  @IsString()
+  lang?: string
 
   @ApiProperty({ required: false })
   @IsOptional()
