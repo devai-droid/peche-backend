@@ -271,6 +271,16 @@ export class BlogV2PostService {
       if (generated) post.summaryText = generated
     }
 
+    // 같은 slug+언어 글이 이미 있으면 → 무의미한 500 대신 명확한 안내(수정 재업로드 유도)
+    const dup = await this.postRepo.findOne({ where: { slug: post.slug, lang: post.lang } })
+    if (dup) {
+      throw new BadRequestException(
+        `이미 같은 주소(slug)의 글이 있습니다: "${post.slug}" (${post.lang}). ` +
+          `'새 글 업로드'가 아니라 블로그 글 목록에서 해당 글의 '수정(재업로드)'을 사용하세요. ` +
+          `정말 새 글이면 .md의 slug를 다른 값으로 바꿔주세요.`,
+      )
+    }
+
     const saved = await this.postRepo.save(post)
 
     if (Array.isArray(frontmatter.citations) && frontmatter.citations.length > 0) {
