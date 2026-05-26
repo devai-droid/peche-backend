@@ -96,6 +96,8 @@ export interface BlogPostFrontmatter {
   schema_type?: string
   main_schema?: string
   medical_schema?: string
+  // 적용할 공통 고지문구 type 목록(선택) — 어드민 미리보기 체크박스로도 설정 가능
+  notices?: string[]
   // 관련 글
   internal_links?: Array<{ anchor: string; slug: string; location?: string }>
   citations?: Array<{ url: string; title?: string; publisher?: string; quote?: string }>

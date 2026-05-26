@@ -116,4 +116,12 @@ export class BlogPostV2 extends TimeStampEntity {
   @ApiProperty({ required: false, description: "CTA 대상 상세페이지명 — 프론트가 이름으로 product_detail_page 매칭 (없으면 product_category로 fallback)" })
   @Column({ name: "product_page", length: 200, nullable: true })
   productPage?: string
+
+  @ApiProperty({
+    required: false,
+    type: [String],
+    description: "이 글에 적용할 추가 고지문구 type 목록 (ai_image_notice 등). 일반 면책은 항상 적용되어 미포함",
+  })
+  @Column({ name: "notices", type: "text", array: true, nullable: true })
+  notices?: string[]
 }

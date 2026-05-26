@@ -5,6 +5,9 @@ import { BlogKeyword } from "@root/blog-v2/entities/keyword.entity"
 import { BlogDoctor } from "@root/blog-v2/entities/doctor.entity"
 import { BlogPostSlugHistory } from "@root/blog-v2/entities/post-slug-history.entity"
 import { BlogPostCitation } from "@root/blog-v2/entities/post-citation.entity"
+import { BlogCommonText } from "@root/blog-v2/entities/common-text.entity"
+import { BlogCommonTextService } from "@root/blog-v2/services/blog-common-text.service"
+import { BlogCommonTextController } from "@root/blog-v2/controller/blog-common-text.controller"
 import { AnthropicService } from "@root/blog-v2/services/anthropic.service"
 import { BlogSlugService } from "@root/blog-v2/services/slug.service"
 import { BlogSummaryService } from "@root/blog-v2/services/summary.service"
@@ -20,8 +23,23 @@ import { BlogRenderService } from "@root/blog-v2/services/blog-render.service"
 import { UploadService } from "@root/upload/upload.service"
 
 @Module({
-  imports: [TypeOrmModule.forFeature([BlogPostV2, BlogKeyword, BlogDoctor, BlogPostSlugHistory, BlogPostCitation])],
-  controllers: [BlogV2PostController, BlogKeywordController, BlogDoctorController, BlogPublicController],
+  imports: [
+    TypeOrmModule.forFeature([
+      BlogPostV2,
+      BlogKeyword,
+      BlogDoctor,
+      BlogPostSlugHistory,
+      BlogPostCitation,
+      BlogCommonText,
+    ]),
+  ],
+  controllers: [
+    BlogV2PostController,
+    BlogKeywordController,
+    BlogDoctorController,
+    BlogPublicController,
+    BlogCommonTextController,
+  ],
   providers: [
     AnthropicService,
     BlogSlugService,
@@ -31,6 +49,7 @@ import { UploadService } from "@root/upload/upload.service"
     BlogDoctorService,
     BlogImageUploadService,
     BlogRenderService,
+    BlogCommonTextService,
     UploadService,
   ],
   exports: [

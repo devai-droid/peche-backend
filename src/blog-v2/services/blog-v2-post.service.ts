@@ -155,6 +155,7 @@ export class BlogV2PostService {
       ? frontmatter.internal_links.map((l) => ({ anchor: l.anchor, slug: l.slug }))
       : undefined
     post.productPage = frontmatter.product_page
+    if (Array.isArray(frontmatter.notices)) post.notices = frontmatter.notices
     // 최초 작성일(publishedAt)은 유지 — 없을 때만 frontmatter로 채움
     post.publishedAt =
       post.publishedAt ?? (frontmatter.published_at ? new Date(frontmatter.published_at) : undefined)
@@ -284,6 +285,7 @@ export class BlogV2PostService {
         ? frontmatter.internal_links.map((l) => ({ anchor: l.anchor, slug: l.slug }))
         : undefined,
       productPage: frontmatter.product_page,
+      notices: Array.isArray(frontmatter.notices) ? frontmatter.notices : undefined,
       publishedAt: frontmatter.published_at ? new Date(frontmatter.published_at) : undefined,
       createdBy: user?.id,
       updatedBy: user?.id,
@@ -429,6 +431,14 @@ export class BlogV2PostService {
 
     const [items, total] = await qb.skip((page - 1) * limit).take(limit).getManyAndCount()
     return { items, total, page, limit }
+  }
+
+  /** 글에 적용할 공통 고지문구 type 목록 설정 (어드민 미리보기 체크박스). */
+  async setNotices(id: string, notices: string[], user: User): Promise<BlogPostV2> {
+    const post = await this.findOne(id)
+    post.notices = notices
+    post.updatedBy = user?.id
+    return this.postRepo.save(post)
   }
 
   async remove(id: string): Promise<void> {

@@ -23,6 +23,7 @@ import { User } from "@root/shared/interface/user"
 import { BlogV2PostService } from "@root/blog-v2/services/blog-v2-post.service"
 import { UploadBlogPostDto } from "@root/blog-v2/dto/upload-blog-post.dto"
 import { QueryBlogPostDto } from "@root/blog-v2/dto/query-blog-post.dto"
+import { UpdatePostNoticesDto } from "@root/blog-v2/dto/common-text.dto"
 import { BlogPostStatus } from "@root/blog-v2/enum/blog-v2.enum"
 
 const MAX_FILES = 50
@@ -108,6 +109,17 @@ export class BlogV2PostController {
   @Auth(AuthGuard(JWT_STRATEGY), SWAGGER_TOKEN_NAME, Role.ADMIN)
   async findOne(@Param("id", ParseUUIDPipe) id: string) {
     return this.service.findOne(id)
+  }
+
+  @ApiOperation({ summary: "글 적용 고지문구 설정 (미리보기 체크박스)" })
+  @Post(":id/notices")
+  @Auth(AuthGuard(JWT_STRATEGY), SWAGGER_TOKEN_NAME, Role.ADMIN)
+  async setNotices(
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body() dto: UpdatePostNoticesDto,
+    @AuthUser() user: User,
+  ) {
+    return this.service.setNotices(id, dto.notices ?? [], user)
   }
 
   @ApiOperation({ summary: "블로그 글 삭제" })
