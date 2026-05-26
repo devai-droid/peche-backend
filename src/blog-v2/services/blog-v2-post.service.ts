@@ -28,27 +28,6 @@ export interface PaginatedResult<T> {
   limit: number
 }
 
-// frontmatter notices 친화적 키 → 실제 고지문구 type (일반 면책은 항상 적용이라 제외)
-const NOTICE_ALIAS: Record<string, string> = {
-  ai_image: "ai_image_notice",
-  ai: "ai_image_notice",
-  ai_image_notice: "ai_image_notice",
-  patient_case: "patient_case_notice",
-  before_after: "patient_case_notice",
-  patient_case_notice: "patient_case_notice",
-  review: "review_notice",
-  review_notice: "review_notice",
-}
-const VALID_NOTICES = new Set(["ai_image_notice", "patient_case_notice", "review_notice"])
-
-/** frontmatter notices(배열, 친화적 키 허용)를 표준 type 목록으로 정규화. */
-function normalizeNotices(raw: unknown): string[] | undefined {
-  if (!Array.isArray(raw)) return undefined
-  const out = raw
-    .map((v) => NOTICE_ALIAS[String(v).trim().toLowerCase()] ?? String(v).trim())
-    .filter((v) => VALID_NOTICES.has(v))
-  return Array.from(new Set(out))
-}
 
 @Injectable()
 export class BlogV2PostService {
@@ -177,7 +156,7 @@ export class BlogV2PostService {
       ? frontmatter.internal_links.map((l) => ({ anchor: l.anchor, slug: l.slug }))
       : undefined
     post.productPage = frontmatter.product_page
-    if (Array.isArray(frontmatter.notices)) post.notices = normalizeNotices(frontmatter.notices)
+    // 고지문구 적용(notices)은 어드민 미리보기에서 수동 선택 — 재업로드 시 기존 선택 유지(덮어쓰지 않음)
     // 최초 작성일(publishedAt)은 유지 — 없을 때만 frontmatter로 채움
     post.publishedAt =
       post.publishedAt ?? (frontmatter.published_at ? new Date(frontmatter.published_at) : undefined)
@@ -307,7 +286,6 @@ export class BlogV2PostService {
         ? frontmatter.internal_links.map((l) => ({ anchor: l.anchor, slug: l.slug }))
         : undefined,
       productPage: frontmatter.product_page,
-      notices: normalizeNotices(frontmatter.notices),
       publishedAt: frontmatter.published_at ? new Date(frontmatter.published_at) : undefined,
       createdBy: user?.id,
       updatedBy: user?.id,
