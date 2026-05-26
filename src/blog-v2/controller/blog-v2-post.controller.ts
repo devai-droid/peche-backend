@@ -9,9 +9,11 @@ import {
   Post,
   Query,
   UploadedFiles,
+  UseFilters,
   UseInterceptors,
 } from "@nestjs/common"
 import { FilesInterceptor } from "@nestjs/platform-express"
+import { UploadExceptionFilter } from "@root/blog-v2/filters/multer-exception.filter"
 import { AuthGuard } from "@nestjs/passport"
 import { ApiBody, ApiConsumes, ApiOperation, ApiTags } from "@nestjs/swagger"
 import { Auth, AuthUser } from "@root/shared/decorator/auth-user.decorator"
@@ -24,7 +26,7 @@ import { QueryBlogPostDto } from "@root/blog-v2/dto/query-blog-post.dto"
 import { BlogPostStatus } from "@root/blog-v2/enum/blog-v2.enum"
 
 const MAX_FILES = 50
-const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+const MAX_FILE_SIZE = 30 * 1024 * 1024 // 30MB (업로드 후 이미지 최적화로 웹용 축소)
 
 @Controller("blog-v2/posts")
 @ApiTags("blog-v2/posts")
@@ -38,6 +40,7 @@ export class BlogV2PostController {
   @ApiConsumes("multipart/form-data")
   @ApiBody({ schema: { type: "object", properties: { files: { type: "array", items: { type: "string", format: "binary" } } } } })
   @Post()
+  @UseFilters(UploadExceptionFilter)
   @UseInterceptors(FilesInterceptor("files", MAX_FILES, { limits: { fileSize: MAX_FILE_SIZE } }))
   @Auth(AuthGuard(JWT_STRATEGY), SWAGGER_TOKEN_NAME, Role.ADMIN)
   async uploadFolder(@UploadedFiles() files: Express.Multer.File[], @AuthUser() user: User) {
@@ -58,6 +61,7 @@ export class BlogV2PostController {
   @ApiConsumes("multipart/form-data")
   @ApiBody({ schema: { type: "object", properties: { files: { type: "array", items: { type: "string", format: "binary" } } } } })
   @Post(":id/reupload")
+  @UseFilters(UploadExceptionFilter)
   @UseInterceptors(FilesInterceptor("files", MAX_FILES, { limits: { fileSize: MAX_FILE_SIZE } }))
   @Auth(AuthGuard(JWT_STRATEGY), SWAGGER_TOKEN_NAME, Role.ADMIN)
   async reupload(
