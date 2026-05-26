@@ -8,6 +8,9 @@ import { BlogPostCitation } from "@root/blog-v2/entities/post-citation.entity"
 import { BlogCommonText } from "@root/blog-v2/entities/common-text.entity"
 import { BlogCommonTextService } from "@root/blog-v2/services/blog-common-text.service"
 import { BlogCommonTextController } from "@root/blog-v2/controller/blog-common-text.controller"
+import { BlogSiteConfig } from "@root/blog-v2/entities/site-config.entity"
+import { BlogSiteConfigService } from "@root/blog-v2/services/blog-site-config.service"
+import { BlogSiteConfigController } from "@root/blog-v2/controller/blog-site-config.controller"
 import { AnthropicService } from "@root/blog-v2/services/anthropic.service"
 import { BlogSlugService } from "@root/blog-v2/services/slug.service"
 import { BlogSummaryService } from "@root/blog-v2/services/summary.service"
@@ -31,6 +34,7 @@ import { UploadService } from "@root/upload/upload.service"
       BlogPostSlugHistory,
       BlogPostCitation,
       BlogCommonText,
+      BlogSiteConfig,
     ]),
   ],
   controllers: [
@@ -39,6 +43,7 @@ import { UploadService } from "@root/upload/upload.service"
     BlogDoctorController,
     BlogPublicController,
     BlogCommonTextController,
+    BlogSiteConfigController,
   ],
   providers: [
     AnthropicService,
@@ -50,6 +55,7 @@ import { UploadService } from "@root/upload/upload.service"
     BlogImageUploadService,
     BlogRenderService,
     BlogCommonTextService,
+    BlogSiteConfigService,
     UploadService,
   ],
   exports: [
