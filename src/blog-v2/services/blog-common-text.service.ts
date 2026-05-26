@@ -15,14 +15,29 @@ export class BlogCommonTextService {
     @InjectRepository(BlogCommonText) private readonly repo: Repository<BlogCommonText>,
   ) {}
 
-  /** 어드민용: 해당 언어의 4종 전부(없는 type은 빈 항목). */
+  /** 어드민용: 해당 언어의 4종 전부. 해당 언어에 없으면 한국어(기본) 내용을 미리 채워 보여줌(나중에 번역). */
   async findAllForAdmin(lang = DEFAULT_LANG): Promise<BlogCommonText[]> {
     const rows = await this.repo.find({ where: { targetSite: SITE, lang } })
     const byType = new Map(rows.map((r) => [r.type, r]))
+    const koByType =
+      lang === DEFAULT_LANG
+        ? new Map<string, BlogCommonText>()
+        : new Map(
+            (await this.repo.find({ where: { targetSite: SITE, lang: DEFAULT_LANG } })).map((r) => [
+              r.type,
+              r,
+            ]),
+          )
     return ALL_TYPES.map(
       (type) =>
         byType.get(type) ??
-        this.repo.create({ targetSite: SITE, lang, type, body: "", isActive: true }),
+        this.repo.create({
+          targetSite: SITE,
+          lang,
+          type,
+          body: koByType.get(type)?.body ?? "",
+          isActive: true,
+        }),
     )
   }
 
