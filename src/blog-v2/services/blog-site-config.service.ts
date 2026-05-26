@@ -9,7 +9,7 @@ import { User } from "@root/shared/interface/user"
 const SITE = "peche"
 const DEFAULT_LANG = "ko"
 
-// 언어별로 덮어쓰는 표시값 (공통 식별값 url/@id/type/telephone/geo 는 제외)
+// 언어별로 덮어쓰는 표시값 (공통 식별값 url/@id/type/telephone/geo/진료과목 은 제외)
 const LOCALIZABLE: (keyof BlogSiteConfigI18n)[] = [
   "hospitalName",
   "addressStreet",
@@ -17,7 +17,6 @@ const LOCALIZABLE: (keyof BlogSiteConfigI18n)[] = [
   "addressRegion",
   "addressPostalCode",
   "addressCountry",
-  "medicalSpecialty",
   "sameAs",
   "knowsAbout",
   "certifications",
