@@ -12,6 +12,7 @@ export class BlogDoctorService {
   async create(dto: CreateBlogDoctorDto, user: User): Promise<BlogDoctor> {
     const entity = this.repo.create({
       ...dto,
+      lang: dto.lang || "ko",
       isVisible: dto.isVisible ?? true,
       targetSite: "peche",
       createdBy: user?.id,
@@ -25,6 +26,7 @@ export class BlogDoctorService {
     const limit = query.limit ?? 50
     const qb = this.repo.createQueryBuilder("d").orderBy("d.createdAt", "DESC")
 
+    if (query.lang) qb.andWhere("d.lang = :lang", { lang: query.lang })
     if (query.visibleOnly) qb.andWhere("d.is_visible = true")
     if (query.q) qb.andWhere("(d.name ILIKE :q OR d.specialty ILIKE :q OR d.job_title ILIKE :q)", { q: `%${query.q}%` })
 
@@ -43,9 +45,15 @@ export class BlogDoctorService {
    * 글에 author_doctor가 지정 안 된 경우 이 의료진으로 카드를 채운다.
    * 노출(isVisible) 의료진 중 가장 먼저 등록된 1명. 없으면 null.
    */
-  async findRepresentative(): Promise<BlogDoctor | null> {
+  async findRepresentative(lang = "ko"): Promise<BlogDoctor | null> {
+    const found = await this.repo.findOne({
+      where: { isVisible: true, targetSite: "peche", lang },
+      order: { createdAt: "ASC" },
+    })
+    if (found || lang === "ko") return found
+    // 해당 언어 대표 의료진이 없으면 기본 언어(ko)로 폴백
     return this.repo.findOne({
-      where: { isVisible: true, targetSite: "peche" },
+      where: { isVisible: true, targetSite: "peche", lang: "ko" },
       order: { createdAt: "ASC" },
     })
   }

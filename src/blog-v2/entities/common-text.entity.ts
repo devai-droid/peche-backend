@@ -15,7 +15,7 @@ export enum BlogCommonTextType {
  * 일반 면책은 모든 글, 나머지는 글별 선택(posts.notices)에 따라 조건부 노출.
  */
 @Entity({ schema: "blog", name: "common_texts" })
-@Unique("uq_blog_common_texts_site_type", ["targetSite", "type"])
+@Unique("uq_blog_common_texts_site_lang_type", ["targetSite", "lang", "type"])
 export class BlogCommonText extends TimeStampEntity {
   @ApiProperty()
   @PrimaryGeneratedColumn("uuid")
@@ -24,6 +24,10 @@ export class BlogCommonText extends TimeStampEntity {
   @ApiProperty()
   @Column({ name: "target_site", length: 50, default: "peche" })
   targetSite: string
+
+  @ApiProperty({ description: "언어 (ko/en/zh/zh-TW/ja/th)" })
+  @Column({ length: 10, default: "ko" })
+  lang: string
 
   @ApiProperty({ enum: BlogCommonTextType })
   @Column({ length: 50 })

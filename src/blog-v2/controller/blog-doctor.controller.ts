@@ -31,8 +31,8 @@ export class BlogDoctorController {
     summary: "대표 의료진 (공개, 인증 불필요) — 블로그 글 하단 공통 의료진 카드용",
   })
   @Get("public/representative")
-  publicRepresentative() {
-    return this.service.findRepresentative()
+  publicRepresentative(@Query("lang") lang?: string) {
+    return this.service.findRepresentative(lang)
   }
 
   @ApiOperation({ summary: "감수의사 상세" })

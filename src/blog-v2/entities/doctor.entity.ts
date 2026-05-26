@@ -8,6 +8,10 @@ export class BlogDoctor extends TimeStampEntity {
   @PrimaryGeneratedColumn("uuid")
   id: string
 
+  @ApiProperty({ description: "언어 (ko/en/zh/zh-TW/ja/th)" })
+  @Column({ length: 10, default: "ko" })
+  lang: string
+
   @ApiProperty()
   @Column({ length: 100 })
   name: string

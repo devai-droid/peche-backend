@@ -9,6 +9,7 @@ import { BlogCommonText } from "@root/blog-v2/entities/common-text.entity"
 import { BlogCommonTextService } from "@root/blog-v2/services/blog-common-text.service"
 import { BlogCommonTextController } from "@root/blog-v2/controller/blog-common-text.controller"
 import { BlogSiteConfig } from "@root/blog-v2/entities/site-config.entity"
+import { BlogSiteConfigI18n } from "@root/blog-v2/entities/site-config-i18n.entity"
 import { BlogSiteConfigService } from "@root/blog-v2/services/blog-site-config.service"
 import { BlogSiteConfigController } from "@root/blog-v2/controller/blog-site-config.controller"
 import { AnthropicService } from "@root/blog-v2/services/anthropic.service"
@@ -35,6 +36,7 @@ import { UploadService } from "@root/upload/upload.service"
       BlogPostCitation,
       BlogCommonText,
       BlogSiteConfig,
+      BlogSiteConfigI18n,
     ]),
   ],
   controllers: [

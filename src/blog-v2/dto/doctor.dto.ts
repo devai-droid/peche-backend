@@ -3,6 +3,12 @@ import { IsArray, IsBoolean, IsInt, IsNotEmpty, IsOptional, IsString, Max, MaxLe
 import { Type } from "class-transformer"
 
 export class CreateBlogDoctorDto {
+  @ApiProperty({ required: false, description: "언어 (ko/en/zh/zh-TW/ja/th)" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  lang?: string
+
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
@@ -60,6 +66,11 @@ export class CreateBlogDoctorDto {
 export class UpdateBlogDoctorDto extends PartialType(CreateBlogDoctorDto) {}
 
 export class QueryBlogDoctorDto {
+  @ApiProperty({ required: false, description: "언어 필터" })
+  @IsOptional()
+  @IsString()
+  lang?: string
+
   @ApiProperty({ required: false, description: "true=공개만, false=숨김 포함" })
   @IsOptional()
   @Type(() => Boolean)
