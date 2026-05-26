@@ -15,7 +15,6 @@ const LOCALIZABLE: (keyof BlogSiteConfigI18n)[] = [
   "addressStreet",
   "addressLocality",
   "addressRegion",
-  "addressPostalCode",
   "addressCountry",
   "sameAs",
   "knowsAbout",
