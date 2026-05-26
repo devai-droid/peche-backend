@@ -100,8 +100,9 @@ export class BlogV2PostService {
     const { frontmatter, bodyMd } = parseBlogMarkdown(markdown)
     const warnings: string[] = []
 
-    if (!frontmatter.title) throw new BadRequestException("frontmatter.title 필수")
-    if (!bodyMd) throw new BadRequestException("본문 비어있음")
+    if (!frontmatter.title || !bodyMd) {
+      throw new BadRequestException("md 파일에 오류가 있습니다. 내용·형식을 확인해주세요.")
+    }
 
     const authorDoctorId =
       frontmatter.author_doctor_id ?? (await this.resolveDoctorId(frontmatter.author_doctor, warnings))
@@ -115,6 +116,9 @@ export class BlogV2PostService {
     const thumbnailUrl = urlMap
       ? this.imageUpload.resolveSingle(frontmatter.thumbnail, urlMap)
       : frontmatter.thumbnail
+
+    // 폴더 업로드인데 경로가 안 맞아 못 올라간(상대경로로 남은) 로컬 이미지가 있으면 차단
+    if (urlMap) this.assertImagesResolved(bodyMd, thumbnailUrl, frontmatter.thumbnail)
 
     const summaryText =
       frontmatter.summary ?? frontmatter.meta_description ?? extractSummaryFromBody(bodyMd) ?? undefined
@@ -185,6 +189,31 @@ export class BlogV2PostService {
   }
 
   /**
+   * 폴더 업로드 후 본문/썸네일에 업로드되지 못한(경로 불일치로 상대경로로 남은) 로컬 이미지가 있으면 차단.
+   * 매칭된 이미지는 CloudFront 절대 URL로 치환되므로, http/https·data·외부 URL이 아닌 참조가 남아있으면 경로 불일치.
+   */
+  private assertImagesResolved(
+    bodyMd: string,
+    thumbnailUrl: string | undefined,
+    thumbnailInput: string | undefined,
+  ): void {
+    const isLocal = (p?: string): boolean => !!p && !/^(https?:|data:|\/\/)/i.test(p.trim())
+    const unresolved: string[] = []
+    // 썸네일: 입력은 로컬인데 치환 후에도 로컬이면 매칭 실패
+    if (isLocal(thumbnailInput) && isLocal(thumbnailUrl)) unresolved.push(thumbnailInput!)
+    // 본문 이미지: ![alt](path) 중 로컬 경로가 남아있으면 매칭 실패
+    const re = /!\[[^\]]*\]\(\s*<?([^)>]+)>?\s*\)/g
+    let m: RegExpExecArray | null
+    // eslint-disable-next-line no-cond-assign
+    while ((m = re.exec(bodyMd))) {
+      if (isLocal(m[1])) unresolved.push(m[1])
+    }
+    if (unresolved.length > 0) {
+      throw new BadRequestException("이미지 경로가 일치하지 않습니다.")
+    }
+  }
+
+  /**
    * 마크다운 → frontmatter 매핑(이름→ID) + 자동 hook(slug/summary) → 초안 저장.
    * 매핑 실패는 발행 막지 않고 warnings로 반환 (graceful).
    */
@@ -196,8 +225,9 @@ export class BlogV2PostService {
     const { frontmatter, bodyMd } = parseBlogMarkdown(markdown)
     const warnings: string[] = []
 
-    if (!frontmatter.title) throw new BadRequestException("frontmatter.title 필수")
-    if (!bodyMd) throw new BadRequestException("본문 비어있음")
+    if (!frontmatter.title || !bodyMd) {
+      throw new BadRequestException("md 파일에 오류가 있습니다. 내용·형식을 확인해주세요.")
+    }
 
     // 이름 → ID 매핑 (직접 ID 입력이 있으면 우선)
     const authorDoctorId =
@@ -215,6 +245,9 @@ export class BlogV2PostService {
     const thumbnailUrl = urlMap
       ? this.imageUpload.resolveSingle(frontmatter.thumbnail, urlMap)
       : frontmatter.thumbnail
+
+    // 폴더 업로드인데 경로가 안 맞아 못 올라간(상대경로로 남은) 로컬 이미지가 있으면 차단
+    if (urlMap) this.assertImagesResolved(bodyMd, thumbnailUrl, frontmatter.thumbnail)
 
     // 핵심 요약: frontmatter 우선 → 본문 ## 💡 핵심 요약 → (없으면 LLM fallback)
     const summaryText =
