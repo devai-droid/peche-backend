@@ -17,6 +17,7 @@ export interface SiteConfig {
   supportedLangs: string[]
   cta?: { text: string; url: string } // 글 하단 공통 CTA
   treatmentListPath?: string // 전체시술 페이지 경로 (시술 대분류 카드 링크용)
+  indexNowKey?: string // IndexNow 공개 키 (네이버·Bing 색인 즉시 통보). /{key}.txt 로 사이트 루트에 호스팅됨
 }
 
 export const PECHE_SITE: SiteConfig = {
@@ -36,4 +37,6 @@ export const PECHE_SITE: SiteConfig = {
   supportedLangs: ["ko", "en", "zh", "zh-TW", "ja", "th"],
   cta: { text: "상담 예약하기", url: "/reservation" },
   treatmentListPath: "/products",
+  // 공개 키 — peche-frontend/public/{key}.txt 로 사이트 루트에 동일하게 호스팅 (https://pecheskin.clinic/{key}.txt)
+  indexNowKey: "9f26df7c8f4d2d0ea8ddf7ac5da0dd82",
 }

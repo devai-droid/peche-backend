@@ -469,13 +469,17 @@ export class BlogV2PostService {
     return saved
   }
 
-  /** 발행 시 IndexNow 색인 요청 (네이버·Bing). INDEXNOW_KEY 없으면 skip. 실패는 무시. */
+  /**
+   * 발행 시 IndexNow 색인 즉시 통보 (네이버·Bing·Yandex). 공개 키는 site config에 하드코딩.
+   * api.indexnow.org 로 보내면 네이버 등 파트너 검색엔진에 일괄 전파됨. (구글은 IndexNow 미지원 → sitemap 자동 수집)
+   * 키 검증용 파일이 사이트 루트(/{key}.txt)에 호스팅돼 있어야 통보가 수락됨. 실패는 무시(발행 흐름 방해 금지).
+   */
   private pingIndexNow(post: BlogPostV2): void {
-    const key = process.env.INDEXNOW_KEY
+    const key = PECHE_SITE.indexNowKey
     if (!key) return
     const url = `${PECHE_SITE.baseUrl}/${post.lang}/blog/${encodeURIComponent(post.slug)}`
     fetch(`https://api.indexnow.org/IndexNow?url=${encodeURIComponent(url)}&key=${key}`)
-      .then(() => this.logger.log(`IndexNow ping: ${url}`))
+      .then((r) => this.logger.log(`IndexNow ping(${r.status}): ${url}`))
       .catch((e) => this.logger.warn(`IndexNow 실패: ${(e as Error).message}`))
   }
 
