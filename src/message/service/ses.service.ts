@@ -30,7 +30,7 @@ export class SesService {
         Body: {
           Html: {
             Charset: "UTF-8",
-            Data: body,
+            Data: `<div style="font-size:18px; line-height:1.7;">${body}</div>`,
           },
         },
         Subject: {
