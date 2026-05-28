@@ -319,6 +319,15 @@ ${assoc}
         medicalSpecialty: doc.specialty ?? undefined,
       }
     }
+    // 본문 외부링크 자동 수집 → citation(출처/인용)
+    const citations = this.extractCitations(post.bodyHtml ?? "")
+    if (citations.length > 0) {
+      blogPosting.citation = citations.map((c) => ({
+        "@type": "CreativeWork",
+        ...(c.name ? { name: c.name } : {}),
+        url: c.url,
+      }))
+    }
     graph.push(blogPosting)
 
     // 2. MedicalClinic (병원)
@@ -373,6 +382,44 @@ ${assoc}
     return graph
       .map((g) => `<script type="application/ld+json">${JSON.stringify(g).replace(/</g, "\\u003c")}</script>`)
       .join("\n")
+  }
+
+  /**
+   * 본문의 외부(http) 링크를 출처/인용으로 자동 수집 → citation(CreativeWork).
+   * - 상대경로(/{lang}/blog/... 내부 관련글)는 제외 (이미 "관련 글" 섹션 앵커로 처리)
+   * - 자사 도메인(예약·CTA·내부 절대링크)도 제외
+   * - URL 기준 중복 제거, 앵커 텍스트를 name으로 사용
+   * 프론트(blog-detail) .blog-citation 판별 기준과 동일.
+   */
+  private extractCitations(bodyHtml: string): Array<{ url: string; name?: string }> {
+    if (!bodyHtml) return []
+    const selfHost = (() => {
+      try {
+        return new URL(this.site.baseUrl).hostname.replace(/^www\./, "")
+      } catch {
+        return ""
+      }
+    })()
+    const $ = cheerio.load(bodyHtml, null, false)
+    const seen = new Set<string>()
+    const out: Array<{ url: string; name?: string }> = []
+    $("a[href]").each((_, el) => {
+      const href = ($(el).attr("href") ?? "").trim()
+      if (!/^https?:\/\//i.test(href)) return // 내부 상대링크(관련글) 제외
+      let host = ""
+      try {
+        host = new URL(href).hostname.replace(/^www\./, "")
+      } catch {
+        return
+      }
+      if (!host || host === selfHost) return // 자사(예약·CTA·내부 절대링크) 제외
+      if (seen.has(href)) return
+      seen.add(href)
+      let name = $(el).text().trim()
+      if (/^\(.*\)$/.test(name)) name = name.slice(1, -1).trim() // 전체가 괄호로 감싸진 인용만 벗김
+      out.push({ url: href, name: name || undefined })
+    })
+    return out
   }
 
   /** 본문 HTML의 "## FAQ" 섹션에서 Q/A 추출 (**Q: ...** / A: ... 형식). */
