@@ -17,12 +17,24 @@ export class BlogPublicController {
     private readonly botAnalytics: BotAnalyticsService,
   ) {}
 
-  /** CloudFront 갈림길에서 부여한 x-bot=1 헤더가 있을 때만 GA에 봇 방문 기록(fire-and-forget). */
-  private trackIfBot(req: Request, pagePath: string, lang: string, postSlug?: string): void {
-    const xBot = (req.headers["x-bot"] as string | undefined) ?? ""
-    if (xBot !== "1") return
-    const ua = (req.headers["user-agent"] as string | undefined) ?? ""
-    void this.botAnalytics.trackBotRead({ userAgent: ua, pagePath, lang, postSlug })
+  /**
+   * CloudFront 함수가 부여한 `x-bot` 헤더가 봇 이름이면(예: "GPTBot") GA에 기록 + 캐시 무효.
+   * - 헤더값이 "0" 이거나 비어있으면 사람 → 무시
+   * - 헤더값이 봇 이름이면: (1) Cache-Control: no-store 설정 (캐시되면 다음 봇 요청에 GA 누락)
+   *                       (2) bot_read 이벤트 fire-and-forget 전송
+   * CloudFront가 UA를 백엔드까지 전달하지 않으므로 봇 이름은 헤더에서만 얻음.
+   */
+  private handleBotRequest(
+    req: Request,
+    res: Response,
+    pagePath: string,
+    lang: string,
+    postSlug?: string,
+  ): void {
+    const botName = ((req.headers["x-bot"] as string | undefined) ?? "0").trim()
+    if (!botName || botName === "0") return
+    res.setHeader("Cache-Control", "no-store, max-age=0")
+    void this.botAnalytics.trackBotRead({ botName, pagePath, lang, postSlug })
   }
 
   @Get("sitemap.xml")
@@ -46,8 +58,8 @@ export class BlogPublicController {
   async renderList(@Param("lang") lang: string, @Req() req: Request, @Res() res: Response) {
     const { html, status } = await this.renderService.renderListPage(lang)
     this.setCsp(res)
+    this.handleBotRequest(req, res, `/${lang}/blog`, lang)
     res.status(status).type("html").send(html)
-    this.trackIfBot(req, `/${lang}/blog`, lang)
   }
 
   @Get(":lang/blog/:slug")
@@ -59,8 +71,8 @@ export class BlogPublicController {
   ) {
     const { html, status } = await this.renderService.renderPostPage(slug, lang)
     this.setCsp(res)
+    this.handleBotRequest(req, res, `/${lang}/blog/${slug}`, lang, slug)
     res.status(status).type("html").send(html)
-    this.trackIfBot(req, `/${lang}/blog/${slug}`, lang, slug)
   }
 
   /**

@@ -46,11 +46,13 @@ export class BotAnalyticsService {
   }
 
   /**
-   * `bot_read` 이벤트를 GA4로 전송. 호출자는 `await` 안 해도 됨(fire-and-forget).
-   * - userAgent / x-bot=1 인 경우에만 호출하는 것이 권장(컨트롤러에서 가드).
+   * `bot_read` 이벤트를 GA4로 전송. fire-and-forget(호출자가 await 안 해도 됨).
+   * - botName 은 CloudFront 함수가 UA 보고 부여한 x-bot 헤더값(예: "GPTBot", "Googlebot")
+   *   CloudFront가 백엔드 origin으로 가는 길에 UA를 차단하기 때문에 헤더 우회가 필요함.
+   * - 호출 전에 컨트롤러에서 봇 여부 가드(x-bot !== "0").
    */
   async trackBotRead(input: {
-    userAgent: string
+    botName: string
     pagePath: string
     lang: string
     postSlug?: string
@@ -59,7 +61,6 @@ export class BotAnalyticsService {
       await this.loadCreds()
       if (!this.creds) return // 자격증명 미설정 — silently skip
 
-      const botName = this.extractBotName(input.userAgent)
       const url = `https://www.google-analytics.com/mp/collect?measurement_id=${encodeURIComponent(
         this.creds.measurementId,
       )}&api_secret=${encodeURIComponent(this.creds.apiSecret)}`
@@ -69,7 +70,7 @@ export class BotAnalyticsService {
           {
             name: "bot_read",
             params: {
-              bot_name: botName,
+              bot_name: input.botName || "unknown-bot",
               page_path: input.pagePath,
               lang: input.lang,
               ...(input.postSlug ? { post_slug: input.postSlug } : {}),
@@ -77,7 +78,6 @@ export class BotAnalyticsService {
           },
         ],
       }
-      // node 20 native fetch
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -89,62 +89,5 @@ export class BotAnalyticsService {
     } catch (e) {
       this.logger.debug(`GA MP send failed silently: ${(e as Error).message}`)
     }
-  }
-
-  /**
-   * UA에서 봇 이름 추출. 잘 알려진 봇은 정확한 이름, 그 외는 -bot|crawl|spider 토큰으로 추정,
-   * 그래도 못 찾으면 "unknown-bot".
-   */
-  private extractBotName(ua: string): string {
-    if (!ua) return "unknown-bot"
-    const known = [
-      /GPTBot/i,
-      /ChatGPT-User/i,
-      /OAI-SearchBot/i,
-      /ClaudeBot/i,
-      /Claude-Web/i,
-      /anthropic-ai/i,
-      /CCBot/i,
-      /PerplexityBot/i,
-      /Perplexity-User/i,
-      /Googlebot-News/i,
-      /Googlebot-Image/i,
-      /Googlebot/i,
-      /Google-Extended/i,
-      /Google-InspectionTool/i,
-      /AdsBot-Google/i,
-      /APIs-Google/i,
-      /Mediapartners-Google/i,
-      /bingbot/i,
-      /BingPreview/i,
-      /DuckDuckBot/i,
-      /Bytespider/i,
-      /Applebot-Extended/i,
-      /Applebot/i,
-      /YandexBot/i,
-      /Baiduspider/i,
-      /SogouSpider/i,
-      /Sogou\s+web\s+spider/i,
-      /Yeti/i,
-      /NaverBot/i,
-      /facebookexternalhit/i,
-      /Twitterbot/i,
-      /LinkedInBot/i,
-      /Slackbot/i,
-      /TelegramBot/i,
-      /WhatsApp/i,
-      /Discordbot/i,
-      /AhrefsBot/i,
-      /SemrushBot/i,
-      /MJ12bot/i,
-      /DotBot/i,
-    ]
-    for (const pat of known) {
-      const m = ua.match(pat)
-      if (m) return m[0]
-    }
-    const generic = ua.match(/[A-Za-z][\w.-]*(?:Bot|bot|Crawler|crawler|Spider|spider)/)
-    if (generic) return generic[0]
-    return "unknown-bot"
   }
 }
