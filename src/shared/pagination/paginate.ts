@@ -111,9 +111,6 @@ function resolveNumericOption(options: IPaginationOptions<any>, key: "page" | "l
 
   if (Number.isInteger(resolvedValue) && resolvedValue >= 0) return resolvedValue
 
-  console.warn(
-    `Query parameter "${key}" with value "${value}" was resolved as "${resolvedValue}", please validate your query input! Falling back to default "${defaultValue}".`,
-  )
   return defaultValue
 }
 

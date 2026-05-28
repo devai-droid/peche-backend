@@ -44,7 +44,6 @@ export class SmartDoctorRepository {
     try {
       return await this.requestGetCustomer(user)
     } catch (e: unknown) {
-      console.log(e)
       this.logger.error("getCustomer failed", e)
       throw new Error("getCustomer failed")
     }
@@ -131,7 +130,6 @@ export class SmartDoctorRepository {
     try {
       return await this.requestGetCustomerReservations(customerNumber)
     } catch (e: unknown) {
-      console.log(e)
       this.logger.error("getCustomerReservations failed", e)
       throw new Error("getCustomerReservations failed")
     }

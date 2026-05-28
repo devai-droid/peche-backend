@@ -151,7 +151,6 @@ export class ReservationService {
   async sendNewReservationMessage(reservation: Reservation) {
     const { user } = reservation
     const lang = user.languageLocale ?? I18nContext.current().lang
-    // const reservationBuilding = reservation.building
     const title = this.i18n.t("MESSAGES.NOTIFICATION.SUBJECT_NEW_RESERVATION", { lang })
     const args = {
       name: user.name ?? "",
@@ -313,7 +312,6 @@ export class ReservationService {
         await this.smsService.sendCancelReservationSms(user.phoneNumber, reservation.datetime)
       }
     } catch (e) {
-      console.error("[sendCancelReservationMessage] FAILED:", e?.message || e, JSON.stringify(e?.response?.data || ""))
     }
   }
 
@@ -341,7 +339,6 @@ export class ReservationService {
         })
       }
     } catch (e) {
-      console.error("[sendRejectReservationMessage] FAILED:", e?.message || e, JSON.stringify(e?.response?.data || ""))
     }
   }
 
@@ -512,7 +509,6 @@ export class ReservationService {
 
   async cancelReservation(reservation: Reservation) {
     await this.sendCancelReservationMessage(reservation)
-    // await this.smartDoctorRepository.deleteReservation(reservation.user.customerNumber, reservation.rid)
   }
 
   async remove(id: string) {
@@ -525,10 +521,8 @@ export class ReservationService {
           reason: "사용자 취소",
         })
       } catch (e) {
-        console.error("Doctor Palette cancel failed:", e)
       }
     }
-    // await this.repository.remove(reservation)
     if (reservation.status == ReservationStatus.DONE) {
       await this.cancelReservation(reservation)
     }
@@ -818,7 +812,6 @@ export class ReservationService {
     try {
       return await this.sesService.sendSesEmail(email, subject, body)
     } catch (e) {
-      console.log("Error sending email")
     }
   }
 

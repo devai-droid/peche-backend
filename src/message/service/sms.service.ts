@@ -117,11 +117,8 @@ export class SmsService {
     })
     try {
       const res = await client.send(command)
-      console.log("SMS sent number", sendNumber)
-      console.log("PINPOINT RES:", `${res?.MessageResponse}`)
       return res
     } catch (error) {
-      console.error("SMS sending error:", error)
       throw error
     }
   }

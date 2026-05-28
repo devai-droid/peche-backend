@@ -7,7 +7,6 @@ export class PaymentException extends HttpException {
       message = e.message
     } else if (e && !(e instanceof PaymentException)) {
       status = HttpStatus.INTERNAL_SERVER_ERROR
-      console.error(e)
     }
     super(message, status)
   }

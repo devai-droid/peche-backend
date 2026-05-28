@@ -2,7 +2,6 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from "@nes
 import { InjectRepository } from "@nestjs/typeorm"
 import { Repository } from "typeorm"
 import { BlogPostV2 } from "@root/blog-v2/entities/post.entity"
-import { BlogPostCitation } from "@root/blog-v2/entities/post-citation.entity"
 import { BlogPostSlugHistory } from "@root/blog-v2/entities/post-slug-history.entity"
 import { BlogDoctor } from "@root/blog-v2/entities/doctor.entity"
 import { BlogKeyword } from "@root/blog-v2/entities/keyword.entity"
@@ -35,7 +34,6 @@ export class BlogV2PostService {
 
   constructor(
     @InjectRepository(BlogPostV2) private readonly postRepo: Repository<BlogPostV2>,
-    @InjectRepository(BlogPostCitation) private readonly citationRepo: Repository<BlogPostCitation>,
     @InjectRepository(BlogPostSlugHistory) private readonly historyRepo: Repository<BlogPostSlugHistory>,
     @InjectRepository(BlogDoctor) private readonly doctorRepo: Repository<BlogDoctor>,
     @InjectRepository(BlogKeyword) private readonly keywordRepo: Repository<BlogKeyword>,
@@ -170,24 +168,6 @@ export class BlogV2PostService {
 
     const saved = await this.postRepo.save(post)
 
-    // 인용: 기존 전부 삭제 후 새 frontmatter 기준으로 재등록
-    await this.citationRepo.delete({ postId: saved.id })
-    if (Array.isArray(frontmatter.citations) && frontmatter.citations.length > 0) {
-      const citations = frontmatter.citations
-        .filter((c) => c?.url)
-        .map((c, i) =>
-          this.citationRepo.create({
-            postId: saved.id,
-            url: c.url,
-            title: c.title,
-            publisher: c.publisher,
-            quote: c.quote,
-            orderNum: i,
-          }),
-        )
-      if (citations.length > 0) await this.citationRepo.save(citations)
-    }
-
     return { id: saved.id, slug: saved.slug, status: saved.status, warnings }
   }
 
@@ -320,22 +300,6 @@ export class BlogV2PostService {
 
     const saved = await this.postRepo.save(post)
 
-    if (Array.isArray(frontmatter.citations) && frontmatter.citations.length > 0) {
-      const citations = frontmatter.citations
-        .filter((c) => c?.url)
-        .map((c, i) =>
-          this.citationRepo.create({
-            postId: saved.id,
-            url: c.url,
-            title: c.title,
-            publisher: c.publisher,
-            quote: c.quote,
-            orderNum: i,
-          }),
-        )
-      if (citations.length > 0) await this.citationRepo.save(citations)
-    }
-
     // 발행된 글 수정 시 검색엔진 재색인 요청(GEO/AEO 최신화). 초안은 발행 시 핑.
     if (saved.status === BlogPostStatus.PUBLISHED) this.pingIndexNow(saved)
 
@@ -414,11 +378,6 @@ export class BlogV2PostService {
       where: { slug, lang: lang as BlogPostLang },
       relations: ["keyword", "authorDoctor"],
     })
-  }
-
-  /** 출처 인용 목록 (공개 페이지 citation). */
-  async findCitations(postId: string): Promise<BlogPostCitation[]> {
-    return this.citationRepo.find({ where: { postId }, order: { orderNum: "ASC" } })
   }
 
   async findMany(query: QueryBlogPostDto): Promise<PaginatedResult<BlogPostV2>> {
