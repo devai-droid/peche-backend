@@ -23,6 +23,7 @@ import { BlogKeywordController } from "@root/blog-v2/controller/blog-keyword.con
 import { BlogDoctorController } from "@root/blog-v2/controller/blog-doctor.controller"
 import { BlogPublicController } from "@root/blog-v2/controller/blog-public.controller"
 import { BlogRenderService } from "@root/blog-v2/services/blog-render.service"
+import { BotAnalyticsService } from "@root/blog-v2/services/bot-analytics.service"
 import { UploadService } from "@root/upload/upload.service"
 
 @Module({
@@ -54,6 +55,7 @@ import { UploadService } from "@root/upload/upload.service"
     BlogDoctorService,
     BlogImageUploadService,
     BlogRenderService,
+    BotAnalyticsService,
     BlogCommonTextService,
     BlogSiteConfigService,
     UploadService,

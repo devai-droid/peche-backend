@@ -1,7 +1,8 @@
-import { Controller, Get, Param, Res } from "@nestjs/common"
-import { Response } from "express"
+import { Controller, Get, Param, Req, Res } from "@nestjs/common"
+import { Request, Response } from "express"
 import { ApiExcludeController } from "@nestjs/swagger"
 import { BlogRenderService } from "@root/blog-v2/services/blog-render.service"
+import { BotAnalyticsService } from "@root/blog-v2/services/bot-analytics.service"
 
 /**
  * 공개 블로그 페이지 SSR.
@@ -11,7 +12,18 @@ import { BlogRenderService } from "@root/blog-v2/services/blog-render.service"
 @ApiExcludeController()
 @Controller()
 export class BlogPublicController {
-  constructor(private readonly renderService: BlogRenderService) {}
+  constructor(
+    private readonly renderService: BlogRenderService,
+    private readonly botAnalytics: BotAnalyticsService,
+  ) {}
+
+  /** CloudFront 갈림길에서 부여한 x-bot=1 헤더가 있을 때만 GA에 봇 방문 기록(fire-and-forget). */
+  private trackIfBot(req: Request, pagePath: string, lang: string, postSlug?: string): void {
+    const xBot = (req.headers["x-bot"] as string | undefined) ?? ""
+    if (xBot !== "1") return
+    const ua = (req.headers["user-agent"] as string | undefined) ?? ""
+    void this.botAnalytics.trackBotRead({ userAgent: ua, pagePath, lang, postSlug })
+  }
 
   @Get("sitemap.xml")
   async sitemap(@Res() res: Response) {
@@ -31,17 +43,24 @@ export class BlogPublicController {
   }
 
   @Get(":lang/blog")
-  async renderList(@Param("lang") lang: string, @Res() res: Response) {
+  async renderList(@Param("lang") lang: string, @Req() req: Request, @Res() res: Response) {
     const { html, status } = await this.renderService.renderListPage(lang)
     this.setCsp(res)
     res.status(status).type("html").send(html)
+    this.trackIfBot(req, `/${lang}/blog`, lang)
   }
 
   @Get(":lang/blog/:slug")
-  async renderPost(@Param("lang") lang: string, @Param("slug") slug: string, @Res() res: Response) {
+  async renderPost(
+    @Param("lang") lang: string,
+    @Param("slug") slug: string,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
     const { html, status } = await this.renderService.renderPostPage(slug, lang)
     this.setCsp(res)
     res.status(status).type("html").send(html)
+    this.trackIfBot(req, `/${lang}/blog/${slug}`, lang, slug)
   }
 
   /**
