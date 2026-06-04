@@ -29,6 +29,7 @@ import { EventService } from "@root/event/service/event.service"
 import { ReservationStatus } from "@root/shared/enum/reservation"
 import { SmartDoctorRepository } from "@root/smart-doctor/repository/smart-doctor.repository"
 import { DoctorPaletteRepository } from "@root/doctor-palette/repository/doctor-palette.repository"
+import { resolveScheduleCode } from "@root/shared/constant/doctor-palette"
 import { UserService } from "@root/users/service/user.service"
 import { numberToDayOfWeekString } from "@root/shared/utils"
 import { SystemConstantsService } from "@root/system/service/system-constants.service"
@@ -93,6 +94,7 @@ export class ReservationService {
     let planId = undefined
     let eventObjs = undefined
     let productObjs = undefined
+    let scheduleId = undefined
     if (dto.status == ReservationStatus.DONE || !dto.status) {
       const autoReservationConfirm = await this.systemConstantsService.findOneOrNull(
         SystemConstantsKey.AUTO_RESERVATION_CONFIRM,
@@ -121,7 +123,8 @@ export class ReservationService {
           e.category?.name ? `[${e.category.name}] ${e.name}` : e.name,
         )
         const productNames = productObjs?.map((p) => p.name)
-        // 닥터팔레트 예약
+        // 분류(A/B/C)에 맞는 닥터팔레트 스케줄로 예약 생성 (미지정 시 초진 스케줄)
+        scheduleId = resolveScheduleCode(dto.category)
         planId = await this.postReservationAndGetPlanId(
           customerName,
           customerId,
@@ -129,13 +132,19 @@ export class ReservationService {
           dto,
           eventNames,
           productNames,
+          scheduleId,
         )
       } else {
         dto.status = ReservationStatus.WAITING
       }
     }
     const reservation = await this.repository.save(
-      Object.assign(dto, { user: user, building: building, palettePlanId: planId.id }),
+      Object.assign(dto, {
+        user: user,
+        building: building,
+        palettePlanId: planId?.id,
+        paletteScheduleId: scheduleId,
+      }),
     )
     if (dto.eventIds && dto.eventIds.length > 0) {
       await this.reservationEventService.bulkCreate(reservation, dto.eventIds)
@@ -496,8 +505,8 @@ export class ReservationService {
         ...(building && { building: building }),
       }),
     )
-    // 팔레트 api 콜
-    await this.updateReservationAndGetPlanId(reservation.palettePlanId, dto)
+    // 팔레트 api 콜 (예약 원본 스케줄 유지)
+    await this.updateReservationAndGetPlanId(reservation.palettePlanId, dto, reservation.paletteScheduleId)
 
     // 예약 변경 후 메시지 전송
     const newReservation = await this.findOne(reservation.id)
@@ -603,9 +612,10 @@ export class ReservationService {
 
   // NEW 캘린더 조회때 사용
   async getAvailableReservationByDayFromDoctorPalette(dto: AvailableReservationByDayDto) {
-    // 1. 닥터팔레트 schedule 슬롯 조회
+    // 1. 분류에 맞는 닥터팔레트 스케줄 슬롯 조회 (미지정 시 초진 스케줄)
     const date = `${String(dto.year)}-${String(dto.month).padStart(2, "0")}-${String(dto.day).padStart(2, "0")}`
-    const slots = await this.doctorPaletteRepository.getScheduleSlots(date)
+    const scheduleId = resolveScheduleCode(dto.category)
+    const slots = await this.doctorPaletteRepository.getScheduleSlots(date, scheduleId)
 
     // 2. enabled = true 인 슬롯만 필터링
     const availableSlots = slots.filter((s) => s.enabled)
@@ -1219,12 +1229,21 @@ export class ReservationService {
     dto: CreateReservationDto,
     eventNames: [],
     productNames: [],
+    scheduleId?: string,
   ) {
-    return await this.doctorPaletteRepository.createPlan(customerName, customerId, phone, dto, eventNames, productNames)
+    return await this.doctorPaletteRepository.createPlan(
+      customerName,
+      customerId,
+      phone,
+      dto,
+      eventNames,
+      productNames,
+      scheduleId,
+    )
   }
 
-  // 닥터 팔레트 예약(플랜) 수정
-  private async updateReservationAndGetPlanId(planId: string, dto: UpdateReservationDto) {
+  // 닥터 팔레트 예약(플랜) 수정 (scheduleId 미지정 시 초진 스케줄로 폴백)
+  private async updateReservationAndGetPlanId(planId: string, dto: UpdateReservationDto, scheduleId?: string) {
     // 전달할 payload 생성 (닥터팔레트는 REQUESTED/CONFIRMED만 허용)
     const payload: any = {}
 
@@ -1241,7 +1260,8 @@ export class ReservationService {
       payload.requestMessage = dto.userMemo
     }
 
-    return await this.doctorPaletteRepository.updatePlan(planId, payload)
+    // scheduleId(예약 원본 스케줄)가 없으면 repository가 초진 스케줄로 폴백
+    return await this.doctorPaletteRepository.updatePlan(planId, payload, scheduleId || undefined)
   }
 
   // yyyy-MM-ddTHH:mm:00 형태로 변환

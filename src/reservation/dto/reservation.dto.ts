@@ -2,7 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger"
 import { IsOptional } from "class-validator"
 import { Paginated } from "@root/shared/dto/base-list.ro"
 import { Reservation } from "@root/reservation/entities/reservation.entity"
-import { ReservationStatus } from "@root/shared/enum/reservation"
+import { ReservationCategory, ReservationStatus } from "@root/shared/enum/reservation"
 import { Building } from "@root/shared/enum/category"
 import { Transform } from "class-transformer"
 import { DtoHelper } from "@root/shared/helper/dto.helper"
@@ -17,6 +17,7 @@ export interface ReservationDto {
   pathVisit?: string
   detailVisit?: string
   palettePlanId?: string
+  category?: ReservationCategory
 }
 
 export class CreateReservationDto implements ReservationDto {
@@ -28,6 +29,10 @@ export class CreateReservationDto implements ReservationDto {
   @ApiPropertyOptional() @IsOptional() readonly adminMemo?: string
   @ApiPropertyOptional() @IsOptional() readonly pathVisit?: string
   @ApiPropertyOptional() @IsOptional() readonly detailVisit?: string
+  // 홈페이지 예약 분류(A 초진 / B 재진 보유권 / C 제모 보유권) → 닥터팔레트 스케줄 라우팅
+  @ApiPropertyOptional({ enum: ReservationCategory })
+  @IsOptional()
+  readonly category?: ReservationCategory
 }
 
 export class UpdateReservationDto implements ReservationDto {
@@ -61,6 +66,8 @@ export class AvailableReservationByDayDto implements AvailableReservationDto {
   @ApiProperty() day: number
   @ApiPropertyOptional() @IsOptional() @Transform(DtoHelper.explodeParamValue) productIds?: string[]
   @ApiPropertyOptional() @IsOptional() @Transform(DtoHelper.explodeParamValue) eventIds?: string[]
+  // 분류별 스케줄 슬롯 조회 (미지정 시 초진 스케줄)
+  @ApiPropertyOptional({ enum: ReservationCategory }) @IsOptional() category?: ReservationCategory
 }
 
 export class AvailableReservationResultDto {

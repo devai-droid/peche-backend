@@ -80,4 +80,9 @@ export class Reservation extends TimeStampEntity {
   @ApiProperty()
   @Column({ nullable: true })
   palettePlanId?: string
+
+  // 예약이 생성된 닥터팔레트 스케줄 ID (예약 수정 시 원본 스케줄 유지용)
+  @ApiProperty()
+  @Column({ nullable: true })
+  paletteScheduleId?: string
 }

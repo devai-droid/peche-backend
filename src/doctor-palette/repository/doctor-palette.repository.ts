@@ -53,10 +53,10 @@ export class DoctorPaletteRepository {
     }
   }
 
-  /** 특정 날짜의 스케줄 슬롯 조회 */
-  async getScheduleSlots(date: string) {
+  /** 특정 날짜의 스케줄 슬롯 조회 (scheduleId 미지정 시 초진 스케줄) */
+  async getScheduleSlots(date: string, scheduleId: string = SCHEDULE_CODE) {
     try {
-      const res = await this.api.get(`/schedule/dateTime/${SCHEDULE_CODE}`, {
+      const res = await this.api.get(`/schedule/dateTime/${scheduleId}`, {
         params: { date }, // 자동으로 ?date=YYYY-MM-DD 붙음
       })
       return res.data
@@ -81,6 +81,7 @@ export class DoctorPaletteRepository {
     dto: CreateReservationDto & { userId?: string; phoneNumber?: string; email?: string },
     eventNames: string[],
     productNames: string[],
+    scheduleId: string = SCHEDULE_CODE,
   ) {
     try {
       // -------- dateTime 변환 (UTC → KST) --------
@@ -102,7 +103,7 @@ export class DoctorPaletteRepository {
       // 예약 API Body 생성
       // -----------------------------------------
       const payload = {
-        scheduleId: SCHEDULE_CODE,
+        scheduleId,
         patient: {
           id: customerId,
           name: customerName,
@@ -135,7 +136,7 @@ export class DoctorPaletteRepository {
     }
   }
 
-  // 닥터 팔레트 Plan 수정 (scheduleId는 항상 SCHEDULE_CODE로 자동 세팅)
+  // 닥터 팔레트 Plan 수정 (scheduleId 미지정 시 초진 스케줄 — 가급적 예약 원본 스케줄을 넘길 것)
   async updatePlan(
     planId: string,
     dto: Partial<{
@@ -144,10 +145,11 @@ export class DoctorPaletteRepository {
       requestMessage: string
       meta: any
     }>,
+    scheduleId: string = SCHEDULE_CODE,
   ) {
     try {
       const payload = {
-        scheduleId: SCHEDULE_CODE, // 항상 같은 스케줄 ID 사용
+        scheduleId, // 예약이 생성된 스케줄 유지 (B/C 예약이 초진으로 이동하지 않도록)
         ...dto,
       }
 
