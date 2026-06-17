@@ -1,7 +1,7 @@
 import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn, Unique } from "typeorm"
 import { ApiProperty } from "@nestjs/swagger"
 import { TimeStampEntity } from "@root/shared/entity/time-stamp.entity"
-import { BlogPostLang, BlogPostStatus } from "@root/blog-v2/enum/blog-v2.enum"
+import { BlogPostLang, BlogPostStatus, BlogPublishTarget } from "@root/blog-v2/enum/blog-v2.enum"
 import { BlogKeyword } from "@root/blog-v2/entities/keyword.entity"
 import { BlogDoctor } from "@root/blog-v2/entities/doctor.entity"
 
@@ -124,4 +124,12 @@ export class BlogPostV2 extends TimeStampEntity {
   })
   @Column({ name: "notices", type: "text", array: true, nullable: true })
   notices?: string[]
+
+  @ApiProperty({
+    enum: BlogPublishTarget,
+    description: "노출 대상: blog(블로그 목록, 기본) / detail_page(시술 상세페이지 영상 아래 섹션). product_page로 상세페이지 매칭",
+  })
+  @Index("idx_blog_posts_publish_target")
+  @Column({ name: "publish_target", length: 20, default: BlogPublishTarget.BLOG })
+  publishTarget: BlogPublishTarget
 }

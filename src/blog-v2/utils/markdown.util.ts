@@ -76,6 +76,8 @@ export interface BlogPostFrontmatter {
   product_category?: string
   // [시술 중심 의원] 상세페이지 — CTA 링크 대상 (사이트 실제 상세페이지명과 일치, 자동 매칭)
   product_page?: string
+  // 노출 대상: "detail_page" 지정 시 블로그 목록이 아니라 시술 상세페이지(영상 아래)에 노출 (product_page로 매칭). 기본은 블로그
+  publish_target?: string
   // 키워드 (신규 명칭) — 마케터 md 표준
   topic_keyword?: string // 주제 키워드 (blog.keywords 매칭 + "OO 관련글 더보기" 헤딩)
   title_keyword?: string // 제목 키워드 (main_keyword)

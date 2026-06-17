@@ -24,7 +24,7 @@ import { BlogV2PostService } from "@root/blog-v2/services/blog-v2-post.service"
 import { UploadBlogPostDto } from "@root/blog-v2/dto/upload-blog-post.dto"
 import { QueryBlogPostDto } from "@root/blog-v2/dto/query-blog-post.dto"
 import { UpdatePostNoticesDto } from "@root/blog-v2/dto/common-text.dto"
-import { BlogPostStatus } from "@root/blog-v2/enum/blog-v2.enum"
+import { BlogPostStatus, BlogPublishTarget } from "@root/blog-v2/enum/blog-v2.enum"
 
 const MAX_FILES = 50
 const MAX_FILE_SIZE = 30 * 1024 * 1024 // 30MB (업로드 후 이미지 최적화로 웹용 축소)
@@ -73,10 +73,22 @@ export class BlogV2PostController {
     return this.service.updateFromFiles(id, files, user)
   }
 
-  @ApiOperation({ summary: "공개 글 목록 (인증 불필요, 발행 글만) — frontend 블로그 목록용" })
+  @ApiOperation({ summary: "공개 글 목록 (인증 불필요, 발행 글만) — frontend 블로그 목록용. detail_page 글은 제외" })
   @Get("public/list")
   async publicList(@Query() query: QueryBlogPostDto) {
-    return this.service.findMany({ ...query, status: BlogPostStatus.PUBLISHED })
+    return this.service.findMany({
+      ...query,
+      status: BlogPostStatus.PUBLISHED,
+      publishTarget: BlogPublishTarget.BLOG,
+    })
+  }
+
+  @ApiOperation({
+    summary: "공개: 시술 상세페이지에 연결된 글 (productPage+lang, 발행·detail_page만) — 상세페이지 영상 아래 노출용",
+  })
+  @Get("public/detail-page")
+  async publicDetailPagePost(@Query("productPage") productPage: string, @Query("lang") lang: string) {
+    return this.service.findDetailPagePost(productPage, lang)
   }
 
   @ApiOperation({ summary: "공개 글 상세 (slug, 인증 불필요) — frontend 블로그 상세용" })

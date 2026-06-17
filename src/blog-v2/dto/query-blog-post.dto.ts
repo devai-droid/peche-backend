@@ -1,7 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger"
 import { IsEnum, IsInt, IsOptional, IsString, IsUUID, Max, Min } from "class-validator"
 import { Type } from "class-transformer"
-import { BlogPostStatus } from "@root/blog-v2/enum/blog-v2.enum"
+import { BlogPostStatus, BlogPublishTarget } from "@root/blog-v2/enum/blog-v2.enum"
 
 export class QueryBlogPostDto {
   @ApiProperty({ required: false, enum: BlogPostStatus })
@@ -33,6 +33,11 @@ export class QueryBlogPostDto {
   @IsOptional()
   @IsString()
   productPageContains?: string
+
+  @ApiProperty({ required: false, enum: BlogPublishTarget, description: "노출 대상 필터 (blog/detail_page)" })
+  @IsOptional()
+  @IsEnum(BlogPublishTarget)
+  publishTarget?: BlogPublishTarget
 
   @ApiProperty({ required: false, description: "제목·요약·본문 검색" })
   @IsOptional()

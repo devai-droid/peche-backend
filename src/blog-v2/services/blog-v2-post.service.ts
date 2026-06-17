@@ -8,7 +8,7 @@ import { BlogKeyword } from "@root/blog-v2/entities/keyword.entity"
 import { BlogSlugService } from "@root/blog-v2/services/slug.service"
 import { BlogSummaryService } from "@root/blog-v2/services/summary.service"
 import { BlogImageUploadService } from "@root/blog-v2/services/blog-image-upload.service"
-import { BlogPostLang, BlogPostStatus } from "@root/blog-v2/enum/blog-v2.enum"
+import { BlogPostLang, BlogPostStatus, BlogPublishTarget } from "@root/blog-v2/enum/blog-v2.enum"
 import {
   extractSummaryFromBody,
   parseBlogMarkdown,
@@ -155,6 +155,10 @@ export class BlogV2PostService {
       ? frontmatter.internal_links.map((l) => ({ anchor: l.anchor, slug: l.slug }))
       : undefined
     post.productPage = frontmatter.product_page
+    post.publishTarget =
+      frontmatter.publish_target === BlogPublishTarget.DETAIL_PAGE
+        ? BlogPublishTarget.DETAIL_PAGE
+        : BlogPublishTarget.BLOG
     // 고지문구 적용(notices)은 어드민 미리보기에서 수동 선택 — 재업로드 시 기존 선택 유지(덮어쓰지 않음)
     // 최초 작성일(publishedAt)은 유지 — 없을 때만 frontmatter로 채움
     post.publishedAt =
@@ -268,6 +272,10 @@ export class BlogV2PostService {
         ? frontmatter.internal_links.map((l) => ({ anchor: l.anchor, slug: l.slug }))
         : undefined,
       productPage: frontmatter.product_page,
+      publishTarget:
+        frontmatter.publish_target === BlogPublishTarget.DETAIL_PAGE
+          ? BlogPublishTarget.DETAIL_PAGE
+          : BlogPublishTarget.BLOG,
       publishedAt: frontmatter.published_at ? new Date(frontmatter.published_at) : undefined,
       createdBy: user?.id,
       updatedBy: user?.id,
@@ -393,6 +401,7 @@ export class BlogV2PostService {
     if (query.lang) qb.andWhere("p.lang = :lang", { lang: query.lang })
     if (query.productCategoryId) qb.andWhere("p.product_category_id = :pid", { pid: query.productCategoryId })
     if (query.keywordId) qb.andWhere("p.keyword_id = :kid", { kid: query.keywordId })
+    if (query.publishTarget) qb.andWhere("p.publish_target = :ptgt", { ptgt: query.publishTarget })
     if (query.productPage) qb.andWhere("p.product_page = :pp", { pp: query.productPage })
     if (query.productPageContains) {
       qb.andWhere("p.product_page ILIKE :ppc", { ppc: `%${query.productPageContains}%` })
@@ -403,6 +412,23 @@ export class BlogV2PostService {
 
     const [items, total] = await qb.skip((page - 1) * limit).take(limit).getManyAndCount()
     return { items, total, page, limit }
+  }
+
+  /**
+   * 시술 상세페이지에 연결된 글 1건 (productPage 이름 + lang 일치, 발행·detail_page만).
+   * 여러 개면 최신 발행/작성 글. 없으면 null → 프론트는 빈 공간 처리.
+   */
+  async findDetailPagePost(productPage: string, lang: string): Promise<BlogPostV2 | null> {
+    if (!productPage || !lang) return null
+    return this.postRepo.findOne({
+      where: {
+        productPage,
+        lang: lang as BlogPostLang,
+        status: BlogPostStatus.PUBLISHED,
+        publishTarget: BlogPublishTarget.DETAIL_PAGE,
+      },
+      order: { publishedAt: "DESC", createdAt: "DESC" },
+    })
   }
 
   /** 글에 적용할 공통 고지문구 type 목록 설정 (어드민 미리보기 체크박스). */
