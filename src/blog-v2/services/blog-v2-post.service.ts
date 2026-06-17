@@ -431,6 +431,11 @@ export class BlogV2PostService {
     })
   }
 
+  /** 조회수 +1 (실제 열람 시. 프론트 React 클라이언트에서만 호출 → 봇은 SSR 경로라 미카운트) */
+  async incrementView(id: string): Promise<void> {
+    await this.postRepo.increment({ id }, "viewCount", 1)
+  }
+
   /** 글에 적용할 공통 고지문구 type 목록 설정 (어드민 미리보기 체크박스). */
   async setNotices(id: string, notices: string[], user: User): Promise<BlogPostV2> {
     const post = await this.findOne(id)

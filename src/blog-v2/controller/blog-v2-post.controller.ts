@@ -91,6 +91,13 @@ export class BlogV2PostController {
     return this.service.findDetailPagePost(productPage, lang)
   }
 
+  @ApiOperation({ summary: "공개: 조회수 +1 (실제 열람 시, 인증 불필요)" })
+  @Post("public/:id/view")
+  async incrementView(@Param("id", ParseUUIDPipe) id: string) {
+    await this.service.incrementView(id)
+    return { ok: true }
+  }
+
   @ApiOperation({ summary: "공개 글 상세 (slug, 인증 불필요) — frontend 블로그 상세용" })
   @Get("public/detail/:lang/:slug")
   async publicDetail(@Param("lang") lang: string, @Param("slug") slug: string) {
