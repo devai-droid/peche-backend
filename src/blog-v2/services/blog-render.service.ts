@@ -9,6 +9,16 @@ function esc(s?: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!)
 }
 
+// 목차 라벨 (언어별) — SSR nav aria-label·제목에 사용
+const TOC_LABEL: Record<string, string> = {
+  ko: "목차",
+  en: "Contents",
+  zh: "目录",
+  "zh-TW": "目錄",
+  ja: "目次",
+  th: "สารบัญ",
+}
+
 const TYPOGRAPHY_CSS = `
   *{box-sizing:border-box}
   body{margin:0;font-family:-apple-system,'Apple SD Gothic Neo','Pretendard',sans-serif;color:#2b2b2b;line-height:1.8;background:#fff}
@@ -222,7 +232,7 @@ ${this.buildJsonLd(post, canonical)}
 ${post.subtitle ? `<p class="blog-subtitle">${esc(post.subtitle)}</p>` : ""}
 ${post.thumbnailUrl ? `<img class="blog-thumb" src="${esc(post.thumbnailUrl)}" alt="${esc(post.title)}">` : ""}
 ${post.summaryText ? `<div class="blog-summary">${esc(post.summaryText)}</div>` : ""}
-${this.buildToc(post.bodyHtml ?? "")}
+${this.buildToc(post.bodyHtml ?? "", post.lang)}
 <div class="blog-content">${post.bodyHtml ?? ""}</div>
 ${this.buildAuthorCard(post)}
 </article>
@@ -234,8 +244,8 @@ ${this.buildCta(post)}
 </html>`
   }
 
-  /** 목차 — 본문 H2/H3 id 기반 */
-  private buildToc(bodyHtml: string): string {
+  /** 목차 — 본문 H2/H3 id 기반. 봇/검색엔진이 목차로 인식하도록 nav[aria-label] 부여 */
+  private buildToc(bodyHtml: string, lang: string): string {
     if (!bodyHtml) return ""
     const $ = cheerio.load(bodyHtml, null, false)
     const items = $("h2, h3")
@@ -243,10 +253,11 @@ ${this.buildCta(post)}
       .get()
       .filter((t) => t.id && t.text)
     if (items.length < 2) return ""
+    const label = TOC_LABEL[lang] ?? TOC_LABEL.ko
     const lis = items
       .map((t) => `<li class="toc-${t.lv}"><a href="#${esc(t.id)}">${esc(t.text)}</a></li>`)
       .join("")
-    return `<nav class="blog-toc"><div class="toc-title">목차</div><ul>${lis}</ul></nav>`
+    return `<nav class="blog-toc" aria-label="${esc(label)}"><div class="toc-title">${esc(label)}</div><ul>${lis}</ul></nav>`
   }
 
   /** 감수자 카드 — author_doctor */
