@@ -1,0 +1,7 @@
+[Unit]
+Description=Check SSL cert expiry and alert Slack
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/check-cert-expiry.sh
