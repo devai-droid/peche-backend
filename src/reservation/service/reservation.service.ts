@@ -121,6 +121,14 @@ export class ReservationService {
         }
         // 닥팔 예약메모용 시술 라인: "시술명(단가) x수량 - 소계" + 맨 끝 합계
         // 단가 = 할인가(이벤트가) 있으면 할인가, 없으면 정가. 수량은 dto.quantities[id] (없으면 1)
+        // 방문상담·보유권 사용은 실제 시술이 아닌 마커 상품 → 가격 라인·합계에서 제외 (정보는 userMemo에 별도 표기)
+        const MARKER_PRODUCT_IDS = new Set<string>([
+          "e00f590d-5920-4297-9dc6-41cdf5438ec9", // 방문상담(local)
+          "22c0f372-754e-4f5a-93ea-9ae567fd8184", // 방문상담(dev/prod/staging)
+          "5e8c9d2f-1a3b-4c5d-8e6f-7a9b0c1d2e3f", // 보유권 사용
+        ])
+        const realProductObjs = (productObjs ?? []).filter((p) => !MARKER_PRODUCT_IDS.has(p.id))
+
         const qtyOf = (id: string) => Number(dto.quantities?.[id]) || 1
         const unitPriceOf = (o: { price?: number; discountPrice?: number }) =>
           Number(o.discountPrice ?? o.price ?? 0)
@@ -131,11 +139,11 @@ export class ReservationService {
           const name = e.category?.name ? `[${e.category.name}] ${e.name}` : e.name
           return formatLine(name, unitPriceOf(e), qtyOf(e.id))
         })
-        const productLines = (productObjs ?? []).map((p) => formatLine(p.name, unitPriceOf(p), qtyOf(p.id)))
+        const productLines = realProductObjs.map((p) => formatLine(p.name, unitPriceOf(p), qtyOf(p.id)))
 
         let totalPrice = 0
         ;(eventObjs ?? []).forEach((e) => (totalPrice += unitPriceOf(e) * qtyOf(e.id)))
-        ;(productObjs ?? []).forEach((p) => (totalPrice += unitPriceOf(p) * qtyOf(p.id)))
+        realProductObjs.forEach((p) => (totalPrice += unitPriceOf(p) * qtyOf(p.id)))
 
         // 합계는 시술이 1개 이상일 때만, 맨 끝에 추가
         const productNames =
