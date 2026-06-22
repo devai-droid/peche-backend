@@ -18,11 +18,10 @@ export class BlogPublicController {
   ) {}
 
   /**
-   * CloudFront 함수가 부여한 `x-bot` 헤더가 봇 이름이면(예: "GPTBot") GA에 기록 + 캐시 무효.
-   * - 헤더값이 "0" 이거나 비어있으면 사람 → 무시
-   * - 헤더값이 봇 이름이면: (1) Cache-Control: no-store 설정 (캐시되면 다음 봇 요청에 GA 누락)
-   *                       (2) bot_read 이벤트 fire-and-forget 전송
-   * CloudFront가 UA를 백엔드까지 전달하지 않으므로 봇 이름은 헤더에서만 얻음.
+   * CloudFront 함수가 부여한 헤더로 GA 분석 이벤트 발사 (UA·Referer를 origin까지 안 넘기므로 헤더 우회).
+   * - `x-bot` 이 봇 이름(예: "GPTBot") → bot_read + 캐시 무효(캐시되면 다음 봇 요청에 GA 누락)
+   * - 사람(x-bot="0")인데 `x-ai-ref` 이 AI 엔진(예: "ChatGPT") → ai_referral (AI 답변 링크 클릭 유입)
+   * 둘 다 fire-and-forget. 캐시 히트 시 origin 미도달로 누락될 수 있음(저빈도라 감수).
    */
   private handleBotRequest(
     req: Request,
@@ -32,9 +31,17 @@ export class BlogPublicController {
     postSlug?: string,
   ): void {
     const botName = ((req.headers["x-bot"] as string | undefined) ?? "0").trim()
-    if (!botName || botName === "0") return
-    res.setHeader("Cache-Control", "no-store, max-age=0")
-    void this.botAnalytics.trackBotRead({ botName, pagePath, lang, postSlug })
+    if (botName && botName !== "0") {
+      res.setHeader("Cache-Control", "no-store, max-age=0")
+      void this.botAnalytics.trackBotRead({ botName, pagePath, lang, postSlug })
+      return
+    }
+    // 사람: AI 답변에서 유입됐으면 ai_referral
+    const aiRef = ((req.headers["x-ai-ref"] as string | undefined) ?? "0").trim()
+    if (aiRef && aiRef !== "0") {
+      res.setHeader("Cache-Control", "no-store, max-age=0")
+      void this.botAnalytics.trackAiReferral({ referrerEngine: aiRef, pagePath, lang, postSlug })
+    }
   }
 
   @Get("sitemap.xml")
