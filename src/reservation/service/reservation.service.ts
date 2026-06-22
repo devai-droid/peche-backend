@@ -119,10 +119,29 @@ export class ReservationService {
         if (dto.productIds && dto.productIds.length > 0) {
           productObjs = await this.productService.findManyByIds(dto.productIds)
         }
-        const eventNames = eventObjs?.map((e) =>
-          e.category?.name ? `[${e.category.name}] ${e.name}` : e.name,
-        )
-        const productNames = productObjs?.map((p) => p.name)
+        // 닥팔 예약메모용 시술 라인: "시술명(단가) x수량 - 소계" + 맨 끝 합계
+        // 단가 = 할인가(이벤트가) 있으면 할인가, 없으면 정가. 수량은 dto.quantities[id] (없으면 1)
+        const qtyOf = (id: string) => Number(dto.quantities?.[id]) || 1
+        const unitPriceOf = (o: { price?: number; discountPrice?: number }) =>
+          Number(o.discountPrice ?? o.price ?? 0)
+        const formatLine = (name: string, unit: number, qty: number) =>
+          `${name}(${unit.toLocaleString("ko-KR")}원) x${qty} - ${(unit * qty).toLocaleString("ko-KR")}원`
+
+        const eventNames = (eventObjs ?? []).map((e) => {
+          const name = e.category?.name ? `[${e.category.name}] ${e.name}` : e.name
+          return formatLine(name, unitPriceOf(e), qtyOf(e.id))
+        })
+        const productLines = (productObjs ?? []).map((p) => formatLine(p.name, unitPriceOf(p), qtyOf(p.id)))
+
+        let totalPrice = 0
+        ;(eventObjs ?? []).forEach((e) => (totalPrice += unitPriceOf(e) * qtyOf(e.id)))
+        ;(productObjs ?? []).forEach((p) => (totalPrice += unitPriceOf(p) * qtyOf(p.id)))
+
+        // 합계는 시술이 1개 이상일 때만, 맨 끝에 추가
+        const productNames =
+          eventNames.length + productLines.length > 0
+            ? [...productLines, `합계 ${totalPrice.toLocaleString("ko-KR")}원`]
+            : productLines
         // 분류(A/B/C)에 맞는 닥터팔레트 스케줄로 예약 생성 (미지정 시 초진 스케줄)
         scheduleId = resolveScheduleCode(dto.category)
         planId = await this.postReservationAndGetPlanId(

@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger"
-import { IsOptional } from "class-validator"
+import { IsObject, IsOptional } from "class-validator"
 import { Paginated } from "@root/shared/dto/base-list.ro"
 import { Reservation } from "@root/reservation/entities/reservation.entity"
 import { ReservationCategory, ReservationStatus } from "@root/shared/enum/reservation"
@@ -18,6 +18,7 @@ export interface ReservationDto {
   detailVisit?: string
   palettePlanId?: string
   category?: ReservationCategory
+  quantities?: Record<string, number>
 }
 
 export class CreateReservationDto implements ReservationDto {
@@ -33,6 +34,11 @@ export class CreateReservationDto implements ReservationDto {
   @ApiPropertyOptional({ enum: ReservationCategory })
   @IsOptional()
   readonly category?: ReservationCategory
+  // 시술별 수량 { [productOrEventId]: 개수 } — 닥팔 예약메모 단가·소계 계산용
+  @ApiPropertyOptional({ type: "object", additionalProperties: { type: "number" } })
+  @IsOptional()
+  @IsObject()
+  readonly quantities?: Record<string, number>
 }
 
 export class UpdateReservationDto implements ReservationDto {
