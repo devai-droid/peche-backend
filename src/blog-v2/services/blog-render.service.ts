@@ -244,11 +244,11 @@ ${this.buildCta(post)}
 </html>`
   }
 
-  /** 목차 — 본문 H2/H3 id 기반. 봇/검색엔진이 목차로 인식하도록 nav[aria-label] 부여 */
+  /** 목차 — 본문 H2 id 기반(h3 제외, 대제목만). 봇/검색엔진이 목차로 인식하도록 nav[aria-label] 부여 */
   private buildToc(bodyHtml: string, lang: string): string {
     if (!bodyHtml) return ""
     const $ = cheerio.load(bodyHtml, null, false)
-    const items = $("h2, h3")
+    const items = $("h2")
       .map((_, el) => ({ id: $(el).attr("id") ?? "", text: $(el).text().trim(), lv: el.tagName.toLowerCase() }))
       .get()
       .filter((t) => t.id && t.text)
