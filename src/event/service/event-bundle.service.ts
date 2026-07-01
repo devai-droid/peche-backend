@@ -1,6 +1,7 @@
 import { forwardRef, Inject, Injectable } from "@nestjs/common"
 import { InjectRepository } from "@nestjs/typeorm"
-import { Brackets, FindManyOptions, Repository } from "typeorm"
+import { FindManyOptions, LessThan, MoreThanOrEqual, Repository } from "typeorm"
+import { kstDayBounds } from "@root/shared/helper/kst.helper"
 import { EventBundle } from "@root/event/entities/event-bundle.entity"
 import { CreateEventBundleDto, UpdateEventBundleDto } from "@root/event/dto/event-bundle.dto"
 import { paginate } from "@root/shared/pagination"
@@ -58,8 +59,22 @@ export class EventBundleService {
     })
   }
 
-  async findVisible() {
+  // 임포트 동기화 등 내부용: 게시기간과 무관하게 전체 번들 반환
+  async findAll() {
     return this.repository.find({ order: { order: "ASC" } })
+  }
+
+  // 웹사이트 노출용: 오늘(KST)이 게시기간에 포함되는 번들만 반환.
+  // 어드민은 날짜만 지정하므로(저장 시 붙는 시각은 무시) KST "날짜 단위"로 비교.
+  async findVisible() {
+    const { todayStart, tomorrowStart } = kstDayBounds()
+    return this.repository.find({
+      where: {
+        postStartDate: LessThan(tomorrowStart),
+        postEndDate: MoreThanOrEqual(todayStart),
+      },
+      order: { order: "ASC" },
+    })
   }
 
   async update(id: string, dto: UpdateEventBundleDto) {

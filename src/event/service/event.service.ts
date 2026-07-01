@@ -1,7 +1,7 @@
 import { forwardRef, Inject, Injectable } from "@nestjs/common"
 import { InjectRepository } from "@nestjs/typeorm"
 import { Event } from "@root/event/entities/event.entity"
-import { FindManyOptions, ILike, In, Repository, Brackets } from "typeorm"
+import { ILike, In, Repository, Brackets } from "typeorm"
 import { ProductDetailPageService } from "@root/product/service/product-detail-page.service"
 import { IntegratedCrmCategoryService } from "@root/smart-doctor/service/integrated-crm-category.service"
 import { paginate } from "@root/shared/pagination"
@@ -18,6 +18,7 @@ import { EventBundleService } from "@root/event/service/event-bundle.service"
 import { EventBackup } from "@root/event/entities/event-backup.entity"
 import { GoogleSpreadsheetHelper } from "@root/shared/helper/google-spreadsheet.helper"
 import { EventCategoryStatus } from "@root/shared/enum/event"
+import { kstDayBounds } from "@root/shared/helper/kst.helper"
 
 @Injectable()
 export class EventService {
@@ -75,23 +76,35 @@ export class EventService {
   }
 
   async findManyWithPaginationQuery(query?: EventQueryDto) {
-    const findOptions = <FindManyOptions<Event>>{
-      relations: ["bundle"],
-      where: {
-        ...(query?.bundleId && { bundle: { id: query.bundleId } }),
-        ...(query?.categoryId && { category: { id: query.categoryId } }),
-        ...(query?.detailPageId && { detailPage: { id: query.detailPageId } }),
-        ...(query?.integratedCrmCategoryId && { integratedCrmCategory: { id: query.integratedCrmCategoryId } }),
-        ...(query?.visible && { visible: query.visible }),
-        ...(query?.visibleEN && { visibleEN: query.visibleEN }),
-        ...(query?.visibleZH && { visibleZH: query.visibleZH }),
-        ...(query?.visibleZHTW && { visibleZHTW: query.visibleZHTW }),
-        ...(query?.visibleJA && { visibleJA: query.visibleJA }),
-        ...(query?.visibleTH && { visibleTH: query.visibleTH }),
-      },
-      order: { bundle: { order: "ASC" }, order: "ASC" },
+    const qb = this.repository
+      .createQueryBuilder("event")
+      .leftJoinAndSelect("event.bundle", "bundle")
+      .where("1 = 1")
+
+    // bundle 게시기간 필터: 오늘(KST) 날짜 단위로 비교 (null이면 무제한). 어드민은 includeExpired=true 로 우회
+    if (!query?.includeExpired) {
+      const { todayStart, tomorrowStart } = kstDayBounds()
+      qb.andWhere("(bundle.post_start_date IS NULL OR bundle.post_start_date < :tomorrowStart)", { tomorrowStart })
+      qb.andWhere("(bundle.post_end_date IS NULL OR bundle.post_end_date >= :todayStart)", { todayStart })
     }
-    return await paginate<Event>(this.repository, query.paginationOptions(), findOptions)
+
+    if (query?.bundleId) qb.andWhere("bundle.id = :bundleId", { bundleId: query.bundleId })
+    if (query?.categoryId) qb.andWhere('event."category_id" = :categoryId', { categoryId: query.categoryId })
+    if (query?.detailPageId)
+      qb.andWhere('event."detail_page_id" = :detailPageId', { detailPageId: query.detailPageId })
+    if (query?.integratedCrmCategoryId)
+      qb.andWhere('event."integrated_crm_category_id" = :icId', { icId: query.integratedCrmCategoryId })
+    if (query?.visible !== undefined) qb.andWhere("event.visible = :v", { v: query.visible })
+    if (query?.visibleEN !== undefined) qb.andWhere('event."visible_en" = :vEN', { vEN: query.visibleEN })
+    if (query?.visibleZH !== undefined) qb.andWhere('event."visible_zh" = :vZH', { vZH: query.visibleZH })
+    if (query?.visibleZHTW !== undefined)
+      qb.andWhere('event."visible_zhtw" = :vZHTW', { vZHTW: query.visibleZHTW })
+    if (query?.visibleJA !== undefined) qb.andWhere('event."visible_ja" = :vJA', { vJA: query.visibleJA })
+    if (query?.visibleTH !== undefined) qb.andWhere('event."visible_th" = :vTH', { vTH: query.visibleTH })
+
+    qb.orderBy("bundle.order", "ASC").addOrderBy("event.order", "ASC")
+
+    return await paginate<Event>(qb, query.paginationOptions())
   }
 
   async findOne(id: string) {
@@ -191,7 +204,8 @@ export class EventService {
     const sheetBundleNames = new Set(sheets.map((s) => s.sheetName))
 
     // 시트에 없는 기존 번들은 통째로 삭제 (시트 = SSOT)
-    const existingBundles = await this.eventBundleService.findVisible()
+    // 게시기간 지난 번들도 삭제 대상 판단에 포함해야 하므로 findAll(전체) 사용
+    const existingBundles = await this.eventBundleService.findAll()
     for (const bundle of existingBundles) {
       if (!sheetBundleNames.has(bundle.name)) {
         await this.eventBundleService.remove(bundle.id)
@@ -227,10 +241,13 @@ export class EventService {
     const date = new Date(reservationDate)
     date.setHours(0, 0, 0, 0)
     const datetime = new Date(reservationDate)
+    const { todayStart, tomorrowStart } = kstDayBounds()
     return events.filter((event) => {
       return (
-        event.bundle.startDate <= date &&
-        date <= event.bundle.endDate &&
+        // 예약 가능 기준: 방문일이 아니라 "오늘(KST)이 이 이벤트의 노출(게시)기간 안인지"로 판단
+        // → 노출 중이면 방문일(내원일)은 자유. 노출이 끝났으면 예약 불가.
+        event.bundle.postStartDate < tomorrowStart &&
+        event.bundle.postEndDate >= todayStart &&
         event.category.dayOfWeek.includes(date.getDay()) &&
         (event.category.startDate == undefined || event.category.startDate <= date) &&
         (event.category.endDate == undefined || date <= event.category.endDate) &&
