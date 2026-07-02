@@ -179,6 +179,22 @@ export class ProductService {
       }
     }
 
+    // 경쟁 상태 방지: 상품(동시 생성) 전에 대분류·상세페이지를 순차로 먼저 확보한다.
+    // → 같은 이름의 상세페이지가 동시에 여러 개 만들어지던 중복 버그 수정 (V2와 동일한 순서)
+    const categoryByName = new Map()
+    for (const name of Array.from(
+      new Set(products.map((p) => p.categoryName).filter((n): n is string => !!n)),
+    )) {
+      categoryByName.set(name, await this.productCategoryService.findOrCreateByName({ name }))
+    }
+    for (const dpName of Array.from(
+      new Set(products.map((p) => p.detailPageName).filter((n): n is string => !!n)),
+    )) {
+      const catName = products.find((p) => p.detailPageName === dpName)?.categoryName
+      const category = catName ? categoryByName.get(catName) : undefined
+      await this.productDetailPageService.findOrCreateByName({ name: dpName }, category)
+    }
+
     const createdProducts = await Promise.all(
       products.map(async (dto) => {
         return await this.createFromGoogleSpreadsheet(dto)
