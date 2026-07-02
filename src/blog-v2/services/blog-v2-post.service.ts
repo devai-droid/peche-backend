@@ -402,7 +402,12 @@ export class BlogV2PostService {
     if (query.productCategoryId) qb.andWhere("p.product_category_id = :pid", { pid: query.productCategoryId })
     if (query.keywordId) qb.andWhere("p.keyword_id = :kid", { kid: query.keywordId })
     if (query.publishTarget) qb.andWhere("p.publish_target = :ptgt", { ptgt: query.publishTarget })
-    if (query.productPage) qb.andWhere("p.product_page = :pp", { pp: query.productPage })
+    if (query.productPage)
+      // product_page 는 콤마로 여러 상세페이지명을 가질 수 있음 → 각 항목(트림)과 정확 일치 검사
+      qb.andWhere(
+        "EXISTS (SELECT 1 FROM unnest(string_to_array(p.product_page, ',')) AS e WHERE trim(e) = :pp)",
+        { pp: query.productPage },
+      )
     if (query.productPageContains) {
       qb.andWhere("p.product_page ILIKE :ppc", { ppc: `%${query.productPageContains}%` })
     }
@@ -420,15 +425,18 @@ export class BlogV2PostService {
    */
   async findDetailPagePost(productPage: string, lang: string): Promise<BlogPostV2 | null> {
     if (!productPage || !lang) return null
-    return this.postRepo.findOne({
-      where: {
-        productPage,
-        lang: lang as BlogPostLang,
-        status: BlogPostStatus.PUBLISHED,
-        publishTarget: BlogPublishTarget.DETAIL_PAGE,
-      },
-      order: { publishedAt: "DESC", createdAt: "DESC" },
-    })
+    // product_page 에 콤마로 여러 상세페이지명이 들어갈 수 있으므로, 각 항목(트림)과 정확 일치 검사
+    return this.postRepo
+      .createQueryBuilder("p")
+      .where("EXISTS (SELECT 1 FROM unnest(string_to_array(p.product_page, ',')) AS e WHERE trim(e) = :pp)", {
+        pp: productPage,
+      })
+      .andWhere("p.lang = :lang", { lang })
+      .andWhere("p.status = :status", { status: BlogPostStatus.PUBLISHED })
+      .andWhere("p.publish_target = :ptgt", { ptgt: BlogPublishTarget.DETAIL_PAGE })
+      .orderBy("p.published_at", "DESC")
+      .addOrderBy("p.created_at", "DESC")
+      .getOne()
   }
 
   /** 글에 적용할 공통 고지문구 type 목록 설정 (어드민 미리보기 체크박스). */
