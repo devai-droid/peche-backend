@@ -79,6 +79,11 @@ export class EventService {
     const qb = this.repository
       .createQueryBuilder("event")
       .leftJoinAndSelect("event.bundle", "bundle")
+      // 쿼리빌더는 eager 관계를 자동 로드하지 않으므로 명시적으로 join
+      // (category/detailPage/integratedCrmCategory 는 엔티티에서 eager: true)
+      .leftJoinAndSelect("event.category", "category")
+      .leftJoinAndSelect("event.detailPage", "detailPage")
+      .leftJoinAndSelect("event.integratedCrmCategory", "integratedCrmCategory")
       .where("1 = 1")
 
     // bundle 게시기간 필터: 오늘(KST) 날짜 단위로 비교 (null이면 무제한). 어드민은 includeExpired=true 로 우회
