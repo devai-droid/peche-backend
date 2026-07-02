@@ -399,7 +399,16 @@ export class BlogV2PostService {
 
     if (query.status) qb.andWhere("p.status = :status", { status: query.status })
     if (query.lang) qb.andWhere("p.lang = :lang", { lang: query.lang })
-    if (query.productCategoryId) qb.andWhere("p.product_category_id = :pid", { pid: query.productCategoryId })
+    if (query.productCategoryId)
+      // 대분류 자동 도출(B): 글의 대분류가 직접 일치하거나, product_page에 적힌 상세페이지가 그 대분류 소속이면 포함
+      qb.andWhere(
+        `(p.product_category_id = :pid OR EXISTS (
+            SELECT 1 FROM public.product_detail_page dp
+            WHERE dp.category_id = :pid
+              AND EXISTS (SELECT 1 FROM unnest(string_to_array(p.product_page, ',')) AS e WHERE trim(e) = dp.name)
+          ))`,
+        { pid: query.productCategoryId },
+      )
     if (query.keywordId) qb.andWhere("p.keyword_id = :kid", { kid: query.keywordId })
     if (query.publishTarget) qb.andWhere("p.publish_target = :ptgt", { ptgt: query.publishTarget })
     if (query.productPage)
