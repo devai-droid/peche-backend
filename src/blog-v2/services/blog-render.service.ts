@@ -82,8 +82,13 @@ export class BlogRenderService {
 
   async renderPostPage(slug: string, lang: string): Promise<{ html: string; status: number }> {
     const post = await this.postService.findBySlug(slug, lang)
-    if (!post) return { html: this.render404(), status: 404 }
-    return { html: this.buildHtml(post), status: 200 }
+    if (post) return { html: this.buildHtml(post), status: 200 }
+    // 이름 변경 등으로 사라진 옛 주소(슬러그 이력에 있음) → 410 Gone
+    // (CloudFront는 404/403만 index.html로 바꾸고 410은 통과 → 검색엔진에 "영구 삭제" 전달)
+    if (await this.postService.isHistoricalSlug(slug, lang)) {
+      return { html: this.render410(), status: 410 }
+    }
+    return { html: this.render404(), status: 404 }
   }
 
   async renderListPage(lang: string): Promise<{ html: string; status: number }> {
@@ -466,5 +471,10 @@ ${assoc}
   private render404(): string {
     return `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>글을 찾을 수 없습니다</title></head>
 <body style="font-family:sans-serif;text-align:center;padding:80px"><h1>404</h1><p>글을 찾을 수 없습니다.</p></body></html>`
+  }
+
+  private render410(): string {
+    return `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="robots" content="noindex"><title>삭제된 페이지</title></head>
+<body style="font-family:sans-serif;text-align:center;padding:80px"><h1>410</h1><p>삭제된 페이지입니다.</p></body></html>`
   }
 }

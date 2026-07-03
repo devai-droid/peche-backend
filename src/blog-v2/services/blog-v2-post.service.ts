@@ -388,6 +388,11 @@ export class BlogV2PostService {
     })
   }
 
+  /** 슬러그가 "이름 변경으로 사라진 옛 주소"(이력에 있음)인지 — SSR 410 처리용 */
+  async isHistoricalSlug(slug: string, lang: string): Promise<boolean> {
+    return (await this.historyRepo.count({ where: { oldSlug: slug, lang } })) > 0
+  }
+
   async findMany(query: QueryBlogPostDto): Promise<PaginatedResult<BlogPostV2>> {
     const page = query.page ?? 1
     const limit = query.limit ?? 20
