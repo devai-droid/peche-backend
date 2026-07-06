@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from "@nes
 import { InjectRepository } from "@nestjs/typeorm"
 import { Repository } from "typeorm"
 import { BlogPostV2 } from "@root/blog-v2/entities/post.entity"
+import { BlogCommonTextType } from "@root/blog-v2/entities/common-text.entity"
 import { BlogPostSlugHistory } from "@root/blog-v2/entities/post-slug-history.entity"
 import { BlogDoctor } from "@root/blog-v2/entities/doctor.entity"
 import { BlogKeyword } from "@root/blog-v2/entities/keyword.entity"
@@ -272,6 +273,9 @@ export class BlogV2PostService {
         ? frontmatter.internal_links.map((l) => ({ anchor: l.anchor, slug: l.slug }))
         : undefined,
       productPage: frontmatter.product_page,
+      // 고지문구: 일반 면책은 항상 적용(프론트에서 자동), AI 이미지 고지는 신규 글에 기본 등록.
+      // frontmatter로 명시하면 그 값을 존중(빈 배열로 끄기 가능). 재업로드는 기존 선택 유지(update 경로).
+      notices: frontmatter.notices ?? [BlogCommonTextType.AI_IMAGE_NOTICE],
       publishTarget:
         frontmatter.publish_target === BlogPublishTarget.DETAIL_PAGE
           ? BlogPublishTarget.DETAIL_PAGE
