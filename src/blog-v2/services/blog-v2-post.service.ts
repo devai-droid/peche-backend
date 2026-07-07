@@ -408,13 +408,19 @@ export class BlogV2PostService {
   async getPublishedTitlesBySlugs(slugs: string[], lang: string): Promise<Record<string, string>> {
     const uniq = Array.from(new Set((slugs ?? []).map((s) => (s ?? "").trim()).filter(Boolean)))
     if (!uniq.length) return {}
-    const rows: Array<{ slug: string; title: string }> = await this.postRepo.query(
-      `SELECT slug, title FROM blog.posts WHERE lang = $1 AND status = 'published' AND slug = ANY($2)`,
-      [lang, uniq],
-    )
-    const map: Record<string, string> = {}
-    for (const r of rows) map[r.slug] = r.title
-    return map
+    try {
+      const rows: Array<{ slug: string; title: string }> = await this.postRepo.query(
+        `SELECT slug, title FROM blog.posts WHERE lang = $1 AND status = 'published' AND slug = ANY($2)`,
+        [lang, uniq],
+      )
+      const map: Record<string, string> = {}
+      for (const r of rows) map[r.slug] = r.title
+      return map
+    } catch (e) {
+      // 조회 실패해도 글 렌더는 정상 — 내부링크는 텍스트로 폴백
+      this.logger.warn(`getPublishedTitlesBySlugs 실패: ${(e as Error).message}`)
+      return {}
+    }
   }
 
   /**
