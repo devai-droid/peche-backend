@@ -91,6 +91,13 @@ export class BlogV2PostController {
     return this.service.findDetailPagePost(productPage, lang)
   }
 
+  @ApiOperation({ summary: "내부링크 치환용 — slug들 중 발행된 글의 slug→제목 맵" })
+  @Get("public/slug-titles")
+  async publicSlugTitles(@Query("lang") lang: string, @Query("slugs") slugs: string) {
+    const list = (slugs ?? "").split(",").map((s) => s.trim()).filter(Boolean)
+    return this.service.getPublishedTitlesBySlugs(list, lang || "ko")
+  }
+
 
   @ApiOperation({ summary: "공개 글 상세 (slug, 인증 불필요) — frontend 블로그 상세용" })
   @Get("public/detail/:lang/:slug")

@@ -402,6 +402,22 @@ export class BlogV2PostService {
   }
 
   /**
+   * 내부링크 치환용 — 주어진 slug들 중 "발행된" 글의 slug→제목 맵.
+   * 미발행/미존재 slug는 결과에 없음(호출측에서 링크 대신 텍스트 처리).
+   */
+  async getPublishedTitlesBySlugs(slugs: string[], lang: string): Promise<Record<string, string>> {
+    const uniq = Array.from(new Set((slugs ?? []).map((s) => (s ?? "").trim()).filter(Boolean)))
+    if (!uniq.length) return {}
+    const rows: Array<{ slug: string; title: string }> = await this.postRepo.query(
+      `SELECT slug, title FROM blog.posts WHERE lang = $1 AND status = 'published' AND slug = ANY($2)`,
+      [lang, uniq],
+    )
+    const map: Record<string, string> = {}
+    for (const r of rows) map[r.slug] = r.title
+    return map
+  }
+
+  /**
    * frontmatter.cta(최대 2개) → 이름 매칭으로 URL 해석해 저장.
    * 항목별로 page/category/event 중 하나 + text. 매칭 실패 항목은 경고 후 제외.
    * page: 상세페이지 → /products/{id}, category: 상시 대분류 → /products?category={id}, event: 이벤트 대분류 → /events?category={id}

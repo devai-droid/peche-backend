@@ -101,7 +101,9 @@ export class BlogRenderService {
     const post = await this.postService.findBySlug(slug, lang)
     if (post) {
       const priceGroups = await this.postService.getBlogPriceData(post.productPage, post.lang)
-      return { html: this.buildHtml(post, priceGroups), status: 200 }
+      const relatedSlugs = (post.internalLinks ?? []).map((l) => l.slug)
+      const titleMap = await this.postService.getPublishedTitlesBySlugs(relatedSlugs, post.lang)
+      return { html: this.buildHtml(post, priceGroups, titleMap), status: 200 }
     }
     // 이름 변경 등으로 사라진 옛 주소(슬러그 이력에 있음) → 410 Gone
     // (CloudFront는 404/403만 index.html로 바꾸고 410은 통과 → 검색엔진에 "영구 삭제" 전달)
@@ -222,7 +224,11 @@ ${posts.length ? `<div class="card-grid">${cards}</div>` : `<p>아직 발행된 
 </html>`
   }
 
-  private buildHtml(post: BlogPostV2, priceGroups: BlogPriceGroup[] = []): string {
+  private buildHtml(
+    post: BlogPostV2,
+    priceGroups: BlogPriceGroup[] = [],
+    relatedTitles: Record<string, string> = {},
+  ): string {
     const site = this.site
     const desc = post.summaryText ?? post.subtitle ?? ""
     const canonical = `${site.baseUrl}/${post.lang}/blog/${encodeURIComponent(post.slug)}`
@@ -262,7 +268,7 @@ ${this.buildToc(post.bodyHtml ?? "", post.lang)}
 ${this.buildAuthorCard(post)}
 ${this.buildPriceSection(priceGroups, post.lang)}
 </article>
-${this.buildRelated(post)}
+${this.buildRelated(post, relatedTitles)}
 </main>
 <footer class="blog-footer">© ${esc(site.hospitalName)}</footer>
 </body>
@@ -302,12 +308,17 @@ ${assoc}
 </aside>`
   }
 
-  /** 관련 글 — internal_links */
-  private buildRelated(post: BlogPostV2): string {
+  /** 관련 글 — internal_links. 발행된 글은 실제 제목+링크, 미발행이면 미리 적어둔 텍스트만(링크 X) */
+  private buildRelated(post: BlogPostV2, relatedTitles: Record<string, string> = {}): string {
     const links = post.internalLinks
     if (!links?.length) return ""
     const lis = links
-      .map((l) => `<li><a href="/${post.lang}/blog/${encodeURIComponent(l.slug)}">${esc(l.anchor)}</a></li>`)
+      .map((l) => {
+        const title = relatedTitles[l.slug]
+        return title
+          ? `<li><a href="/${post.lang}/blog/${encodeURIComponent(l.slug)}">${esc(title)}</a></li>`
+          : `<li><span>${esc(l.anchor)}</span></li>`
+      })
       .join("")
     return `<aside class="blog-related"><h2>관련 글</h2><ul>${lis}</ul></aside>`
   }
