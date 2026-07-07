@@ -263,7 +263,6 @@ ${this.buildAuthorCard(post)}
 ${this.buildPriceSection(priceGroups, post.lang)}
 </article>
 ${this.buildRelated(post)}
-${this.buildCta(post)}
 </main>
 <footer class="blog-footer">© ${esc(site.hospitalName)}</footer>
 </body>
