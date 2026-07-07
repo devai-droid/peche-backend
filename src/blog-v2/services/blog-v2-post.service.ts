@@ -503,7 +503,7 @@ export class BlogV2PostService {
         `SELECT COALESCE(e.${c.n}, e.name) AS name,
                 COALESCE(e.${c.d}, e.description) AS description,
                 e.price, e.discount_price AS "discountPrice",
-                e.label AS labels,
+                e.label::text[] AS labels,
                 COALESCE(ec.${c.n}, ec.name) AS "categoryName"
          FROM public.event e
          LEFT JOIN public.event_bundle b ON b.id = e.bundle_id

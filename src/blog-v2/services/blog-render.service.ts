@@ -333,11 +333,20 @@ ${assoc}
    * 상세페이지별로 구분, 각 블록 안에 가격이벤트(게시중)·전체 시술. 한쪽만 있으면 그 하나만.
    */
   private buildPriceSection(groups: BlogPriceGroup[], lang: string): string {
+    try {
+      return this.buildPriceSectionInner(groups, lang)
+    } catch {
+      // 가격 렌더 실패해도 글 SSR은 정상 — 가격 섹션만 생략
+      return ""
+    }
+  }
+
+  private buildPriceSectionInner(groups: BlogPriceGroup[], lang: string): string {
     if (!groups?.length) return ""
     const fmt = (n: number) => `${Number(n).toLocaleString("ko-KR")}원`
     const labelText: Record<string, string> = { POP: "event", NEW: "new", KAKAO: "kakao", BEST: "best" }
     const card = (it: BlogPriceGroup["events"][number]) => {
-      const chips = (it.labels ?? [])
+      const chips = (Array.isArray(it.labels) ? it.labels : [])
         .map((l) => `<span class="ps-chip">${esc(labelText[l] ?? l)}</span>`)
         .join("")
       const priceHtml = it.discountPrice
