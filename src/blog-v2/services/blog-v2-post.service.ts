@@ -25,11 +25,16 @@ import { kstDayBounds } from "@root/shared/helper/kst.helper"
 /** 블로그 가격 섹션 한 행 (상시/이벤트 공통) */
 export interface BlogPriceRow {
   name: string
+  description: string | null
   price: number
   discountPrice: number | null
+  // 이벤트 전용
+  labels?: string[] | null
+  categoryName?: string | null
 }
 /** 상세페이지 단위 가격 묶음 — products(전체 시술)·events(가격이벤트, 게시중만) */
 export interface BlogPriceGroup {
+  detailPageId: string
   detailPageName: string
   products: BlogPriceRow[]
   events: BlogPriceRow[]
@@ -444,15 +449,15 @@ export class BlogV2PostService {
     return `/events?category=${rows[0].id}`
   }
 
-  /** 언어 → 상품/이벤트 테이블의 이름·노출·정렬 컬럼(snake) 매핑 */
-  private static priceCols(lang: string): { n: string; v: string; o: string } {
-    const map: Record<string, { n: string; v: string; o: string }> = {
-      ko: { n: "name", v: "visible", o: "order" },
-      en: { n: "name_en", v: "visible_en", o: "order_en" },
-      zh: { n: "name_zh", v: "visible_zh", o: "order_zh" },
-      "zh-TW": { n: "name_zhtw", v: "visible_zhtw", o: "order_zhtw" },
-      ja: { n: "name_ja", v: "visible_ja", o: "order_ja" },
-      th: { n: "name_th", v: "visible_th", o: "order_th" },
+  /** 언어 → 상품/이벤트 테이블의 이름·설명·노출·정렬 컬럼(snake) 매핑 */
+  private static priceCols(lang: string): { n: string; d: string; v: string; o: string } {
+    const map: Record<string, { n: string; d: string; v: string; o: string }> = {
+      ko: { n: "name", d: "description", v: "visible", o: "order" },
+      en: { n: "name_en", d: "description_en", v: "visible_en", o: "order_en" },
+      zh: { n: "name_zh", d: "description_zh", v: "visible_zh", o: "order_zh" },
+      "zh-TW": { n: "name_zhtw", d: "description_zhtw", v: "visible_zhtw", o: "order_zhtw" },
+      ja: { n: "name_ja", d: "description_ja", v: "visible_ja", o: "order_ja" },
+      th: { n: "name_th", d: "description_th", v: "visible_th", o: "order_th" },
     }
     return map[lang] ?? map.ko
   }
@@ -486,16 +491,23 @@ export class BlogV2PostService {
       if (!dpRows.length) continue
       const dp = dpRows[0]
       const products: BlogPriceRow[] = await this.postRepo.query(
-        `SELECT COALESCE(${c.n}, name) AS name, price, discount_price AS "discountPrice"
+        `SELECT COALESCE(${c.n}, name) AS name,
+                COALESCE(${c.d}, description) AS description,
+                price, discount_price AS "discountPrice"
          FROM public.product
          WHERE detail_page_id = $1 AND ${c.v} IS TRUE
          ORDER BY "${c.o}" ASC NULLS LAST`,
         [dp.id],
       )
       const events: BlogPriceRow[] = await this.postRepo.query(
-        `SELECT COALESCE(e.${c.n}, e.name) AS name, e.price, e.discount_price AS "discountPrice"
+        `SELECT COALESCE(e.${c.n}, e.name) AS name,
+                COALESCE(e.${c.d}, e.description) AS description,
+                e.price, e.discount_price AS "discountPrice",
+                e.label AS labels,
+                COALESCE(ec.${c.n}, ec.name) AS "categoryName"
          FROM public.event e
          LEFT JOIN public.event_bundle b ON b.id = e.bundle_id
+         LEFT JOIN public.event_category ec ON ec.id = e.category_id
          WHERE e.detail_page_id = $1
            AND e.${c.v} IS TRUE
            AND e.detail_page_show IS TRUE
@@ -505,7 +517,8 @@ export class BlogV2PostService {
         [dp.id, tomorrowStart, todayStart],
       )
       // 둘 다 비면 상세페이지 블록 자체를 생략
-      if (products.length || events.length) groups.push({ detailPageName: dp.name, products, events })
+      if (products.length || events.length)
+        groups.push({ detailPageId: dp.id, detailPageName: dp.name, products, events })
     }
     return groups
   }

@@ -72,15 +72,22 @@ const TYPOGRAPHY_CSS = `
   .cta-btn{display:inline-block;background:#DA7F67;color:#fff;padding:14px 36px;border-radius:6px;text-decoration:none;font-weight:600;font-size:16px}
   .cta-btn:hover{background:#c56b54}
   .blog-price{margin:40px 0 0}
-  .ps-group{margin:0 0 24px}
+  .ps-group{margin:0 0 52px}
   .ps-group>h2{font-size:19px;font-weight:700;margin:0 0 12px}
-  .ps-tab{margin:0 0 16px}
+  .ps-tab{margin:0 0 20px}
   .ps-tab>h3{font-size:15px;font-weight:600;color:#DA7F67;margin:0 0 8px}
-  .ps-tab ul{list-style:none;padding:0;margin:0}
-  .ps-tab li{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #f0eae7;font-size:15px}
-  .ps-name{color:#333}
-  .ps-price del{color:#bbb;margin-right:6px;font-size:13px}
-  .ps-price strong{color:#111}
+  .ps-card{display:flex;flex-direction:column;gap:8px;padding:16px 4px;border-bottom:1px solid #eee}
+  .ps-main{display:flex;flex-direction:column;gap:6px;min-width:0}
+  .ps-chips{display:flex;gap:4px}
+  .ps-chip{font-size:12px;font-weight:600;color:#8D7B64;background:#F4F4F4;border-radius:4px;padding:3px 6px;line-height:1}
+  .ps-name{font-size:17px;font-weight:600;color:#121212}
+  .ps-cat{color:#DA7F67}
+  .ps-desc{font-size:13px;color:#666}
+  .ps-price{white-space:nowrap}
+  .ps-price del{color:#9B9B9B;margin-right:6px;font-size:13px}
+  .ps-price strong{color:#AB6655;font-size:16px}
+  .ps-more{display:inline-block;margin-top:10px;color:#AB6655;font-weight:600;font-size:14px;text-decoration:none}
+  @media(min-width:768px){.ps-card{flex-direction:row;align-items:center;gap:20px}.ps-main{flex:1}}
   .blog-footer{border-top:1px solid #eee;padding:32px 24px;text-align:center;color:#999;font-size:13px}
 `
 
@@ -253,7 +260,7 @@ ${post.summaryText ? `<div class="blog-summary">${esc(post.summaryText)}</div>` 
 ${this.buildToc(post.bodyHtml ?? "", post.lang)}
 <div class="blog-content">${post.bodyHtml ?? ""}</div>
 ${this.buildAuthorCard(post)}
-${this.buildPriceSection(priceGroups)}
+${this.buildPriceSection(priceGroups, post.lang)}
 </article>
 ${this.buildRelated(post)}
 ${this.buildCta(post)}
@@ -325,21 +332,29 @@ ${assoc}
    * 가격 섹션(봇용) — 상품명·가격을 이미지가 아닌 실제 텍스트로 출력해 크롤러가 읽게 함.
    * 상세페이지별로 구분, 각 블록 안에 가격이벤트(게시중)·전체 시술. 한쪽만 있으면 그 하나만.
    */
-  private buildPriceSection(groups: BlogPriceGroup[]): string {
+  private buildPriceSection(groups: BlogPriceGroup[], lang: string): string {
     if (!groups?.length) return ""
     const fmt = (n: number) => `${Number(n).toLocaleString("ko-KR")}원`
-    const row = (it: { name: string; price: number; discountPrice: number | null }) => {
+    const labelText: Record<string, string> = { POP: "event", NEW: "new", KAKAO: "kakao", BEST: "best" }
+    const card = (it: BlogPriceGroup["events"][number]) => {
+      const chips = (it.labels ?? [])
+        .map((l) => `<span class="ps-chip">${esc(labelText[l] ?? l)}</span>`)
+        .join("")
       const priceHtml = it.discountPrice
         ? `<del>${fmt(it.price)}</del> <strong>${fmt(it.discountPrice)}</strong>`
         : `<strong>${fmt(it.price)}</strong>`
-      return `<li><span class="ps-name">${esc(it.name)}</span><span class="ps-price">${priceHtml}</span></li>`
+      const title = it.categoryName
+        ? `<span class="ps-cat">${esc(it.categoryName)}</span> ${esc(it.name)}`
+        : esc(it.name)
+      return `<div class="ps-card"><div class="ps-main">${chips ? `<div class="ps-chips">${chips}</div>` : ""}<div class="ps-name">${title}</div>${it.description ? `<div class="ps-desc">${esc(it.description)}</div>` : ""}</div><div class="ps-price">${priceHtml}</div></div>`
     }
     const tab = (title: string, rows: BlogPriceGroup["products"]) =>
-      rows.length ? `<div class="ps-tab"><h3>${title}</h3><ul>${rows.map(row).join("")}</ul></div>` : ""
+      rows.length ? `<div class="ps-tab"><h3>${title}</h3>${rows.map(card).join("")}</div>` : ""
     const blocks = groups
       .map((g) => {
         const inner = `${tab("가격이벤트", g.events)}${tab("전체 시술", g.products)}`
-        return inner ? `<section class="ps-group"><h2>${esc(g.detailPageName)} 가격</h2>${inner}</section>` : ""
+        if (!inner) return ""
+        return `<section class="ps-group"><h2>${esc(g.detailPageName)} 가격</h2>${inner}<a class="ps-more" href="/${esc(lang)}/products/${esc(g.detailPageId)}">가격 더보기</a></section>`
       })
       .filter(Boolean)
     return blocks.length ? `<aside class="blog-price">${blocks.join("")}</aside>` : ""
@@ -442,6 +457,7 @@ ${assoc}
       [...g.events, ...g.products].map((it) => ({
         "@type": "Product",
         name: it.name,
+        description: it.description ?? undefined,
         category: g.detailPageName,
         offers: {
           "@type": "Offer",
