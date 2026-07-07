@@ -174,7 +174,9 @@ export class BlogV2PostService {
     post.internalLinks = Array.isArray(frontmatter.internal_links)
       ? frontmatter.internal_links.map((l) => ({ anchor: l.anchor, slug: l.slug }))
       : undefined
-    post.productPage = frontmatter.product_page
+    post.productPage = Array.isArray(frontmatter.product_page)
+      ? frontmatter.product_page.join(" | ")
+      : frontmatter.product_page
     // CTA는 md가 source of truth — 재업로드 시 md 기준으로 갱신(product_page와 동일 정책). 없으면 해제.
     post.ctaLinks = await this.resolveCtaLinks(frontmatter.cta, warnings)
     post.publishTarget =
@@ -293,7 +295,9 @@ export class BlogV2PostService {
       internalLinks: Array.isArray(frontmatter.internal_links)
         ? frontmatter.internal_links.map((l) => ({ anchor: l.anchor, slug: l.slug }))
         : undefined,
-      productPage: frontmatter.product_page,
+      productPage: Array.isArray(frontmatter.product_page)
+        ? frontmatter.product_page.join(" | ")
+        : frontmatter.product_page,
       ctaLinks: await this.resolveCtaLinks(frontmatter.cta, warnings),
       // 고지문구: 일반 면책은 항상 적용(프론트에서 자동), AI 이미지 고지는 신규 글에 기본 등록.
       // frontmatter로 명시하면 그 값을 존중(빈 배열로 끄기 가능). 재업로드는 기존 선택 유지(update 경로).
@@ -478,7 +482,8 @@ export class BlogV2PostService {
   }
 
   private async getBlogPriceDataInner(productPage: string | undefined, lang: string): Promise<BlogPriceGroup[]> {
-    const names = (productPage ?? "").split(",").map((s) => s.trim()).filter(Boolean)
+    const sep = (productPage ?? "").includes("|") ? "|" : ","
+    const names = (productPage ?? "").split(sep).map((s) => s.trim()).filter(Boolean)
     if (!names.length) return []
     const c = BlogV2PostService.priceCols(lang)
     const { todayStart, tomorrowStart } = kstDayBounds()
@@ -562,7 +567,7 @@ export class BlogV2PostService {
         `(p.product_category_id = :pid OR EXISTS (
             SELECT 1 FROM public.product_detail_page dp
             WHERE dp.category_id = :pid
-              AND EXISTS (SELECT 1 FROM unnest(string_to_array(p.product_page, ',')) AS e WHERE trim(e) = dp.name)
+              AND EXISTS (SELECT 1 FROM unnest(string_to_array(p.product_page, CASE WHEN position('|' in p.product_page) > 0 THEN '|' ELSE ',' END)) AS e WHERE trim(e) = dp.name)
           ))`,
         { pid: query.productCategoryId },
       )
@@ -571,7 +576,7 @@ export class BlogV2PostService {
     if (query.productPage)
       // product_page 는 콤마로 여러 상세페이지명을 가질 수 있음 → 각 항목(트림)과 정확 일치 검사
       qb.andWhere(
-        "EXISTS (SELECT 1 FROM unnest(string_to_array(p.product_page, ',')) AS e WHERE trim(e) = :pp)",
+        "EXISTS (SELECT 1 FROM unnest(string_to_array(p.product_page, CASE WHEN position('|' in p.product_page) > 0 THEN '|' ELSE ',' END)) AS e WHERE trim(e) = :pp)",
         { pp: query.productPage },
       )
     if (query.productPageContains) {
@@ -594,7 +599,7 @@ export class BlogV2PostService {
     // product_page 에 콤마로 여러 상세페이지명이 들어갈 수 있으므로, 각 항목(트림)과 정확 일치 검사
     return this.postRepo
       .createQueryBuilder("p")
-      .where("EXISTS (SELECT 1 FROM unnest(string_to_array(p.product_page, ',')) AS e WHERE trim(e) = :pp)", {
+      .where("EXISTS (SELECT 1 FROM unnest(string_to_array(p.product_page, CASE WHEN position('|' in p.product_page) > 0 THEN '|' ELSE ',' END)) AS e WHERE trim(e) = :pp)", {
         pp: productPage,
       })
       .andWhere("p.lang = :lang", { lang })
