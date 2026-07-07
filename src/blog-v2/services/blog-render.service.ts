@@ -360,7 +360,7 @@ ${assoc}
       rows.length ? `<div class="ps-tab"><h3>${title}</h3>${rows.map(card).join("")}</div>` : ""
     const blocks = groups
       .map((g) => {
-        const inner = `${tab("가격이벤트", g.events)}${tab("전체 시술", g.products)}`
+        const inner = `${tab("가격·이벤트", g.events)}${tab("전체 시술", g.products)}`
         if (!inner) return ""
         return `<section class="ps-group"><h2>${esc(g.detailPageName)} 가격</h2>${inner}<a class="ps-more" href="/${esc(lang)}/products/${esc(g.detailPageId)}">가격 더보기</a></section>`
       })
