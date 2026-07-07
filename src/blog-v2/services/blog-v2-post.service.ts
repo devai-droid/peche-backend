@@ -156,6 +156,8 @@ export class BlogV2PostService {
       ? frontmatter.internal_links.map((l) => ({ anchor: l.anchor, slug: l.slug }))
       : undefined
     post.productPage = frontmatter.product_page
+    // CTA는 md가 source of truth — 재업로드 시 md 기준으로 갱신(product_page와 동일 정책). 없으면 해제.
+    post.ctaLinks = await this.resolveCtaLinks(frontmatter.cta, warnings)
     post.publishTarget =
       frontmatter.publish_target === BlogPublishTarget.DETAIL_PAGE
         ? BlogPublishTarget.DETAIL_PAGE
@@ -273,6 +275,7 @@ export class BlogV2PostService {
         ? frontmatter.internal_links.map((l) => ({ anchor: l.anchor, slug: l.slug }))
         : undefined,
       productPage: frontmatter.product_page,
+      ctaLinks: await this.resolveCtaLinks(frontmatter.cta, warnings),
       // 고지문구: 일반 면책은 항상 적용(프론트에서 자동), AI 이미지 고지는 신규 글에 기본 등록.
       // frontmatter로 명시하면 그 값을 존중(빈 배열로 끄기 가능). 재업로드는 기존 선택 유지(update 경로).
       notices: frontmatter.notices ?? [BlogCommonTextType.AI_IMAGE_NOTICE],
@@ -373,6 +376,58 @@ export class BlogV2PostService {
       return undefined
     }
     return rows[0].id
+  }
+
+  /**
+   * frontmatter.cta(최대 2개) → 이름 매칭으로 URL 해석해 저장.
+   * 항목별로 page/category/event 중 하나 + text. 매칭 실패 항목은 경고 후 제외.
+   * page: 상세페이지 → /products/{id}, category: 상시 대분류 → /products?category={id}, event: 이벤트 대분류 → /events?category={id}
+   */
+  private async resolveCtaLinks(
+    cta: Array<{ page?: string; category?: string; event?: string; text?: string }> | undefined,
+    warnings: string[],
+  ): Promise<BlogPostV2["ctaLinks"]> {
+    if (!Array.isArray(cta) || cta.length === 0) return undefined
+    if (cta.length > 2) warnings.push(`CTA는 최대 2개까지만 적용됩니다 — 앞의 2개만 사용(${cta.length}개 입력됨)`)
+    const out: NonNullable<BlogPostV2["ctaLinks"]> = []
+    for (const item of cta.slice(0, 2)) {
+      const type: "page" | "category" | "event" | undefined = item.page
+        ? "page"
+        : item.category
+          ? "category"
+          : item.event
+            ? "event"
+            : undefined
+      const target = (item.page ?? item.category ?? item.event ?? "").trim()
+      if (!type || !target) {
+        warnings.push("CTA 항목에 page/category/event 중 하나가 필요합니다 — 해당 항목 제외")
+        continue
+      }
+      const url = await this.resolveCtaUrl(type, target, warnings)
+      if (!url) continue
+      out.push({ type, target, text: (item.text ?? target).trim(), url })
+    }
+    return out.length ? out : undefined
+  }
+
+  private async resolveCtaUrl(
+    type: "page" | "category" | "event",
+    target: string,
+    warnings: string[],
+  ): Promise<string | undefined> {
+    const table = type === "page" ? "product_detail_page" : type === "category" ? "product_category" : "event_category"
+    const rows: Array<{ id: string }> = await this.postRepo.query(
+      `SELECT id FROM public.${table} WHERE name = $1 AND status = 'ACTIVE' LIMIT 1`,
+      [target],
+    )
+    if (!rows.length) {
+      const label = type === "page" ? "상세페이지" : type === "category" ? "상시 대분류" : "이벤트 대분류"
+      warnings.push(`CTA ${label} 매칭 실패: "${target}" — 사이트 실제 이름과 정확히 일치해야 함`)
+      return undefined
+    }
+    if (type === "page") return `/products/${rows[0].id}`
+    if (type === "category") return `/products?category=${rows[0].id}`
+    return `/events?category=${rows[0].id}`
   }
 
   async findOne(id: string): Promise<BlogPostV2> {

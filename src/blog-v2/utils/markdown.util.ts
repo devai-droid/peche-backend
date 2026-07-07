@@ -74,8 +74,12 @@ export interface BlogPostFrontmatter {
   department?: string
   // [시술 중심 의원] 대분류 — 블로그 메뉴 필터 (사이트 실제 대분류명과 일치, 자동 매칭)
   product_category?: string
-  // [시술 중심 의원] 상세페이지 — CTA 링크 대상 (사이트 실제 상세페이지명과 일치, 자동 매칭)
+  // [시술 중심 의원] 상세페이지 — 글 노출 위치 (콤마로 여러 개, 사이트 실제 상세페이지명과 일치)
   product_page?: string
+  // CTA 버튼 링크(최대 2개) — product_page와 별개. 항목별로 page/category/event 중 하나 + text.
+  //   page: 상세페이지명 → /products/{id}, category: 상시 대분류명 → /products?category={id}, event: 이벤트 대분류명 → /events?category={id}
+  cta?: Array<{ page?: string; category?: string; event?: string; text?: string }>
+
   // 노출 대상: "detail_page" 지정 시 블로그 목록이 아니라 시술 상세페이지(영상 아래)에 노출 (product_page로 매칭). 기본은 블로그
   publish_target?: string
   // 키워드 (신규 명칭) — 마케터 md 표준

@@ -126,6 +126,15 @@ export class BlogPostV2 extends TimeStampEntity {
   notices?: string[]
 
   @ApiProperty({
+    required: false,
+    description:
+      "CTA 버튼 링크(최대 2개). product_page(노출 위치)와 별개. 파싱 시 이름→URL 해석해 저장. type: page(상세페이지)/category(상시 대분류)/event(이벤트 대분류)",
+  })
+  @Column({ name: "cta_links", type: "jsonb", nullable: true })
+  ctaLinks?: Array<{ type: "page" | "category" | "event"; target: string; text: string; url: string }>
+
+
+  @ApiProperty({
     enum: BlogPublishTarget,
     description: "노출 대상: blog(블로그 목록, 기본) / detail_page(시술 상세페이지 영상 아래 섹션). product_page로 상세페이지 매칭",
   })

@@ -292,11 +292,15 @@ ${assoc}
     return `<aside class="blog-related"><h2>관련 글</h2><ul>${lis}</ul></aside>`
   }
 
-  /** 시술 대분류 카드 + 공통 CTA */
+  /** CTA 버튼 — 글별 ctaLinks(최대 2개) 우선, 없으면 사이트 공통 CTA */
   private buildCta(post: BlogPostV2): string {
     const site = this.site
     const parts: string[] = []
-    if (site.cta) {
+    if (post.ctaLinks?.length) {
+      for (const c of post.ctaLinks.slice(0, 2)) {
+        parts.push(`<a class="cta-btn" href="/${post.lang}${c.url}">${esc(c.text)}</a>`)
+      }
+    } else if (site.cta) {
       parts.push(`<a class="cta-btn" href="/${post.lang}${site.cta.url}">${esc(site.cta.text)}</a>`)
     }
     if (!parts.length) return ""
