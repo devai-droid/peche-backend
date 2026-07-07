@@ -20,6 +20,20 @@ import { UploadBlogPostDto } from "@root/blog-v2/dto/upload-blog-post.dto"
 import { QueryBlogPostDto } from "@root/blog-v2/dto/query-blog-post.dto"
 import { User } from "@root/shared/interface/user"
 import { PECHE_SITE } from "@root/blog-v2/sites/peche.config"
+import { kstDayBounds } from "@root/shared/helper/kst.helper"
+
+/** 블로그 가격 섹션 한 행 (상시/이벤트 공통) */
+export interface BlogPriceRow {
+  name: string
+  price: number
+  discountPrice: number | null
+}
+/** 상세페이지 단위 가격 묶음 — products(전체 시술)·events(가격이벤트, 게시중만) */
+export interface BlogPriceGroup {
+  detailPageName: string
+  products: BlogPriceRow[]
+  events: BlogPriceRow[]
+}
 
 export interface PaginatedResult<T> {
   items: T[]
@@ -428,6 +442,72 @@ export class BlogV2PostService {
     if (type === "page") return `/products/${rows[0].id}`
     if (type === "category") return `/products?category=${rows[0].id}`
     return `/events?category=${rows[0].id}`
+  }
+
+  /** 언어 → 상품/이벤트 테이블의 이름·노출·정렬 컬럼(snake) 매핑 */
+  private static priceCols(lang: string): { n: string; v: string; o: string } {
+    const map: Record<string, { n: string; v: string; o: string }> = {
+      ko: { n: "name", v: "visible", o: "order" },
+      en: { n: "name_en", v: "visible_en", o: "order_en" },
+      zh: { n: "name_zh", v: "visible_zh", o: "order_zh" },
+      "zh-TW": { n: "name_zhtw", v: "visible_zhtw", o: "order_zhtw" },
+      ja: { n: "name_ja", v: "visible_ja", o: "order_ja" },
+      th: { n: "name_th", v: "visible_th", o: "order_th" },
+    }
+    return map[lang] ?? map.ko
+  }
+
+  /**
+   * 블로그 가격 섹션 데이터 — product_page(콤마로 여러 상세페이지명)별로 상시 상품 + 게시중 이벤트를 조회.
+   * 상세페이지별로 구분(섞지 않음). 정렬은 사이트와 동일(order). 이벤트는 게시기간(bundle) 노출중 + detail_page_show만.
+   * 언어별 이름·노출·정렬 컬럼 사용(이름은 번역 없으면 ko로 폴백). 봇 SSR·API 공용.
+   */
+  async getBlogPriceData(productPage: string | undefined, lang: string): Promise<BlogPriceGroup[]> {
+    try {
+      return await this.getBlogPriceDataInner(productPage, lang)
+    } catch (e) {
+      // 가격 조회 실패해도 글 렌더(봇 SSR 포함)는 정상 진행 — 가격 섹션만 빠짐
+      this.logger.warn(`getBlogPriceData 실패: ${(e as Error).message}`)
+      return []
+    }
+  }
+
+  private async getBlogPriceDataInner(productPage: string | undefined, lang: string): Promise<BlogPriceGroup[]> {
+    const names = (productPage ?? "").split(",").map((s) => s.trim()).filter(Boolean)
+    if (!names.length) return []
+    const c = BlogV2PostService.priceCols(lang)
+    const { todayStart, tomorrowStart } = kstDayBounds()
+    const groups: BlogPriceGroup[] = []
+    for (const nm of names) {
+      const dpRows: Array<{ id: string; name: string }> = await this.postRepo.query(
+        `SELECT id, name FROM public.product_detail_page WHERE name = $1 AND status = 'ACTIVE' LIMIT 1`,
+        [nm],
+      )
+      if (!dpRows.length) continue
+      const dp = dpRows[0]
+      const products: BlogPriceRow[] = await this.postRepo.query(
+        `SELECT COALESCE(${c.n}, name) AS name, price, discount_price AS "discountPrice"
+         FROM public.product
+         WHERE detail_page_id = $1 AND ${c.v} IS TRUE
+         ORDER BY "${c.o}" ASC NULLS LAST`,
+        [dp.id],
+      )
+      const events: BlogPriceRow[] = await this.postRepo.query(
+        `SELECT COALESCE(e.${c.n}, e.name) AS name, e.price, e.discount_price AS "discountPrice"
+         FROM public.event e
+         LEFT JOIN public.event_bundle b ON b.id = e.bundle_id
+         WHERE e.detail_page_id = $1
+           AND e.${c.v} IS TRUE
+           AND e.detail_page_show IS TRUE
+           AND (b.post_start_date IS NULL OR b.post_start_date < $2)
+           AND (b.post_end_date IS NULL OR b.post_end_date >= $3)
+         ORDER BY b."order" ASC NULLS LAST, e."${c.o}" ASC NULLS LAST`,
+        [dp.id, tomorrowStart, todayStart],
+      )
+      // 둘 다 비면 상세페이지 블록 자체를 생략
+      if (products.length || events.length) groups.push({ detailPageName: dp.name, products, events })
+    }
+    return groups
   }
 
   async findOne(id: string): Promise<BlogPostV2> {

@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common"
 import * as cheerio from "cheerio"
-import { BlogV2PostService } from "@root/blog-v2/services/blog-v2-post.service"
+import { BlogV2PostService, BlogPriceGroup } from "@root/blog-v2/services/blog-v2-post.service"
 import { BlogPostV2 } from "@root/blog-v2/entities/post.entity"
 import { PECHE_SITE, SiteConfig } from "@root/blog-v2/sites/peche.config"
 
@@ -71,6 +71,16 @@ const TYPOGRAPHY_CSS = `
   .blog-cta{margin:40px 0 0;text-align:center}
   .cta-btn{display:inline-block;background:#DA7F67;color:#fff;padding:14px 36px;border-radius:6px;text-decoration:none;font-weight:600;font-size:16px}
   .cta-btn:hover{background:#c56b54}
+  .blog-price{margin:40px 0 0}
+  .ps-group{margin:0 0 24px}
+  .ps-group>h2{font-size:19px;font-weight:700;margin:0 0 12px}
+  .ps-tab{margin:0 0 16px}
+  .ps-tab>h3{font-size:15px;font-weight:600;color:#DA7F67;margin:0 0 8px}
+  .ps-tab ul{list-style:none;padding:0;margin:0}
+  .ps-tab li{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #f0eae7;font-size:15px}
+  .ps-name{color:#333}
+  .ps-price del{color:#bbb;margin-right:6px;font-size:13px}
+  .ps-price strong{color:#111}
   .blog-footer{border-top:1px solid #eee;padding:32px 24px;text-align:center;color:#999;font-size:13px}
 `
 
@@ -82,7 +92,10 @@ export class BlogRenderService {
 
   async renderPostPage(slug: string, lang: string): Promise<{ html: string; status: number }> {
     const post = await this.postService.findBySlug(slug, lang)
-    if (post) return { html: this.buildHtml(post), status: 200 }
+    if (post) {
+      const priceGroups = await this.postService.getBlogPriceData(post.productPage, post.lang)
+      return { html: this.buildHtml(post, priceGroups), status: 200 }
+    }
     // 이름 변경 등으로 사라진 옛 주소(슬러그 이력에 있음) → 410 Gone
     // (CloudFront는 404/403만 index.html로 바꾸고 410은 통과 → 검색엔진에 "영구 삭제" 전달)
     if (await this.postService.isHistoricalSlug(slug, lang)) {
@@ -202,7 +215,7 @@ ${posts.length ? `<div class="card-grid">${cards}</div>` : `<p>아직 발행된 
 </html>`
   }
 
-  private buildHtml(post: BlogPostV2): string {
+  private buildHtml(post: BlogPostV2, priceGroups: BlogPriceGroup[] = []): string {
     const site = this.site
     const desc = post.summaryText ?? post.subtitle ?? ""
     const canonical = `${site.baseUrl}/${post.lang}/blog/${encodeURIComponent(post.slug)}`
@@ -226,7 +239,7 @@ ${post.thumbnailUrl ? `<meta property="og:image" content="${esc(post.thumbnailUr
 <meta name="twitter:title" content="${esc(post.title)}">
 <meta name="twitter:description" content="${esc(desc)}">
 ${post.thumbnailUrl ? `<meta name="twitter:image" content="${esc(post.thumbnailUrl)}">` : ""}
-${this.buildJsonLd(post, canonical)}
+${this.buildJsonLd(post, canonical, priceGroups)}
 <style>${TYPOGRAPHY_CSS}</style>
 </head>
 <body>
@@ -240,6 +253,7 @@ ${post.summaryText ? `<div class="blog-summary">${esc(post.summaryText)}</div>` 
 ${this.buildToc(post.bodyHtml ?? "", post.lang)}
 <div class="blog-content">${post.bodyHtml ?? ""}</div>
 ${this.buildAuthorCard(post)}
+${this.buildPriceSection(priceGroups)}
 </article>
 ${this.buildRelated(post)}
 ${this.buildCta(post)}
@@ -307,8 +321,32 @@ ${assoc}
     return `<div class="blog-cta">${parts.join("")}</div>`
   }
 
-  /** JSON-LD 풀세트: BlogPosting + MedicalClinic + Physician(reviewedBy) + Breadcrumb + FAQPage + medical_schema */
-  private buildJsonLd(post: BlogPostV2, canonical: string): string {
+  /**
+   * 가격 섹션(봇용) — 상품명·가격을 이미지가 아닌 실제 텍스트로 출력해 크롤러가 읽게 함.
+   * 상세페이지별로 구분, 각 블록 안에 가격이벤트(게시중)·전체 시술. 한쪽만 있으면 그 하나만.
+   */
+  private buildPriceSection(groups: BlogPriceGroup[]): string {
+    if (!groups?.length) return ""
+    const fmt = (n: number) => `${Number(n).toLocaleString("ko-KR")}원`
+    const row = (it: { name: string; price: number; discountPrice: number | null }) => {
+      const priceHtml = it.discountPrice
+        ? `<del>${fmt(it.price)}</del> <strong>${fmt(it.discountPrice)}</strong>`
+        : `<strong>${fmt(it.price)}</strong>`
+      return `<li><span class="ps-name">${esc(it.name)}</span><span class="ps-price">${priceHtml}</span></li>`
+    }
+    const tab = (title: string, rows: BlogPriceGroup["products"]) =>
+      rows.length ? `<div class="ps-tab"><h3>${title}</h3><ul>${rows.map(row).join("")}</ul></div>` : ""
+    const blocks = groups
+      .map((g) => {
+        const inner = `${tab("가격이벤트", g.events)}${tab("전체 시술", g.products)}`
+        return inner ? `<section class="ps-group"><h2>${esc(g.detailPageName)} 가격</h2>${inner}</section>` : ""
+      })
+      .filter(Boolean)
+    return blocks.length ? `<aside class="blog-price">${blocks.join("")}</aside>` : ""
+  }
+
+  /** JSON-LD 풀세트: BlogPosting + MedicalClinic + Physician(reviewedBy) + Breadcrumb + FAQPage + medical_schema + 가격(Offer) */
+  private buildJsonLd(post: BlogPostV2, canonical: string, priceGroups: BlogPriceGroup[] = []): string {
     const site = this.site
     const graph: Record<string, unknown>[] = []
     const isoDate = (d?: Date) => (d ? new Date(d).toISOString() : undefined)
@@ -397,6 +435,29 @@ ${assoc}
     // 5. medical_schema (글 주인공 JSON-LD, 마케터 작성)
     if (post.extraJsonld && typeof post.extraJsonld === "object") {
       graph.push(post.extraJsonld as Record<string, unknown>)
+    }
+
+    // 6. 가격(Offer) — 검색·AI가 시술 가격을 기계적으로 읽도록. 상세페이지별 Product + offers.
+    const priceItems = priceGroups.flatMap((g) =>
+      [...g.events, ...g.products].map((it) => ({
+        "@type": "Product",
+        name: it.name,
+        category: g.detailPageName,
+        offers: {
+          "@type": "Offer",
+          price: it.discountPrice ?? it.price,
+          priceCurrency: "KRW",
+          availability: "https://schema.org/InStock",
+          url: canonical,
+        },
+      })),
+    )
+    if (priceItems.length > 0) {
+      graph.push({
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        itemListElement: priceItems.map((item, i) => ({ "@type": "ListItem", position: i + 1, item })),
+      })
     }
 
     return graph
