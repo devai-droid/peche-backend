@@ -6,6 +6,12 @@ import { BlogSiteConfig } from "@root/blog-v2/entities/site-config.entity"
 import { BlogPostV2 } from "@root/blog-v2/entities/post.entity"
 import { PECHE_SITE, SiteConfig } from "@root/blog-v2/sites/peche.config"
 
+/** 빵부스러기(Breadcrumb)용 대분류·상세페이지 노드 */
+type BlogBreadcrumb = {
+  category: { id: string; name: string } | null
+  detailPage: { id: string; name: string } | null
+}
+
 function esc(s?: string): string {
   if (!s) return ""
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!)
@@ -105,11 +111,12 @@ export class BlogRenderService {
   async renderPostPage(slug: string, lang: string): Promise<{ html: string; status: number }> {
     const post = await this.postService.findBySlug(slug, lang)
     if (post) {
-      const priceGroups = await this.postService.getBlogPriceData(post.productPage, post.lang)
+      const priceGroups = await this.postService.getBlogPriceData(post.priceRefs, post.productPage, post.lang)
       const relatedSlugs = (post.internalLinks ?? []).map((l) => l.slug)
       const titleMap = await this.postService.getPublishedTitlesBySlugs(relatedSlugs, post.lang)
       const cfg = await this.siteConfigService.getMerged(post.lang).catch(() => null)
-      return { html: this.buildHtml(post, priceGroups, titleMap, cfg), status: 200 }
+      const breadcrumb = await this.postService.getPostBreadcrumb(post.productCategoryId, post.productPage)
+      return { html: this.buildHtml(post, priceGroups, titleMap, cfg, breadcrumb), status: 200 }
     }
     // 이름 변경 등으로 사라진 옛 주소(슬러그 이력에 있음) → 410 Gone
     // (CloudFront는 404/403만 index.html로 바꾸고 410은 통과 → 검색엔진에 "영구 삭제" 전달)
@@ -235,6 +242,7 @@ ${posts.length ? `<div class="card-grid">${cards}</div>` : `<p>아직 발행된 
     priceGroups: BlogPriceGroup[] = [],
     relatedTitles: Record<string, string> = {},
     cfg: BlogSiteConfig | null = null,
+    breadcrumb: BlogBreadcrumb = { category: null, detailPage: null },
   ): string {
     const site = this.site
     const desc = post.summaryText ?? post.subtitle ?? ""
@@ -247,7 +255,6 @@ ${posts.length ? `<div class="card-grid">${cards}</div>` : `<p>아직 발행된 
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(post.title)} | ${esc(site.hospitalName)}</title>
 <meta name="description" content="${esc(desc)}">
-${post.mainKeyword ? `<meta name="keywords" content="${esc([post.mainKeyword, ...(post.subKeywords ?? [])].join(", "))}">` : ""}
 <link rel="canonical" href="${canonical}">
 <meta property="og:type" content="article">
 <meta property="og:title" content="${esc(post.title)}">
@@ -259,7 +266,7 @@ ${post.thumbnailUrl ? `<meta property="og:image" content="${esc(post.thumbnailUr
 <meta name="twitter:title" content="${esc(post.title)}">
 <meta name="twitter:description" content="${esc(desc)}">
 ${post.thumbnailUrl ? `<meta name="twitter:image" content="${esc(post.thumbnailUrl)}">` : ""}
-${this.buildJsonLd(post, canonical, priceGroups, cfg)}
+${this.buildJsonLd(post, canonical, priceGroups, cfg, breadcrumb)}
 <style>${TYPOGRAPHY_CSS}</style>
 </head>
 <body>
@@ -380,7 +387,12 @@ ${assoc}
       .map((g) => {
         const inner = `${tab("가격·이벤트", g.events)}${tab("전체 시술", g.products)}`
         if (!inner) return ""
-        return `<section class="ps-group"><h2>${esc(g.detailPageName)} 가격</h2>${inner}<a class="ps-more" href="/${esc(lang)}/products/${esc(g.detailPageId)}">가격 더보기</a></section>`
+        // 더보기 링크: page=상세페이지, category=대분류 상품 목록
+        const moreHref =
+          g.linkType === "category"
+            ? `/${esc(lang)}/products?category=${esc(g.linkId)}`
+            : `/${esc(lang)}/products/${esc(g.linkId)}`
+        return `<section class="ps-group"><h2>${esc(g.detailPageName)} 가격</h2>${inner}<a class="ps-more" href="${moreHref}">가격 더보기</a></section>`
       })
       .filter(Boolean)
     return blocks.length ? `<aside class="blog-price">${blocks.join("")}</aside>` : ""
@@ -392,12 +404,28 @@ ${assoc}
     canonical: string,
     priceGroups: BlogPriceGroup[] = [],
     cfg: BlogSiteConfig | null = null,
+    breadcrumb: BlogBreadcrumb = { category: null, detailPage: null },
   ): string {
     const site = this.site
     const graph: Record<string, unknown>[] = []
     const isoDate = (d?: Date) => (d ? new Date(d).toISOString() : undefined)
-    // 병원은 한 번만 정의(@id) → Service의 provider 등은 이 id를 참조(중복 MedicalClinic 방지)
+    // 병원은 한 번만 정의(@id) → publisher·provider·감수의사 소속 등은 이 id를 참조(중복 MedicalClinic 방지)
     const clinicId = `${cfg?.baseUrl || site.baseUrl}#clinic`
+    // 병원 연락처·주소·이미지 — 병원 노드와 감수의사(Physician) 노드에서 공통 재사용
+    const hasGeo = cfg?.latitude != null && cfg?.longitude != null
+    const locality = cfg?.addressLocality || site.address?.locality
+    const clinicTelephone = cfg?.telephone || undefined
+    const clinicImage = site.logoUrl || undefined
+    const clinicAddress = locality
+      ? {
+          "@type": "PostalAddress",
+          streetAddress: cfg?.addressStreet || undefined,
+          addressLocality: locality,
+          addressRegion: cfg?.addressRegion || site.address?.region,
+          postalCode: cfg?.addressPostalCode || site.address?.postalCode,
+          addressCountry: cfg?.addressCountry || site.address?.country,
+        }
+      : undefined
 
     // 1. BlogPosting (+ author/reviewedBy = 감수의사)
     const blogPosting: Record<string, unknown> = {
@@ -409,7 +437,8 @@ ${assoc}
       datePublished: isoDate(post.publishedAt),
       dateModified: isoDate(post.updatedAt as unknown as Date),
       mainEntityOfPage: { "@type": "MedicalWebPage", "@id": canonical },
-      publisher: { "@type": site.organizationType, name: site.hospitalName },
+      // 발행처 = 위에서 정의한 병원(@id 참조). 빈 껍데기 MedicalClinic 중복 생성 방지.
+      publisher: { "@id": clinicId },
     }
     if (post.authorDoctor) {
       const doc = post.authorDoctor
@@ -419,11 +448,24 @@ ${assoc}
         jobTitle: doc.jobTitle ?? undefined,
         url: doc.profileUrl ?? undefined,
       }
+      // 감수의사(Physician) — Google이 의료 주체로 보고 연락처·주소·이미지를 권장하므로 병원 정보로 채움.
       blogPosting.reviewedBy = {
         "@type": "Physician",
         name: doc.name,
         medicalSpecialty: doc.specialty ?? undefined,
+        image: doc.photoUrl || clinicImage,
+        worksFor: { "@id": clinicId },
+        telephone: clinicTelephone,
+        address: clinicAddress,
       }
+    }
+    // 주제 신호: about(다루는 시술을 MedicalProcedure로 명시) — product_page에서 자동 생성.
+    //  → 비교글처럼 product_page에 시술 2개를 적으면 봇이 둘 다 주제로 인식(한쪽만 대표로 보는 것 방지).
+    const procedures = Array.from(
+      new Set(priceGroups.map((g) => (g.detailPageName ?? "").trim()).filter(Boolean)),
+    )
+    if (procedures.length > 0) {
+      blogPosting.about = procedures.map((name) => ({ "@type": "MedicalProcedure", name }))
     }
     // 본문 외부링크 자동 수집 → citation(출처/인용)
     const citations = this.extractCitations(post.bodyHtml ?? "")
@@ -437,43 +479,54 @@ ${assoc}
     graph.push(blogPosting)
 
     // 2. MedicalClinic (병원) — 어드민 '기본정보'(DB) 우선, 없으면 하드코딩 설정 폴백
-    const hasGeo = cfg?.latitude != null && cfg?.longitude != null
-    const locality = cfg?.addressLocality || site.address?.locality
     graph.push({
       "@context": "https://schema.org",
       "@type": cfg?.organizationType || site.organizationType,
       "@id": clinicId,
       name: cfg?.hospitalName || site.hospitalName,
       url: cfg?.baseUrl || site.baseUrl,
-      image: site.logoUrl || undefined,
-      telephone: cfg?.telephone || undefined,
+      image: clinicImage,
+      telephone: clinicTelephone,
       medicalSpecialty: cfg?.medicalSpecialty || undefined,
       sameAs: cfg?.sameAs?.length ? cfg.sameAs : site.sameAs,
       knowsAbout: cfg?.knowsAbout?.length ? cfg.knowsAbout : site.knowsAbout,
-      address: locality
-        ? {
-            "@type": "PostalAddress",
-            streetAddress: cfg?.addressStreet || undefined,
-            addressLocality: locality,
-            addressRegion: cfg?.addressRegion || site.address?.region,
-            postalCode: cfg?.addressPostalCode || site.address?.postalCode,
-            addressCountry: cfg?.addressCountry || site.address?.country,
-          }
-        : undefined,
+      address: clinicAddress,
       geo: hasGeo
         ? { "@type": "GeoCoordinates", latitude: cfg?.latitude, longitude: cfg?.longitude }
         : undefined,
     })
 
-    // 3. BreadcrumbList
+    // 3. BreadcrumbList — Home > Blog > (대분류) > (상세페이지) > 글
+    //    대분류/상세페이지는 목록 필터 URL(?cat=&chip=)로 연결. 글 주소는 canonical 하나 그대로(중복 아님).
+    const crumbs: Array<{ name: string; item: string }> = [
+      { name: "Home", item: `${site.baseUrl}/${post.lang}` },
+      { name: "Blog", item: `${site.baseUrl}/${post.lang}/blog` },
+    ]
+    if (breadcrumb.category) {
+      crumbs.push({
+        name: breadcrumb.category.name,
+        item: `${site.baseUrl}/${post.lang}/blog?cat=${encodeURIComponent(breadcrumb.category.id)}`,
+      })
+    }
+    if (breadcrumb.detailPage) {
+      const catPart = breadcrumb.category
+        ? `cat=${encodeURIComponent(breadcrumb.category.id)}&`
+        : ""
+      crumbs.push({
+        name: breadcrumb.detailPage.name,
+        item: `${site.baseUrl}/${post.lang}/blog?${catPart}chip=${encodeURIComponent(breadcrumb.detailPage.id)}`,
+      })
+    }
+    crumbs.push({ name: post.title, item: canonical })
     graph.push({
       "@context": "https://schema.org",
       "@type": "BreadcrumbList",
-      itemListElement: [
-        { "@type": "ListItem", position: 1, name: "Home", item: `${site.baseUrl}/${post.lang}` },
-        { "@type": "ListItem", position: 2, name: "Blog", item: `${site.baseUrl}/${post.lang}/blog` },
-        { "@type": "ListItem", position: 3, name: post.title, item: canonical },
-      ],
+      itemListElement: crumbs.map((c, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        name: c.name,
+        item: c.item,
+      })),
     })
 
     // 4. FAQPage (본문 ## FAQ 파싱)

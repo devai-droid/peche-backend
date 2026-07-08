@@ -32,12 +32,20 @@ export interface BlogPriceRow {
   labels?: string[] | null
   categoryName?: string | null
 }
-/** 상세페이지 단위 가격 묶음 — products(전체 시술)·events(가격이벤트, 게시중만) */
+/** 가격 묶음(탭 1개) — products(전체 시술)·events(가격이벤트, 게시중만). linkType으로 더보기 링크 종류 구분 */
 export interface BlogPriceGroup {
-  detailPageId: string
-  detailPageName: string
+  linkType: "page" | "category"
+  linkId: string // 더보기 대상 id: page=상세페이지 id, category=대분류 id
+  detailPageName: string // 탭 라벨 (상세페이지명 또는 대분류명)
   products: BlogPriceRow[]
   events: BlogPriceRow[]
+}
+
+/** 가격 보기 소스 참조 (blog.posts.price_refs 저장 형태) */
+export interface BlogPriceRef {
+  type: "page" | "category"
+  id: string
+  name: string
 }
 
 export interface PaginatedResult<T> {
@@ -179,6 +187,8 @@ export class BlogV2PostService {
       : frontmatter.product_page
     // CTA는 md가 source of truth — 재업로드 시 md 기준으로 갱신(product_page와 동일 정책). 없으면 해제.
     post.ctaLinks = await this.resolveCtaLinks(frontmatter.cta, warnings)
+    // 가격 보기 소스도 md가 source of truth — price 있으면 그대로, 없으면 product_page로 폴백.
+    post.priceRefs = await this.resolvePriceRefs(frontmatter.price, post.productPage, warnings)
     post.publishTarget =
       frontmatter.publish_target === BlogPublishTarget.DETAIL_PAGE
         ? BlogPublishTarget.DETAIL_PAGE
@@ -299,6 +309,13 @@ export class BlogV2PostService {
         ? frontmatter.product_page.join(" | ")
         : frontmatter.product_page,
       ctaLinks: await this.resolveCtaLinks(frontmatter.cta, warnings),
+      priceRefs: await this.resolvePriceRefs(
+        frontmatter.price,
+        Array.isArray(frontmatter.product_page)
+          ? frontmatter.product_page.join(" | ")
+          : frontmatter.product_page,
+        warnings,
+      ),
       // 고지문구: 일반 면책은 항상 적용(프론트에서 자동), AI 이미지 고지는 신규 글에 기본 등록.
       // frontmatter로 명시하면 그 값을 존중(빈 배열로 끄기 가능). 재업로드는 기존 선택 유지(update 경로).
       notices: frontmatter.notices ?? [BlogCommonTextType.AI_IMAGE_NOTICE],
@@ -424,6 +441,46 @@ export class BlogV2PostService {
   }
 
   /**
+   * 글 빵부스러기(Breadcrumb)용 — 대분류 + 상세페이지.
+   * product_page 첫 상세페이지 → 그 상세페이지 + 소속 대분류. 없으면 productCategoryId로 대분류만.
+   */
+  async getPostBreadcrumb(
+    productCategoryId: string | undefined,
+    productPage: string | undefined,
+  ): Promise<{ category: { id: string; name: string } | null; detailPage: { id: string; name: string } | null }> {
+    let category: { id: string; name: string } | null = null
+    let detailPage: { id: string; name: string } | null = null
+    try {
+      const sep = (productPage ?? "").includes("|") ? "|" : ","
+      const first = (productPage ?? "").split(sep).map((s) => s.trim()).filter(Boolean)[0]
+      if (first) {
+        const rows: Array<{ dpid: string; dpname: string; cid: string; cname: string }> =
+          await this.postRepo.query(
+            `SELECT dp.id AS dpid, dp.name AS dpname, pc.id AS cid, pc.name AS cname
+             FROM public.product_detail_page dp
+             JOIN public.product_category pc ON pc.id = dp.category_id
+             WHERE dp.name = $1 AND dp.status = 'ACTIVE' AND pc.status = 'ACTIVE' LIMIT 1`,
+            [first],
+          )
+        if (rows.length) {
+          detailPage = { id: rows[0].dpid, name: rows[0].dpname }
+          category = { id: rows[0].cid, name: rows[0].cname }
+        }
+      }
+      if (!category && productCategoryId) {
+        const rows: Array<{ id: string; name: string }> = await this.postRepo.query(
+          `SELECT id, name FROM public.product_category WHERE id = $1 AND status = 'ACTIVE' LIMIT 1`,
+          [productCategoryId],
+        )
+        if (rows.length) category = rows[0]
+      }
+    } catch (e) {
+      this.logger.warn(`getPostBreadcrumb 실패: ${(e as Error).message}`)
+    }
+    return { category, detailPage }
+  }
+
+  /**
    * frontmatter.cta(최대 2개) → 이름 매칭으로 URL 해석해 저장.
    * 항목별로 page/category/event 중 하나 + text. 매칭 실패 항목은 경고 후 제외.
    * page: 상세페이지 → /products/{id}, category: 상시 대분류 → /products?category={id}, event: 이벤트 대분류 → /events?category={id}
@@ -475,6 +532,56 @@ export class BlogV2PostService {
     return `/events?category=${rows[0].id}`
   }
 
+  /**
+   * frontmatter.price(가격 보기 소스) → 이름을 id로 해석해 저장.
+   * 항목별로 page(상세페이지) 또는 category(대분류) 하나. 매칭 실패 항목은 경고 후 제외(있는 것만 노출).
+   * price가 없으면 product_page(상세페이지명, '|'/',' 구분)로 폴백 → 각 이름을 page 참조로.
+   */
+  private async resolvePriceRefs(
+    price: Array<{ page?: string; category?: string }> | undefined,
+    productPage: string | undefined,
+    warnings: string[],
+  ): Promise<BlogPriceRef[] | undefined> {
+    // 1) price 명시 → 그대로 해석
+    if (Array.isArray(price) && price.length > 0) {
+      const out: BlogPriceRef[] = []
+      for (const item of price) {
+        const type: "page" | "category" | undefined = item.page ? "page" : item.category ? "category" : undefined
+        const name = (item.page ?? item.category ?? "").trim()
+        if (!type || !name) {
+          warnings.push("price 항목에 page 또는 category 중 하나가 필요합니다 — 해당 항목 제외")
+          continue
+        }
+        const table = type === "page" ? "product_detail_page" : "product_category"
+        const rows: Array<{ id: string; name: string }> = await this.postRepo.query(
+          `SELECT id, name FROM public.${table} WHERE name = $1 AND status = 'ACTIVE' LIMIT 1`,
+          [name],
+        )
+        if (!rows.length) {
+          warnings.push(
+            `price ${type === "page" ? "상세페이지" : "대분류"} 매칭 실패: "${name}" — 사이트 실제 이름과 정확히 일치해야 함`,
+          )
+          continue
+        }
+        out.push({ type, id: rows[0].id, name: rows[0].name })
+      }
+      return out.length ? out : undefined
+    }
+    // 2) 폴백: product_page 상세페이지명 → page 참조 (기존 글 하위호환)
+    const sep = (productPage ?? "").includes("|") ? "|" : ","
+    const names = (productPage ?? "").split(sep).map((s) => s.trim()).filter(Boolean)
+    if (!names.length) return undefined
+    const out: BlogPriceRef[] = []
+    for (const nm of names) {
+      const rows: Array<{ id: string; name: string }> = await this.postRepo.query(
+        `SELECT id, name FROM public.product_detail_page WHERE name = $1 AND status = 'ACTIVE' LIMIT 1`,
+        [nm],
+      )
+      if (rows.length) out.push({ type: "page", id: rows[0].id, name: rows[0].name })
+    }
+    return out.length ? out : undefined
+  }
+
   /** 언어 → 상품/이벤트 테이블의 이름·설명·노출·정렬 컬럼(snake) 매핑 */
   private static priceCols(lang: string): { n: string; d: string; v: string; o: string } {
     const map: Record<string, { n: string; d: string; v: string; o: string }> = {
@@ -493,9 +600,13 @@ export class BlogV2PostService {
    * 상세페이지별로 구분(섞지 않음). 정렬은 사이트와 동일(order). 이벤트는 게시기간(bundle) 노출중 + detail_page_show만.
    * 언어별 이름·노출·정렬 컬럼 사용(이름은 번역 없으면 ko로 폴백). 봇 SSR·API 공용.
    */
-  async getBlogPriceData(productPage: string | undefined, lang: string): Promise<BlogPriceGroup[]> {
+  async getBlogPriceData(
+    refs: BlogPriceRef[] | undefined,
+    productPage: string | undefined,
+    lang: string,
+  ): Promise<BlogPriceGroup[]> {
     try {
-      return await this.getBlogPriceDataInner(productPage, lang)
+      return await this.getBlogPriceDataInner(refs, productPage, lang)
     } catch (e) {
       // 가격 조회 실패해도 글 렌더(봇 SSR 포함)는 정상 진행 — 가격 섹션만 빠짐
       this.logger.warn(`getBlogPriceData 실패: ${(e as Error).message}`)
@@ -503,28 +614,49 @@ export class BlogV2PostService {
     }
   }
 
-  private async getBlogPriceDataInner(productPage: string | undefined, lang: string): Promise<BlogPriceGroup[]> {
-    const sep = (productPage ?? "").includes("|") ? "|" : ","
-    const names = (productPage ?? "").split(sep).map((s) => s.trim()).filter(Boolean)
-    if (!names.length) return []
+  private async getBlogPriceDataInner(
+    refs: BlogPriceRef[] | undefined,
+    productPage: string | undefined,
+    lang: string,
+  ): Promise<BlogPriceGroup[]> {
+    // price_refs 우선. 없으면(기존 글) product_page 상세페이지명 → page 참조로 폴백.
+    let effective: BlogPriceRef[] = Array.isArray(refs) ? refs : []
+    if (!effective.length) {
+      const sep = (productPage ?? "").includes("|") ? "|" : ","
+      const names = (productPage ?? "").split(sep).map((s) => s.trim()).filter(Boolean)
+      for (const nm of names) {
+        const dpRows: Array<{ id: string; name: string }> = await this.postRepo.query(
+          `SELECT id, name FROM public.product_detail_page WHERE name = $1 AND status = 'ACTIVE' LIMIT 1`,
+          [nm],
+        )
+        if (dpRows.length) effective.push({ type: "page", id: dpRows[0].id, name: dpRows[0].name })
+      }
+    }
+    if (!effective.length) return []
     const c = BlogV2PostService.priceCols(lang)
     const { todayStart, tomorrowStart } = kstDayBounds()
     const groups: BlogPriceGroup[] = []
-    for (const nm of names) {
-      const dpRows: Array<{ id: string; name: string }> = await this.postRepo.query(
-        `SELECT id, name FROM public.product_detail_page WHERE name = $1 AND status = 'ACTIVE' LIMIT 1`,
-        [nm],
-      )
-      if (!dpRows.length) continue
-      const dp = dpRows[0]
+    for (const ref of effective) {
+      // 이 탭이 커버할 상세페이지 id 목록: page=자기 자신, category=그 대분류 소속 전체
+      let detailPageIds: string[]
+      if (ref.type === "category") {
+        const dps: Array<{ id: string }> = await this.postRepo.query(
+          `SELECT id FROM public.product_detail_page WHERE category_id = $1 AND status = 'ACTIVE'`,
+          [ref.id],
+        )
+        detailPageIds = dps.map((r) => r.id)
+      } else {
+        detailPageIds = [ref.id]
+      }
+      if (!detailPageIds.length) continue
       const products: BlogPriceRow[] = await this.postRepo.query(
         `SELECT COALESCE(${c.n}, name) AS name,
                 COALESCE(${c.d}, description) AS description,
                 price, discount_price AS "discountPrice"
          FROM public.product
-         WHERE detail_page_id = $1 AND ${c.v} IS TRUE
+         WHERE detail_page_id = ANY($1::uuid[]) AND ${c.v} IS TRUE
          ORDER BY "${c.o}" ASC NULLS LAST`,
-        [dp.id],
+        [detailPageIds],
       )
       const events: BlogPriceRow[] = await this.postRepo.query(
         `SELECT COALESCE(e.${c.n}, e.name) AS name,
@@ -535,17 +667,17 @@ export class BlogV2PostService {
          FROM public.event e
          LEFT JOIN public.event_bundle b ON b.id = e.bundle_id
          LEFT JOIN public.event_category ec ON ec.id = e.category_id
-         WHERE e.detail_page_id = $1
+         WHERE e.detail_page_id = ANY($1::uuid[])
            AND e.${c.v} IS TRUE
            AND e.detail_page_show IS TRUE
            AND (b.post_start_date IS NULL OR b.post_start_date < $2)
            AND (b.post_end_date IS NULL OR b.post_end_date >= $3)
          ORDER BY b."order" ASC NULLS LAST, e."${c.o}" ASC NULLS LAST`,
-        [dp.id, tomorrowStart, todayStart],
+        [detailPageIds, tomorrowStart, todayStart],
       )
-      // 둘 다 비면 상세페이지 블록 자체를 생략
+      // 둘 다 비면 탭 자체를 생략
       if (products.length || events.length)
-        groups.push({ detailPageId: dp.id, detailPageName: dp.name, products, events })
+        groups.push({ linkType: ref.type, linkId: ref.id, detailPageName: ref.name, products, events })
     }
     return groups
   }
