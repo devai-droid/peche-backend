@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common"
 import * as cheerio from "cheerio"
 import { BlogV2PostService, BlogPriceGroup } from "@root/blog-v2/services/blog-v2-post.service"
+import { BlogSiteConfigService } from "@root/blog-v2/services/blog-site-config.service"
+import { BlogSiteConfig } from "@root/blog-v2/entities/site-config.entity"
 import { BlogPostV2 } from "@root/blog-v2/entities/post.entity"
 import { PECHE_SITE, SiteConfig } from "@root/blog-v2/sites/peche.config"
 
@@ -95,7 +97,10 @@ const TYPOGRAPHY_CSS = `
 export class BlogRenderService {
   private readonly site: SiteConfig = PECHE_SITE
 
-  constructor(private readonly postService: BlogV2PostService) {}
+  constructor(
+    private readonly postService: BlogV2PostService,
+    private readonly siteConfigService: BlogSiteConfigService,
+  ) {}
 
   async renderPostPage(slug: string, lang: string): Promise<{ html: string; status: number }> {
     const post = await this.postService.findBySlug(slug, lang)
@@ -103,7 +108,8 @@ export class BlogRenderService {
       const priceGroups = await this.postService.getBlogPriceData(post.productPage, post.lang)
       const relatedSlugs = (post.internalLinks ?? []).map((l) => l.slug)
       const titleMap = await this.postService.getPublishedTitlesBySlugs(relatedSlugs, post.lang)
-      return { html: this.buildHtml(post, priceGroups, titleMap), status: 200 }
+      const cfg = await this.siteConfigService.getMerged(post.lang).catch(() => null)
+      return { html: this.buildHtml(post, priceGroups, titleMap, cfg), status: 200 }
     }
     // 이름 변경 등으로 사라진 옛 주소(슬러그 이력에 있음) → 410 Gone
     // (CloudFront는 404/403만 index.html로 바꾸고 410은 통과 → 검색엔진에 "영구 삭제" 전달)
@@ -228,6 +234,7 @@ ${posts.length ? `<div class="card-grid">${cards}</div>` : `<p>아직 발행된 
     post: BlogPostV2,
     priceGroups: BlogPriceGroup[] = [],
     relatedTitles: Record<string, string> = {},
+    cfg: BlogSiteConfig | null = null,
   ): string {
     const site = this.site
     const desc = post.summaryText ?? post.subtitle ?? ""
@@ -252,7 +259,7 @@ ${post.thumbnailUrl ? `<meta property="og:image" content="${esc(post.thumbnailUr
 <meta name="twitter:title" content="${esc(post.title)}">
 <meta name="twitter:description" content="${esc(desc)}">
 ${post.thumbnailUrl ? `<meta name="twitter:image" content="${esc(post.thumbnailUrl)}">` : ""}
-${this.buildJsonLd(post, canonical, priceGroups)}
+${this.buildJsonLd(post, canonical, priceGroups, cfg)}
 <style>${TYPOGRAPHY_CSS}</style>
 </head>
 <body>
@@ -380,7 +387,12 @@ ${assoc}
   }
 
   /** JSON-LD 풀세트: BlogPosting + MedicalClinic + Physician(reviewedBy) + Breadcrumb + FAQPage + medical_schema + 가격(Offer) */
-  private buildJsonLd(post: BlogPostV2, canonical: string, priceGroups: BlogPriceGroup[] = []): string {
+  private buildJsonLd(
+    post: BlogPostV2,
+    canonical: string,
+    priceGroups: BlogPriceGroup[] = [],
+    cfg: BlogSiteConfig | null = null,
+  ): string {
     const site = this.site
     const graph: Record<string, unknown>[] = []
     const isoDate = (d?: Date) => (d ? new Date(d).toISOString() : undefined)
@@ -422,22 +434,31 @@ ${assoc}
     }
     graph.push(blogPosting)
 
-    // 2. MedicalClinic (병원)
+    // 2. MedicalClinic (병원) — 어드민 '기본정보'(DB) 우선, 없으면 하드코딩 설정 폴백
+    const hasGeo = cfg?.latitude != null && cfg?.longitude != null
+    const locality = cfg?.addressLocality || site.address?.locality
     graph.push({
       "@context": "https://schema.org",
-      "@type": site.organizationType,
-      name: site.hospitalName,
-      url: site.baseUrl,
-      sameAs: site.sameAs,
-      knowsAbout: site.knowsAbout,
-      address: site.address
+      "@type": cfg?.organizationType || site.organizationType,
+      name: cfg?.hospitalName || site.hospitalName,
+      url: cfg?.baseUrl || site.baseUrl,
+      image: site.logoUrl || undefined,
+      telephone: cfg?.telephone || undefined,
+      medicalSpecialty: cfg?.medicalSpecialty || undefined,
+      sameAs: cfg?.sameAs?.length ? cfg.sameAs : site.sameAs,
+      knowsAbout: cfg?.knowsAbout?.length ? cfg.knowsAbout : site.knowsAbout,
+      address: locality
         ? {
             "@type": "PostalAddress",
-            addressLocality: site.address.locality,
-            addressRegion: site.address.region,
-            postalCode: site.address.postalCode,
-            addressCountry: site.address.country,
+            streetAddress: cfg?.addressStreet || undefined,
+            addressLocality: locality,
+            addressRegion: cfg?.addressRegion || site.address?.region,
+            postalCode: cfg?.addressPostalCode || site.address?.postalCode,
+            addressCountry: cfg?.addressCountry || site.address?.country,
           }
+        : undefined,
+      geo: hasGeo
+        ? { "@type": "GeoCoordinates", latitude: cfg?.latitude, longitude: cfg?.longitude }
         : undefined,
     })
 
