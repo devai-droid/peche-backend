@@ -471,18 +471,19 @@ ${assoc}
       graph.push(post.extraJsonld as Record<string, unknown>)
     }
 
-    // 6. 가격(Offer) — 검색·AI가 시술 가격을 기계적으로 읽도록. 상세페이지별 Product + offers.
+    // 6. 가격(Offer) — 검색·AI가 시술 가격을 읽도록. 시술은 상품(Product)이 아니라 Service로
+    //    (Product는 image·배송·반품 등 쇼핑 필드를 요구해 시술엔 부적합). Service+Offer는 이미지 불필요.
     const priceItems = priceGroups.flatMap((g) =>
       [...g.events, ...g.products].map((it) => ({
-        "@type": "Product",
+        "@type": "Service",
         name: it.name,
         description: it.description ?? undefined,
-        category: g.detailPageName,
+        serviceType: g.detailPageName,
+        provider: { "@type": site.organizationType, name: site.hospitalName },
         offers: {
           "@type": "Offer",
           price: it.discountPrice ?? it.price,
           priceCurrency: "KRW",
-          availability: "https://schema.org/InStock",
           url: canonical,
         },
       })),
