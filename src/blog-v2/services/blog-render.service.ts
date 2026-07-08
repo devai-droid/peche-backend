@@ -396,6 +396,8 @@ ${assoc}
     const site = this.site
     const graph: Record<string, unknown>[] = []
     const isoDate = (d?: Date) => (d ? new Date(d).toISOString() : undefined)
+    // 병원은 한 번만 정의(@id) → Service의 provider 등은 이 id를 참조(중복 MedicalClinic 방지)
+    const clinicId = `${cfg?.baseUrl || site.baseUrl}#clinic`
 
     // 1. BlogPosting (+ author/reviewedBy = 감수의사)
     const blogPosting: Record<string, unknown> = {
@@ -440,6 +442,7 @@ ${assoc}
     graph.push({
       "@context": "https://schema.org",
       "@type": cfg?.organizationType || site.organizationType,
+      "@id": clinicId,
       name: cfg?.hospitalName || site.hospitalName,
       url: cfg?.baseUrl || site.baseUrl,
       image: site.logoUrl || undefined,
@@ -500,7 +503,7 @@ ${assoc}
         name: it.name,
         description: it.description ?? undefined,
         serviceType: g.detailPageName,
-        provider: { "@type": site.organizationType, name: site.hospitalName },
+        provider: { "@id": clinicId },
         offers: {
           "@type": "Offer",
           price: it.discountPrice ?? it.price,
