@@ -139,7 +139,7 @@ export class BlogPostV2 extends TimeStampEntity {
       "가격 보기 섹션 소스. product_page(탭 노출)와 별개. CTA처럼 상세페이지/대분류를 각각 지정, 있는 것만 노출. 파싱 시 이름→id 해석해 저장. 없으면 product_page로 폴백. type: page(상세페이지)/category(대분류)",
   })
   @Column({ name: "price_refs", type: "jsonb", nullable: true })
-  priceRefs?: Array<{ type: "page" | "category"; id: string; name: string }>
+  priceRefs?: Array<{ type: "page" | "category" | "event"; id: string; name: string }>
 
 
   @ApiProperty({

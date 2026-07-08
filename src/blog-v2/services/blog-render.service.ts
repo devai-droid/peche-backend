@@ -383,15 +383,23 @@ ${assoc}
     }
     const tab = (title: string, rows: BlogPriceGroup["products"]) =>
       rows.length ? `<div class="ps-tab"><h3>${title}</h3>${rows.map(card).join("")}</div>` : ""
+    const plain = (rows: BlogPriceGroup["products"]) =>
+      rows.length ? `<div class="ps-tab">${rows.map(card).join("")}</div>` : ""
     const blocks = groups
       .map((g) => {
-        const inner = `${tab("가격·이벤트", g.events)}${tab("전체 시술", g.products)}`
+        // page=가격이벤트/전체시술 라벨 탭, category/event=라벨 없이 단일 리스트
+        const inner =
+          g.linkType === "page"
+            ? `${tab("가격·이벤트", g.events)}${tab("전체 시술", g.products)}`
+            : plain([...g.events, ...g.products])
         if (!inner) return ""
-        // 더보기 링크: page=상세페이지, category=대분류 상품 목록
+        // 더보기 링크: page=상세페이지, category=상품 대분류, event=이벤트 대분류
         const moreHref =
           g.linkType === "category"
             ? `/${esc(lang)}/products?category=${esc(g.linkId)}`
-            : `/${esc(lang)}/products/${esc(g.linkId)}`
+            : g.linkType === "event"
+              ? `/${esc(lang)}/events?category=${esc(g.linkId)}`
+              : `/${esc(lang)}/products/${esc(g.linkId)}`
         return `<section class="ps-group"><h2>${esc(g.detailPageName)} 가격</h2>${inner}<a class="ps-more" href="${moreHref}">가격 더보기</a></section>`
       })
       .filter(Boolean)

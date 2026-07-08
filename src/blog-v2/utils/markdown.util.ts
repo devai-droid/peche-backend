@@ -80,10 +80,12 @@ export interface BlogPostFrontmatter {
   // CTA 버튼 링크(최대 2개) — product_page와 별개. 항목별로 page/category/event 중 하나 + text.
   //   page: 상세페이지명 → /products/{id}, category: 상시 대분류명 → /products?category={id}, event: 이벤트 대분류명 → /events?category={id}
   cta?: Array<{ page?: string; category?: string; event?: string; text?: string }>
-  // 가격 보기 섹션 소스 — product_page(탭 노출)와 별개. 항목별로 page(상세페이지명) 또는 category(대분류명) 하나.
-  //   page: 상세페이지 가격 → 더보기 /products/{id}, category: 대분류 소속 상세페이지 전체 가격 → 더보기 /products?category={id}
+  // 가격 보기 섹션 소스 — product_page(탭 노출)와 별개. 항목별로 page/category/event 중 하나.
+  //   page: 상세페이지 가격(상품+이벤트) → 더보기 /products/{id}
+  //   category: 상품 대분류 소속 상세페이지 상품 → 더보기 /products?category={id}
+  //   event: 이벤트 대분류의 게시중 이벤트 → 더보기 /events?category={id}
   //   없으면 product_page(상세페이지명)로 폴백. 있는 것만 노출.
-  price?: Array<{ page?: string; category?: string }>
+  price?: Array<{ page?: string; category?: string; event?: string }>
 
   // 노출 대상: "detail_page" 지정 시 블로그 목록이 아니라 시술 상세페이지(영상 아래)에 노출 (product_page로 매칭). 기본은 블로그
   publish_target?: string

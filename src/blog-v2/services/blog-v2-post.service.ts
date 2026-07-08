@@ -32,18 +32,23 @@ export interface BlogPriceRow {
   labels?: string[] | null
   categoryName?: string | null
 }
-/** 가격 묶음(탭 1개) — products(전체 시술)·events(가격이벤트, 게시중만). linkType으로 더보기 링크 종류 구분 */
+/**
+ * 가격 묶음(탭 1개) — products(전체 시술)·events(가격이벤트, 게시중만). linkType으로 더보기 링크·내부 구성 결정.
+ *  - page: 상세페이지 → products+events 모두(내부 가격이벤트/전체시술 탭)
+ *  - category: 상품 대분류 → products만(내부 탭 없음)
+ *  - event: 이벤트 대분류 → events만(내부 탭 없음)
+ */
 export interface BlogPriceGroup {
-  linkType: "page" | "category"
-  linkId: string // 더보기 대상 id: page=상세페이지 id, category=대분류 id
-  detailPageName: string // 탭 라벨 (상세페이지명 또는 대분류명)
+  linkType: "page" | "category" | "event"
+  linkId: string // 더보기 대상 id: page=상세페이지, category=상품대분류, event=이벤트대분류
+  detailPageName: string // 탭 라벨 (상세페이지명/대분류명/이벤트대분류명)
   products: BlogPriceRow[]
   events: BlogPriceRow[]
 }
 
 /** 가격 보기 소스 참조 (blog.posts.price_refs 저장 형태) */
 export interface BlogPriceRef {
-  type: "page" | "category"
+  type: "page" | "category" | "event"
   id: string
   name: string
 }
@@ -538,29 +543,37 @@ export class BlogV2PostService {
    * price가 없으면 product_page(상세페이지명, '|'/',' 구분)로 폴백 → 각 이름을 page 참조로.
    */
   private async resolvePriceRefs(
-    price: Array<{ page?: string; category?: string }> | undefined,
+    price: Array<{ page?: string; category?: string; event?: string }> | undefined,
     productPage: string | undefined,
     warnings: string[],
   ): Promise<BlogPriceRef[] | undefined> {
     // 1) price 명시 → 그대로 해석
     if (Array.isArray(price) && price.length > 0) {
+      const meta: Record<"page" | "category" | "event", { table: string; label: string }> = {
+        page: { table: "product_detail_page", label: "상세페이지" },
+        category: { table: "product_category", label: "상품 대분류" },
+        event: { table: "event_category", label: "이벤트 대분류" },
+      }
       const out: BlogPriceRef[] = []
       for (const item of price) {
-        const type: "page" | "category" | undefined = item.page ? "page" : item.category ? "category" : undefined
-        const name = (item.page ?? item.category ?? "").trim()
+        const type: "page" | "category" | "event" | undefined = item.page
+          ? "page"
+          : item.category
+            ? "category"
+            : item.event
+              ? "event"
+              : undefined
+        const name = (item.page ?? item.category ?? item.event ?? "").trim()
         if (!type || !name) {
-          warnings.push("price 항목에 page 또는 category 중 하나가 필요합니다 — 해당 항목 제외")
+          warnings.push("price 항목에 page/category/event 중 하나가 필요합니다 — 해당 항목 제외")
           continue
         }
-        const table = type === "page" ? "product_detail_page" : "product_category"
         const rows: Array<{ id: string; name: string }> = await this.postRepo.query(
-          `SELECT id, name FROM public.${table} WHERE name = $1 AND status = 'ACTIVE' LIMIT 1`,
+          `SELECT id, name FROM public.${meta[type].table} WHERE name = $1 AND status = 'ACTIVE' LIMIT 1`,
           [name],
         )
         if (!rows.length) {
-          warnings.push(
-            `price ${type === "page" ? "상세페이지" : "대분류"} 매칭 실패: "${name}" — 사이트 실제 이름과 정확히 일치해야 함`,
-          )
+          warnings.push(`price ${meta[type].label} 매칭 실패: "${name}" — 사이트 실제 이름과 정확히 일치해야 함`)
           continue
         }
         out.push({ type, id: rows[0].id, name: rows[0].name })
@@ -637,44 +650,69 @@ export class BlogV2PostService {
     const { todayStart, tomorrowStart } = kstDayBounds()
     const groups: BlogPriceGroup[] = []
     for (const ref of effective) {
-      // 이 탭이 커버할 상세페이지 id 목록: page=자기 자신, category=그 대분류 소속 전체
-      let detailPageIds: string[]
-      if (ref.type === "category") {
-        const dps: Array<{ id: string }> = await this.postRepo.query(
-          `SELECT id FROM public.product_detail_page WHERE category_id = $1 AND status = 'ACTIVE'`,
-          [ref.id],
+      let products: BlogPriceRow[] = []
+      let events: BlogPriceRow[] = []
+      if (ref.type === "event") {
+        // 이벤트 대분류 → 그 대분류의 게시중 이벤트만(상품 없음, 내부 탭 없음)
+        events = await this.postRepo.query(
+          `SELECT COALESCE(e.${c.n}, e.name) AS name,
+                  COALESCE(e.${c.d}, e.description) AS description,
+                  e.price, e.discount_price AS "discountPrice",
+                  e.label::text[] AS labels,
+                  COALESCE(ec.${c.n}, ec.name) AS "categoryName"
+           FROM public.event e
+           LEFT JOIN public.event_bundle b ON b.id = e.bundle_id
+           LEFT JOIN public.event_category ec ON ec.id = e.category_id
+           WHERE e.category_id = $1
+             AND e.${c.v} IS TRUE
+             AND (b.post_start_date IS NULL OR b.post_start_date < $2)
+             AND (b.post_end_date IS NULL OR b.post_end_date >= $3)
+           ORDER BY b."order" ASC NULLS LAST, e."${c.o}" ASC NULLS LAST`,
+          [ref.id, tomorrowStart, todayStart],
         )
-        detailPageIds = dps.map((r) => r.id)
       } else {
-        detailPageIds = [ref.id]
+        // page=자기 상세페이지, category=그 상품 대분류 소속 상세페이지 전체
+        let detailPageIds: string[]
+        if (ref.type === "category") {
+          const dps: Array<{ id: string }> = await this.postRepo.query(
+            `SELECT id FROM public.product_detail_page WHERE category_id = $1 AND status = 'ACTIVE'`,
+            [ref.id],
+          )
+          detailPageIds = dps.map((r) => r.id)
+        } else {
+          detailPageIds = [ref.id]
+        }
+        if (!detailPageIds.length) continue
+        products = await this.postRepo.query(
+          `SELECT COALESCE(${c.n}, name) AS name,
+                  COALESCE(${c.d}, description) AS description,
+                  price, discount_price AS "discountPrice"
+           FROM public.product
+           WHERE detail_page_id = ANY($1::uuid[]) AND ${c.v} IS TRUE
+           ORDER BY "${c.o}" ASC NULLS LAST`,
+          [detailPageIds],
+        )
+        // page 모드만 이벤트도 함께(상품+이벤트 내부 탭). category 모드는 상품만.
+        if (ref.type === "page") {
+          events = await this.postRepo.query(
+            `SELECT COALESCE(e.${c.n}, e.name) AS name,
+                    COALESCE(e.${c.d}, e.description) AS description,
+                    e.price, e.discount_price AS "discountPrice",
+                    e.label::text[] AS labels,
+                    COALESCE(ec.${c.n}, ec.name) AS "categoryName"
+             FROM public.event e
+             LEFT JOIN public.event_bundle b ON b.id = e.bundle_id
+             LEFT JOIN public.event_category ec ON ec.id = e.category_id
+             WHERE e.detail_page_id = ANY($1::uuid[])
+               AND e.${c.v} IS TRUE
+               AND e.detail_page_show IS TRUE
+               AND (b.post_start_date IS NULL OR b.post_start_date < $2)
+               AND (b.post_end_date IS NULL OR b.post_end_date >= $3)
+             ORDER BY b."order" ASC NULLS LAST, e."${c.o}" ASC NULLS LAST`,
+            [detailPageIds, tomorrowStart, todayStart],
+          )
+        }
       }
-      if (!detailPageIds.length) continue
-      const products: BlogPriceRow[] = await this.postRepo.query(
-        `SELECT COALESCE(${c.n}, name) AS name,
-                COALESCE(${c.d}, description) AS description,
-                price, discount_price AS "discountPrice"
-         FROM public.product
-         WHERE detail_page_id = ANY($1::uuid[]) AND ${c.v} IS TRUE
-         ORDER BY "${c.o}" ASC NULLS LAST`,
-        [detailPageIds],
-      )
-      const events: BlogPriceRow[] = await this.postRepo.query(
-        `SELECT COALESCE(e.${c.n}, e.name) AS name,
-                COALESCE(e.${c.d}, e.description) AS description,
-                e.price, e.discount_price AS "discountPrice",
-                e.label::text[] AS labels,
-                COALESCE(ec.${c.n}, ec.name) AS "categoryName"
-         FROM public.event e
-         LEFT JOIN public.event_bundle b ON b.id = e.bundle_id
-         LEFT JOIN public.event_category ec ON ec.id = e.category_id
-         WHERE e.detail_page_id = ANY($1::uuid[])
-           AND e.${c.v} IS TRUE
-           AND e.detail_page_show IS TRUE
-           AND (b.post_start_date IS NULL OR b.post_start_date < $2)
-           AND (b.post_end_date IS NULL OR b.post_end_date >= $3)
-         ORDER BY b."order" ASC NULLS LAST, e."${c.o}" ASC NULLS LAST`,
-        [detailPageIds, tomorrowStart, todayStart],
-      )
       // 둘 다 비면 탭 자체를 생략
       if (products.length || events.length)
         groups.push({ linkType: ref.type, linkId: ref.id, detailPageName: ref.name, products, events })
