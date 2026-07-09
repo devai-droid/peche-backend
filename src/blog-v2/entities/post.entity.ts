@@ -92,6 +92,10 @@ export class BlogPostV2 extends TimeStampEntity {
   @JoinColumn({ name: "author_doctor_id" })
   authorDoctor?: BlogDoctor
 
+  @ApiProperty({ required: false, type: [String], description: "감수 의료진 id 목록 (frontmatter reviewer_doctors → 이름 해석). 스키마 reviewedBy에 반영. 없으면 author_doctor로 폴백" })
+  @Column({ name: "reviewer_doctor_ids", type: "uuid", array: true, nullable: true })
+  reviewerDoctorIds?: string[]
+
   @ApiProperty({ required: false })
   @Index("idx_blog_posts_published_at")
   @Column({ name: "published_at", type: "timestamptz", nullable: true })

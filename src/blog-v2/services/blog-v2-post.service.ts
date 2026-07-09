@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common"
 import { InjectRepository } from "@nestjs/typeorm"
-import { Repository } from "typeorm"
+import { In, Repository } from "typeorm"
 import { BlogPostV2 } from "@root/blog-v2/entities/post.entity"
 import { BlogCommonTextType } from "@root/blog-v2/entities/common-text.entity"
 import { BlogPostSlugHistory } from "@root/blog-v2/entities/post-slug-history.entity"
@@ -182,6 +182,11 @@ export class BlogV2PostService {
     post.keywordId = keywordId
     post.productCategoryId = productCategoryId
     post.authorDoctorId = authorDoctorId
+    post.reviewerDoctorIds = await this.resolveReviewerDoctorIds(
+      frontmatter.reviewer_doctors,
+      (frontmatter.lang as string) || "ko",
+      warnings,
+    )
     post.schemaType = frontmatter.schema_type
     post.extraJsonld = extraJsonld ?? undefined
     post.internalLinks = Array.isArray(frontmatter.internal_links)
@@ -305,6 +310,11 @@ export class BlogV2PostService {
       keywordId,
       productCategoryId,
       authorDoctorId,
+      reviewerDoctorIds: await this.resolveReviewerDoctorIds(
+        frontmatter.reviewer_doctors,
+        (frontmatter.lang as string) || "ko",
+        warnings,
+      ),
       schemaType: frontmatter.schema_type,
       extraJsonld: extraJsonld ?? undefined,
       internalLinks: Array.isArray(frontmatter.internal_links)
@@ -392,6 +402,28 @@ export class BlogV2PostService {
       return undefined
     }
     return doc.id
+  }
+
+  /** frontmatter.reviewer_doctors(감수 의료진 이름 목록) → 의료진 id 목록. 매칭 실패는 경고 후 제외. */
+  private async resolveReviewerDoctorIds(
+    names: string[] | undefined,
+    lang: string,
+    warnings: string[],
+  ): Promise<string[] | undefined> {
+    if (!Array.isArray(names) || names.length === 0) return undefined
+    const ids: string[] = []
+    for (const nm of names) {
+      const id = await this.resolveDoctorId((nm ?? "").trim() || undefined, lang, warnings)
+      if (id && !ids.includes(id)) ids.push(id)
+    }
+    return ids.length ? ids : undefined
+  }
+
+  /** 감수 의료진 조회(스키마 reviewedBy용). 입력 id 순서 유지. */
+  async getReviewerDoctors(ids: string[] | undefined): Promise<BlogDoctor[]> {
+    if (!Array.isArray(ids) || ids.length === 0) return []
+    const docs = await this.doctorRepo.find({ where: { id: In(ids) } })
+    return ids.map((id) => docs.find((d) => d.id === id)).filter((d): d is BlogDoctor => !!d)
   }
 
   /** 키워드 이름 → blog.keywords ID. 못 찾으면 경고 + undefined. */

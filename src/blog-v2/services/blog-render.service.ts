@@ -4,6 +4,7 @@ import { BlogV2PostService, BlogPriceGroup } from "@root/blog-v2/services/blog-v
 import { BlogSiteConfigService } from "@root/blog-v2/services/blog-site-config.service"
 import { BlogSiteConfig } from "@root/blog-v2/entities/site-config.entity"
 import { BlogPostV2 } from "@root/blog-v2/entities/post.entity"
+import { BlogDoctor } from "@root/blog-v2/entities/doctor.entity"
 import { PECHE_SITE, SiteConfig } from "@root/blog-v2/sites/peche.config"
 
 /** 빵부스러기(Breadcrumb)용 대분류·상세페이지 노드 */
@@ -116,7 +117,8 @@ export class BlogRenderService {
       const titleMap = await this.postService.getPublishedTitlesBySlugs(relatedSlugs, post.lang)
       const cfg = await this.siteConfigService.getMerged(post.lang).catch(() => null)
       const breadcrumb = await this.postService.getPostBreadcrumb(post.productCategoryId, post.productPage)
-      return { html: this.buildHtml(post, priceGroups, titleMap, cfg, breadcrumb), status: 200 }
+      const reviewerDoctors = await this.postService.getReviewerDoctors(post.reviewerDoctorIds)
+      return { html: this.buildHtml(post, priceGroups, titleMap, cfg, breadcrumb, reviewerDoctors), status: 200 }
     }
     // 이름 변경 등으로 사라진 옛 주소(슬러그 이력에 있음) → 410 Gone
     // (CloudFront는 404/403만 index.html로 바꾸고 410은 통과 → 검색엔진에 "영구 삭제" 전달)
@@ -243,6 +245,7 @@ ${posts.length ? `<div class="card-grid">${cards}</div>` : `<p>아직 발행된 
     relatedTitles: Record<string, string> = {},
     cfg: BlogSiteConfig | null = null,
     breadcrumb: BlogBreadcrumb = { category: null, detailPage: null },
+    reviewerDoctors: BlogDoctor[] = [],
   ): string {
     const site = this.site
     const desc = post.summaryText ?? post.subtitle ?? ""
@@ -266,7 +269,7 @@ ${post.thumbnailUrl ? `<meta property="og:image" content="${esc(post.thumbnailUr
 <meta name="twitter:title" content="${esc(post.title)}">
 <meta name="twitter:description" content="${esc(desc)}">
 ${post.thumbnailUrl ? `<meta name="twitter:image" content="${esc(post.thumbnailUrl)}">` : ""}
-${this.buildJsonLd(post, canonical, priceGroups, cfg, breadcrumb)}
+${this.buildJsonLd(post, canonical, priceGroups, cfg, breadcrumb, reviewerDoctors)}
 <style>${TYPOGRAPHY_CSS}</style>
 </head>
 <body>
@@ -413,6 +416,7 @@ ${assoc}
     priceGroups: BlogPriceGroup[] = [],
     cfg: BlogSiteConfig | null = null,
     breadcrumb: BlogBreadcrumb = { category: null, detailPage: null },
+    reviewerDoctors: BlogDoctor[] = [],
   ): string {
     const site = this.site
     const graph: Record<string, unknown>[] = []
@@ -448,6 +452,7 @@ ${assoc}
       // 발행처 = 위에서 정의한 병원(@id 참조). 빈 껍데기 MedicalClinic 중복 생성 방지.
       publisher: { "@id": clinicId },
     }
+    // 작성(author) = author_doctor
     if (post.authorDoctor) {
       const doc = post.authorDoctor
       blogPosting.author = {
@@ -456,8 +461,12 @@ ${assoc}
         jobTitle: doc.jobTitle ?? undefined,
         url: doc.profileUrl ?? undefined,
       }
-      // 감수의사(Physician) — Google이 의료 주체로 보고 연락처·주소·이미지를 권장하므로 병원 정보로 채움.
-      blogPosting.reviewedBy = {
+    }
+    // 감수(reviewedBy) = reviewer_doctors 우선, 없으면 author_doctor로 폴백(기존 글 호환).
+    // Physician은 Google이 의료 주체로 보고 연락처·주소·이미지를 권장하므로 병원 정보로 채움.
+    const reviewers = reviewerDoctors.length ? reviewerDoctors : post.authorDoctor ? [post.authorDoctor] : []
+    if (reviewers.length) {
+      const nodes = reviewers.map((doc) => ({
         "@type": "Physician",
         name: doc.name,
         medicalSpecialty: doc.specialty ?? undefined,
@@ -465,7 +474,8 @@ ${assoc}
         worksFor: { "@id": clinicId },
         telephone: clinicTelephone,
         address: clinicAddress,
-      }
+      }))
+      blogPosting.reviewedBy = nodes.length === 1 ? nodes[0] : nodes
     }
     // 주제 신호: about(다루는 시술을 MedicalProcedure로 명시) — product_page에서 자동 생성.
     //  → 비교글처럼 product_page에 시술 2개를 적으면 봇이 둘 다 주제로 인식(한쪽만 대표로 보는 것 방지).
