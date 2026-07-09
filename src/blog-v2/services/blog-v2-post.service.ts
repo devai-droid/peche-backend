@@ -680,6 +680,37 @@ export class BlogV2PostService {
     if (!effective.length) return []
     const c = BlogV2PostService.priceCols(lang)
     const { todayStart, tomorrowStart } = kstDayBounds()
+    // 상세페이지 id 목록의 상시 상품
+    const productsByDetail = (ids: string[]): Promise<BlogPriceRow[]> =>
+      this.postRepo.query(
+        `SELECT COALESCE(${c.n}, name) AS name,
+                COALESCE(${c.d}, description) AS description,
+                price, discount_price AS "discountPrice"
+         FROM public.product
+         WHERE detail_page_id = ANY($1::uuid[]) AND ${c.v} IS TRUE
+         ORDER BY "${c.o}" ASC NULLS LAST`,
+        [ids],
+      )
+    // 상세페이지 id 목록의 게시중 이벤트(detail_page_show)
+    const eventsByDetail = (ids: string[]): Promise<BlogPriceRow[]> =>
+      this.postRepo.query(
+        `SELECT COALESCE(e.${c.n}, e.name) AS name,
+                COALESCE(e.${c.d}, e.description) AS description,
+                e.price, e.discount_price AS "discountPrice",
+                e.label::text[] AS labels,
+                COALESCE(ec.${c.n}, ec.name) AS "categoryName"
+         FROM public.event e
+         LEFT JOIN public.event_bundle b ON b.id = e.bundle_id
+         LEFT JOIN public.event_category ec ON ec.id = e.category_id
+         WHERE e.detail_page_id = ANY($1::uuid[])
+           AND e.${c.v} IS TRUE
+           AND e.detail_page_show IS TRUE
+           AND (b.post_start_date IS NULL OR b.post_start_date < $2)
+           AND (b.post_end_date IS NULL OR b.post_end_date >= $3)
+         ORDER BY b."order" ASC NULLS LAST, e."${c.o}" ASC NULLS LAST`,
+        [ids, tomorrowStart, todayStart],
+      )
+
     const groups: BlogPriceGroup[] = []
     for (const ref of effective) {
       let products: BlogPriceRow[] = []
@@ -702,48 +733,22 @@ export class BlogV2PostService {
            ORDER BY b."order" ASC NULLS LAST, e."${c.o}" ASC NULLS LAST`,
           [ref.id, tomorrowStart, todayStart],
         )
-      } else {
-        // page=자기 상세페이지, category=그 상품 대분류 소속 상세페이지 전체
-        let detailPageIds: string[]
-        if (ref.type === "category") {
-          const dps: Array<{ id: string }> = await this.postRepo.query(
-            `SELECT id FROM public.product_detail_page WHERE category_id = $1 AND status = 'ACTIVE'`,
-            [ref.id],
-          )
-          detailPageIds = dps.map((r) => r.id)
-        } else {
-          detailPageIds = [ref.id]
-        }
-        if (!detailPageIds.length) continue
-        products = await this.postRepo.query(
-          `SELECT COALESCE(${c.n}, name) AS name,
-                  COALESCE(${c.d}, description) AS description,
-                  price, discount_price AS "discountPrice"
-           FROM public.product
-           WHERE detail_page_id = ANY($1::uuid[]) AND ${c.v} IS TRUE
-           ORDER BY "${c.o}" ASC NULLS LAST`,
-          [detailPageIds],
+      } else if (ref.type === "category") {
+        // 상품 대분류 → 그 대분류의 "첫 번째 상세페이지"(order)의 게시중 이벤트, 없으면 그 상세페이지 상시 상품
+        const first: Array<{ id: string }> = await this.postRepo.query(
+          `SELECT id FROM public.product_detail_page
+           WHERE category_id = $1 AND status = 'ACTIVE'
+           ORDER BY "order" ASC NULLS LAST LIMIT 1`,
+          [ref.id],
         )
-        // page 모드만 이벤트도 함께(상품+이벤트 내부 탭). category 모드는 상품만.
-        if (ref.type === "page") {
-          events = await this.postRepo.query(
-            `SELECT COALESCE(e.${c.n}, e.name) AS name,
-                    COALESCE(e.${c.d}, e.description) AS description,
-                    e.price, e.discount_price AS "discountPrice",
-                    e.label::text[] AS labels,
-                    COALESCE(ec.${c.n}, ec.name) AS "categoryName"
-             FROM public.event e
-             LEFT JOIN public.event_bundle b ON b.id = e.bundle_id
-             LEFT JOIN public.event_category ec ON ec.id = e.category_id
-             WHERE e.detail_page_id = ANY($1::uuid[])
-               AND e.${c.v} IS TRUE
-               AND e.detail_page_show IS TRUE
-               AND (b.post_start_date IS NULL OR b.post_start_date < $2)
-               AND (b.post_end_date IS NULL OR b.post_end_date >= $3)
-             ORDER BY b."order" ASC NULLS LAST, e."${c.o}" ASC NULLS LAST`,
-            [detailPageIds, tomorrowStart, todayStart],
-          )
-        }
+        if (!first.length) continue
+        const dpId = first[0].id
+        events = await eventsByDetail([dpId])
+        if (!events.length) products = await productsByDetail([dpId])
+      } else {
+        // page → 자기 상세페이지 상시 상품 + 게시중 이벤트(내부 탭)
+        products = await productsByDetail([ref.id])
+        events = await eventsByDetail([ref.id])
       }
       // 둘 다 비면 탭 자체를 생략
       if (products.length || events.length)
