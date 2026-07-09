@@ -477,12 +477,16 @@ ${assoc}
       }))
       blogPosting.reviewedBy = nodes.length === 1 ? nodes[0] : nodes
     }
-    // 주제 신호: about(다루는 시술을 MedicalProcedure로 명시) — product_page에서 자동 생성.
-    //  → 비교글처럼 product_page에 시술 2개를 적으면 봇이 둘 다 주제로 인식(한쪽만 대표로 보는 것 방지).
+    // 주제 신호: about — 마케터가 medical_schema에 about을 직접 쓰면 그걸 우선(중복 방지),
+    //  없을 때만 product_page/price 기반으로 자동 생성(안전망). 자동은 상세페이지·대분류명이라 덜 정확할 수 있음.
+    const hasManualAbout =
+      post.extraJsonld &&
+      typeof post.extraJsonld === "object" &&
+      "about" in (post.extraJsonld as Record<string, unknown>)
     const procedures = Array.from(
       new Set(priceGroups.map((g) => (g.detailPageName ?? "").trim()).filter(Boolean)),
     )
-    if (procedures.length > 0) {
+    if (!hasManualAbout && procedures.length > 0) {
       blogPosting.about = procedures.map((name) => ({ "@type": "MedicalProcedure", name }))
     }
     // 본문 외부링크 자동 수집 → citation(출처/인용)
