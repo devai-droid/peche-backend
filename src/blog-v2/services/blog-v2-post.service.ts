@@ -680,7 +680,7 @@ export class BlogV2PostService {
     if (!effective.length) return []
     const c = BlogV2PostService.priceCols(lang)
     const { todayStart, tomorrowStart } = kstDayBounds()
-    // 상세페이지 id 목록의 상시 상품
+    // 상세페이지 id 목록의 상시 상품 — 입력 id 순서(=상세페이지 order) → 상품 order
     const productsByDetail = (ids: string[]): Promise<BlogPriceRow[]> =>
       this.postRepo.query(
         `SELECT COALESCE(${c.n}, name) AS name,
@@ -688,10 +688,10 @@ export class BlogV2PostService {
                 price, discount_price AS "discountPrice"
          FROM public.product
          WHERE detail_page_id = ANY($1::uuid[]) AND ${c.v} IS TRUE
-         ORDER BY "${c.o}" ASC NULLS LAST`,
+         ORDER BY array_position($1::uuid[], detail_page_id), "${c.o}" ASC NULLS LAST`,
         [ids],
       )
-    // 상세페이지 id 목록의 게시중 이벤트(detail_page_show)
+    // 상세페이지 id 목록의 게시중 이벤트(detail_page_show) — 상세페이지 order → 번들 order → 이벤트 order
     const eventsByDetail = (ids: string[]): Promise<BlogPriceRow[]> =>
       this.postRepo.query(
         `SELECT COALESCE(e.${c.n}, e.name) AS name,
@@ -707,7 +707,7 @@ export class BlogV2PostService {
            AND e.detail_page_show IS TRUE
            AND (b.post_start_date IS NULL OR b.post_start_date < $2)
            AND (b.post_end_date IS NULL OR b.post_end_date >= $3)
-         ORDER BY b."order" ASC NULLS LAST, e."${c.o}" ASC NULLS LAST`,
+         ORDER BY array_position($1::uuid[], e.detail_page_id), b."order" ASC NULLS LAST, e."${c.o}" ASC NULLS LAST`,
         [ids, tomorrowStart, todayStart],
       )
 
@@ -734,17 +734,18 @@ export class BlogV2PostService {
           [ref.id, tomorrowStart, todayStart],
         )
       } else if (ref.type === "category") {
-        // 상품 대분류 → 그 대분류의 "첫 번째 상세페이지"(order)의 게시중 이벤트, 없으면 그 상세페이지 상시 상품
-        const first: Array<{ id: string }> = await this.postRepo.query(
+        // 상품 대분류 → 소속 상세페이지 전체를 order 순으로 훑어 게시중 이벤트 수집(첫 상세페이지가 비어도 다음 것 노출).
+        // 이벤트가 하나도 없으면 같은 순서로 상시 상품 폴백.
+        const dps: Array<{ id: string }> = await this.postRepo.query(
           `SELECT id FROM public.product_detail_page
            WHERE category_id = $1 AND status = 'ACTIVE'
-           ORDER BY "order" ASC NULLS LAST LIMIT 1`,
+           ORDER BY "order" ASC NULLS LAST`,
           [ref.id],
         )
-        if (!first.length) continue
-        const dpId = first[0].id
-        events = await eventsByDetail([dpId])
-        if (!events.length) products = await productsByDetail([dpId])
+        if (!dps.length) continue
+        const ids = dps.map((r) => r.id)
+        events = await eventsByDetail(ids)
+        if (!events.length) products = await productsByDetail(ids)
       } else {
         // page → 자기 상세페이지 상시 상품 + 게시중 이벤트(내부 탭)
         products = await productsByDetail([ref.id])

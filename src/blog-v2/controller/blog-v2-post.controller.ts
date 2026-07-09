@@ -99,6 +99,15 @@ export class BlogV2PostController {
   }
 
 
+  @ApiOperation({
+    summary: "공개 가격 보기 데이터 (postId+lang) — 프론트 가격 섹션용. 봇 SSR과 동일 로직(price_refs page/category/event)",
+  })
+  @Get("public/prices/:id")
+  async publicPrices(@Param("id", ParseUUIDPipe) id: string, @Query("lang") lang: string) {
+    const post = await this.service.findOne(id)
+    return this.service.getBlogPriceData(post.priceRefs, post.productPage, lang || post.lang)
+  }
+
   @ApiOperation({ summary: "공개 글 상세 (slug, 인증 불필요) — frontend 블로그 상세용" })
   @Get("public/detail/:lang/:slug")
   async publicDetail(@Param("lang") lang: string, @Param("slug") slug: string) {
