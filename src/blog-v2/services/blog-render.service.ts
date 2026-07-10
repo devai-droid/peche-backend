@@ -28,14 +28,14 @@ const TOC_LABEL: Record<string, string> = {
   th: "สารบัญ",
 }
 
-// 출처(각주) 하단 목록 제목 (언어별, 설명형)
+// 출처(각주) 하단 목록 제목 (언어별)
 const REF_LABEL: Record<string, string> = {
-  ko: "이 글이 본문에서 인용한 자료",
-  en: "Sources cited in this article",
-  zh: "本文引用的资料",
-  "zh-TW": "本文引用的資料",
-  ja: "本文で引用した資料",
-  th: "แหล่งอ้างอิงในบทความนี้",
+  ko: "참고 문헌 및 출처",
+  en: "References & Sources",
+  zh: "参考文献及来源",
+  "zh-TW": "參考文獻及來源",
+  ja: "参考文献・出典",
+  th: "เอกสารอ้างอิงและแหล่งที่มา",
 }
 
 const TYPOGRAPHY_CSS = `
@@ -89,14 +89,14 @@ const TYPOGRAPHY_CSS = `
   .blog-related a:hover{text-decoration:underline}
   .cite-ref{font-size:0.72em;line-height:0}
   .cite-ref a{color:#DA7F67;font-weight:600;text-decoration:none}
-  .blog-references{margin:40px 0 0}
-  .blog-references h2{font-size:20px;font-weight:700;color:#1a1a1a;padding-bottom:8px;margin:0 0 12px;border-bottom:1px solid #DA7F67}
+  .blog-references{margin:40px 0 0;background:#fff;border:1px solid #c8c8c8;padding:16px 20px}
+  .blog-references h2{font-size:20px;font-weight:700;color:#1a1a1a;padding-bottom:8px;margin:0 0 12px;border-bottom:1px solid #c8c8c8}
   .blog-references ol{list-style:none;padding:0;margin:0}
   .blog-references li{font-size:15px;color:#555;margin:2px 0;line-height:1.6}
-  .blog-references .ref-num{color:#999}
+  .blog-references .ref-num{color:#DA7F67}
   .blog-references a{color:#555;text-decoration:none;word-break:break-all}
   .blog-references a:hover{color:#DA7F67}
-  .blog-references .ref-back{color:#DA7F67;word-break:normal;margin-left:4px}
+  .blog-references .ref-back{color:#9b9b9b;word-break:normal;margin-left:4px}
   .blog-cta{margin:40px 0 0;text-align:center}
   .cta-btn{display:inline-block;background:#DA7F67;color:#fff;padding:14px 36px;border-radius:6px;text-decoration:none;font-weight:600;font-size:16px}
   .cta-btn:hover{background:#c56b54}
