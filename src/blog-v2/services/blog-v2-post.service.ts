@@ -199,6 +199,8 @@ export class BlogV2PostService {
     post.ctaLinks = await this.resolveCtaLinks(frontmatter.cta, warnings)
     // 가격 보기 소스도 md가 source of truth — price 있으면 그대로, 없으면 product_page로 폴백.
     post.priceRefs = await this.resolvePriceRefs(frontmatter.price, post.productPage, warnings)
+    // 스키마 about(핵심 시술) — md가 source of truth.
+    post.medicalAbout = this.parseMedicalAbout(frontmatter.about)
     post.publishTarget =
       frontmatter.publish_target === BlogPublishTarget.DETAIL_PAGE
         ? BlogPublishTarget.DETAIL_PAGE
@@ -331,6 +333,7 @@ export class BlogV2PostService {
           : frontmatter.product_page,
         warnings,
       ),
+      medicalAbout: this.parseMedicalAbout(frontmatter.about),
       // 고지문구: 일반 면책은 항상 적용(프론트에서 자동), AI 이미지 고지는 신규 글에 기본 등록.
       // frontmatter로 명시하면 그 값을 존중(빈 배열로 끄기 가능). 재업로드는 기존 선택 유지(update 경로).
       notices: frontmatter.notices ?? [BlogCommonTextType.AI_IMAGE_NOTICE],
@@ -424,6 +427,46 @@ export class BlogV2PostService {
     if (!Array.isArray(ids) || ids.length === 0) return []
     const docs = await this.doctorRepo.find({ where: { id: In(ids) } })
     return ids.map((id) => docs.find((d) => d.id === id)).filter((d): d is BlogDoctor => !!d)
+  }
+
+  /** frontmatter.about(핵심 시술) → 저장 형태 정규화. name 없는 항목 제외. */
+  private parseMedicalAbout(
+    about: Array<{ name?: string; procedureType?: string; bodyLocation?: string }> | undefined,
+  ): Array<{ name: string; procedureType?: string; bodyLocation?: string }> | undefined {
+    if (!Array.isArray(about)) return undefined
+    const out = about
+      .map((a) => ({
+        name: (a?.name ?? "").trim(),
+        procedureType: (a?.procedureType ?? "").trim() || undefined,
+        bodyLocation: (a?.bodyLocation ?? "").trim() || undefined,
+      }))
+      .filter((a) => a.name)
+    return out.length ? out : undefined
+  }
+
+  /** product_page 상세페이지명 → { id, name } 목록 (스키마 about 개별 시술 url용). 읽기 전용, 실패 시 []. */
+  async getProductPageProcedures(productPage: string | undefined): Promise<Array<{ id: string; name: string }>> {
+    try {
+      const sep = (productPage ?? "").includes("|") ? "|" : ","
+      const names = (productPage ?? "").split(sep).map((s) => s.trim()).filter(Boolean)
+      if (!names.length) return []
+      const out: Array<{ id: string; name: string }> = []
+      const seen = new Set<string>()
+      for (const nm of names) {
+        const rows: Array<{ id: string; name: string }> = await this.postRepo.query(
+          `SELECT id, name FROM public.product_detail_page WHERE name = $1 AND status = 'ACTIVE' LIMIT 1`,
+          [nm],
+        )
+        if (rows.length && !seen.has(rows[0].id)) {
+          seen.add(rows[0].id)
+          out.push({ id: rows[0].id, name: rows[0].name })
+        }
+      }
+      return out
+    } catch (e) {
+      this.logger.warn(`getProductPageProcedures 실패: ${(e as Error).message}`)
+      return []
+    }
   }
 
   /** 키워드 이름 → blog.keywords ID. 못 찾으면 경고 + undefined. */

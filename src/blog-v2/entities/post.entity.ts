@@ -145,6 +145,14 @@ export class BlogPostV2 extends TimeStampEntity {
   @Column({ name: "price_refs", type: "jsonb", nullable: true })
   priceRefs?: Array<{ type: "page" | "category" | "event"; id: string; name: string }>
 
+  @ApiProperty({
+    required: false,
+    description:
+      "스키마 about(핵심 시술) — frontmatter `about`. [{ name, procedureType?, bodyLocation? }]. BlogPosting.about에 이 값 + product_page 개별 시술(자동 url) 합쳐 노출",
+  })
+  @Column({ name: "medical_about", type: "jsonb", nullable: true })
+  medicalAbout?: Array<{ name: string; procedureType?: string; bodyLocation?: string }>
+
 
   @ApiProperty({
     enum: BlogPublishTarget,

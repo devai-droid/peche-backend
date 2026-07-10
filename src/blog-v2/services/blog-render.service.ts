@@ -118,7 +118,11 @@ export class BlogRenderService {
       const cfg = await this.siteConfigService.getMerged(post.lang).catch(() => null)
       const breadcrumb = await this.postService.getPostBreadcrumb(post.productCategoryId, post.productPage)
       const reviewerDoctors = await this.postService.getReviewerDoctors(post.reviewerDoctorIds)
-      return { html: this.buildHtml(post, priceGroups, titleMap, cfg, breadcrumb, reviewerDoctors), status: 200 }
+      const pageProcedures = await this.postService.getProductPageProcedures(post.productPage)
+      return {
+        html: this.buildHtml(post, priceGroups, titleMap, cfg, breadcrumb, reviewerDoctors, pageProcedures),
+        status: 200,
+      }
     }
     // 이름 변경 등으로 사라진 옛 주소(슬러그 이력에 있음) → 410 Gone
     // (CloudFront는 404/403만 index.html로 바꾸고 410은 통과 → 검색엔진에 "영구 삭제" 전달)
@@ -246,6 +250,7 @@ ${posts.length ? `<div class="card-grid">${cards}</div>` : `<p>아직 발행된 
     cfg: BlogSiteConfig | null = null,
     breadcrumb: BlogBreadcrumb = { category: null, detailPage: null },
     reviewerDoctors: BlogDoctor[] = [],
+    pageProcedures: Array<{ id: string; name: string }> = [],
   ): string {
     const site = this.site
     const desc = post.summaryText ?? post.subtitle ?? ""
@@ -269,7 +274,7 @@ ${post.thumbnailUrl ? `<meta property="og:image" content="${esc(post.thumbnailUr
 <meta name="twitter:title" content="${esc(post.title)}">
 <meta name="twitter:description" content="${esc(desc)}">
 ${post.thumbnailUrl ? `<meta name="twitter:image" content="${esc(post.thumbnailUrl)}">` : ""}
-${this.buildJsonLd(post, canonical, priceGroups, cfg, breadcrumb, reviewerDoctors)}
+${this.buildJsonLd(post, canonical, priceGroups, cfg, breadcrumb, reviewerDoctors, pageProcedures)}
 <style>${TYPOGRAPHY_CSS}</style>
 </head>
 <body>
@@ -409,7 +414,7 @@ ${assoc}
     return blocks.length ? `<aside class="blog-price">${blocks.join("")}</aside>` : ""
   }
 
-  /** JSON-LD 풀세트: BlogPosting + MedicalClinic + Physician(reviewedBy) + Breadcrumb + FAQPage + medical_schema + 가격(Offer) */
+  /** JSON-LD 풀세트: MedicalWebPage + BlogPosting + Person(작성) + Physician(감수) + MedicalClinic + Breadcrumb + FAQPage + medical_schema + 가격(Offer) */
   private buildJsonLd(
     post: BlogPostV2,
     canonical: string,
@@ -417,6 +422,7 @@ ${assoc}
     cfg: BlogSiteConfig | null = null,
     breadcrumb: BlogBreadcrumb = { category: null, detailPage: null },
     reviewerDoctors: BlogDoctor[] = [],
+    pageProcedures: Array<{ id: string; name: string }> = [],
   ): string {
     const site = this.site
     const graph: Record<string, unknown>[] = []
@@ -439,56 +445,100 @@ ${assoc}
         }
       : undefined
 
-    // 1. BlogPosting (+ author/reviewedBy = 감수의사)
+    // ── @id 주소들 (페이지=canonical, 글·경로·의료진은 그 아래 조각) ──
+    const pageId = canonical
+    const articleId = `${canonical}#article`
+    const breadcrumbId = `${canonical}#breadcrumb`
+    const authorId = `${canonical}#author`
+    const reviewerIdOf = (i: number, n: number) => (n === 1 ? `${canonical}#reviewer` : `${canonical}#reviewer-${i + 1}`)
+    const specialty = cfg?.medicalSpecialty || "Dermatology"
+    const dateOnly = (d?: Date) => (d ? new Date(d).toISOString().slice(0, 10) : undefined)
+
+    // 감수 의료진: reviewer_doctors 우선, 없으면 author_doctor 폴백
+    const reviewers = reviewerDoctors.length ? reviewerDoctors : post.authorDoctor ? [post.authorDoctor] : []
+    const reviewerRefs = reviewers.map((_doc, i) => ({ "@id": reviewerIdOf(i, reviewers.length) }))
+    const reviewedBy = reviewerRefs.length ? (reviewerRefs.length === 1 ? reviewerRefs[0] : reviewerRefs) : undefined
+
+    // ── about(핵심 시술) 병합 ──
+    //  1) 마케터 about(medical_about) 우선. 2) 옛 medical_schema가 MedicalWebPage면 껍데기는 버리고 about만 흡수(중복 방지).
+    //  3) product_page 개별 시술을 name+url로 자동 추가(이름 중복 제외).
+    const extraJsonld =
+      post.extraJsonld && typeof post.extraJsonld === "object" ? (post.extraJsonld as Record<string, unknown>) : null
+    let skipExtra = false
+    const marketerAbout: Array<{ name: string; procedureType?: string; bodyLocation?: string }> = [
+      ...(post.medicalAbout ?? []),
+    ]
+    if (extraJsonld && extraJsonld["@type"] === "MedicalWebPage") {
+      skipExtra = true
+      if (!marketerAbout.length && extraJsonld.about) {
+        const arr = Array.isArray(extraJsonld.about) ? extraJsonld.about : [extraJsonld.about]
+        for (const a of arr) {
+          if (a && typeof a === "object" && (a as Record<string, unknown>).name) {
+            const o = a as Record<string, unknown>
+            marketerAbout.push({
+              name: String(o.name),
+              procedureType: o.procedureType ? String(o.procedureType) : undefined,
+              bodyLocation: o.bodyLocation ? String(o.bodyLocation) : undefined,
+            })
+          }
+        }
+      }
+    }
+    const aboutNodes: Record<string, unknown>[] = []
+    const seenAbout = new Set<string>()
+    for (const a of marketerAbout) {
+      const nm = (a.name ?? "").trim()
+      if (!nm || seenAbout.has(nm)) continue
+      seenAbout.add(nm)
+      aboutNodes.push({
+        "@type": "MedicalProcedure",
+        name: nm,
+        procedureType: a.procedureType || undefined,
+        bodyLocation: a.bodyLocation || undefined,
+      })
+    }
+    for (const p of pageProcedures) {
+      const nm = (p.name ?? "").trim()
+      if (!nm || seenAbout.has(nm)) continue
+      seenAbout.add(nm)
+      aboutNodes.push({ "@type": "MedicalProcedure", name: nm, url: `${site.baseUrl}/${post.lang}/products/${p.id}` })
+    }
+
+    // 1. MedicalWebPage (페이지)
+    graph.push({
+      "@context": "https://schema.org",
+      "@type": "MedicalWebPage",
+      "@id": pageId,
+      url: canonical,
+      name: post.title,
+      inLanguage: post.lang,
+      breadcrumb: { "@id": breadcrumbId },
+      mainEntity: { "@id": articleId },
+      lastReviewed: dateOnly(post.updatedAt as unknown as Date),
+      reviewedBy,
+      medicalAudience: { "@type": "MedicalAudience", audienceType: "Patient" },
+      specialty,
+    })
+
+    // 2. BlogPosting (글) — about = 마케터 핵심 시술 + product_page 개별 시술(자동 url)
     const blogPosting: Record<string, unknown> = {
       "@context": "https://schema.org",
       "@type": "BlogPosting",
+      "@id": articleId,
       headline: post.title,
       description: post.summaryText ?? post.subtitle ?? undefined,
       image: post.thumbnailUrl ?? undefined,
       datePublished: isoDate(post.publishedAt),
       dateModified: isoDate(post.updatedAt as unknown as Date),
-      mainEntityOfPage: { "@type": "MedicalWebPage", "@id": canonical },
-      // 발행처 = 위에서 정의한 병원(@id 참조). 빈 껍데기 MedicalClinic 중복 생성 방지.
+      inLanguage: post.lang,
+      isPartOf: { "@id": pageId },
+      mainEntityOfPage: { "@id": pageId },
       publisher: { "@id": clinicId },
+      articleSection: breadcrumb.category?.name || undefined,
     }
-    // 작성(author) = author_doctor
-    if (post.authorDoctor) {
-      const doc = post.authorDoctor
-      blogPosting.author = {
-        "@type": "Person",
-        name: doc.name,
-        jobTitle: doc.jobTitle ?? undefined,
-        url: doc.profileUrl ?? undefined,
-      }
-    }
-    // 감수(reviewedBy) = reviewer_doctors 우선, 없으면 author_doctor로 폴백(기존 글 호환).
-    // Physician은 Google이 의료 주체로 보고 연락처·주소·이미지를 권장하므로 병원 정보로 채움.
-    const reviewers = reviewerDoctors.length ? reviewerDoctors : post.authorDoctor ? [post.authorDoctor] : []
-    if (reviewers.length) {
-      const nodes = reviewers.map((doc) => ({
-        "@type": "Physician",
-        name: doc.name,
-        medicalSpecialty: doc.specialty ?? undefined,
-        image: doc.photoUrl || clinicImage,
-        worksFor: { "@id": clinicId },
-        telephone: clinicTelephone,
-        address: clinicAddress,
-      }))
-      blogPosting.reviewedBy = nodes.length === 1 ? nodes[0] : nodes
-    }
-    // 주제 신호: about — 마케터가 medical_schema에 about을 직접 쓰면 그걸 우선(중복 방지),
-    //  없을 때만 product_page/price 기반으로 자동 생성(안전망). 자동은 상세페이지·대분류명이라 덜 정확할 수 있음.
-    const hasManualAbout =
-      post.extraJsonld &&
-      typeof post.extraJsonld === "object" &&
-      "about" in (post.extraJsonld as Record<string, unknown>)
-    const procedures = Array.from(
-      new Set(priceGroups.map((g) => (g.detailPageName ?? "").trim()).filter(Boolean)),
-    )
-    if (!hasManualAbout && procedures.length > 0) {
-      blogPosting.about = procedures.map((name) => ({ "@type": "MedicalProcedure", name }))
-    }
+    if (post.authorDoctor) blogPosting.author = { "@id": authorId }
+    if (reviewedBy) blogPosting.reviewedBy = reviewedBy
+    if (aboutNodes.length) blogPosting.about = aboutNodes
     // 본문 외부링크 자동 수집 → citation(출처/인용)
     const citations = this.extractCitations(post.bodyHtml ?? "")
     if (citations.length > 0) {
@@ -499,6 +549,33 @@ ${assoc}
       }))
     }
     graph.push(blogPosting)
+
+    // 3. 작성 의료진 (Person) — author_doctor
+    if (post.authorDoctor) {
+      const doc = post.authorDoctor
+      graph.push({
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "@id": authorId,
+        name: doc.name,
+        jobTitle: doc.jobTitle ?? undefined,
+        url: doc.profileUrl ?? undefined,
+      })
+    }
+    // 4. 감수 의료진 (Physician) — reviewer_doctors. 병원 정보로 연락처·주소 채움
+    reviewers.forEach((doc, i) => {
+      graph.push({
+        "@context": "https://schema.org",
+        "@type": "Physician",
+        "@id": reviewerIdOf(i, reviewers.length),
+        name: doc.name,
+        medicalSpecialty: doc.specialty ?? undefined,
+        image: doc.photoUrl || clinicImage,
+        worksFor: { "@id": clinicId },
+        telephone: clinicTelephone,
+        address: clinicAddress,
+      })
+    })
 
     // 2. MedicalClinic (병원) — 어드민 '기본정보'(DB) 우선, 없으면 하드코딩 설정 폴백
     graph.push({
@@ -543,6 +620,7 @@ ${assoc}
     graph.push({
       "@context": "https://schema.org",
       "@type": "BreadcrumbList",
+      "@id": breadcrumbId,
       itemListElement: crumbs.map((c, i) => ({
         "@type": "ListItem",
         position: i + 1,
@@ -565,9 +643,9 @@ ${assoc}
       })
     }
 
-    // 5. medical_schema (글 주인공 JSON-LD, 마케터 작성)
-    if (post.extraJsonld && typeof post.extraJsonld === "object") {
-      graph.push(post.extraJsonld as Record<string, unknown>)
+    // 5. medical_schema (마케터 작성) — MedicalWebPage면 자동 페이지와 중복이라 생략(about은 위에서 흡수), 그 외 타입만 그대로 삽입
+    if (extraJsonld && !skipExtra) {
+      graph.push(extraJsonld)
     }
 
     // 6. 가격(Offer) — 검색·AI가 시술 가격을 읽도록. 시술은 상품(Product)이 아니라 Service로
