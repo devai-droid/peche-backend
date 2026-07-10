@@ -28,14 +28,14 @@ const TOC_LABEL: Record<string, string> = {
   th: "สารบัญ",
 }
 
-// 출처(각주) 하단 목록 제목 (언어별)
+// 출처(각주) 하단 목록 제목 (언어별, 설명형)
 const REF_LABEL: Record<string, string> = {
-  ko: "출처",
-  en: "References",
-  zh: "参考来源",
-  "zh-TW": "參考來源",
-  ja: "出典",
-  th: "แหล่งอ้างอิง",
+  ko: "이 글이 본문에서 인용한 자료",
+  en: "Sources cited in this article",
+  zh: "本文引用的资料",
+  "zh-TW": "本文引用的資料",
+  ja: "本文で引用した資料",
+  th: "แหล่งอ้างอิงในบทความนี้",
 }
 
 const TYPOGRAPHY_CSS = `
@@ -87,15 +87,16 @@ const TYPOGRAPHY_CSS = `
   .blog-related li{margin:8px 0}
   .blog-related a{color:#DA7F67;text-decoration:none;font-size:15px}
   .blog-related a:hover{text-decoration:underline}
-  .cite-ref{font-size:0.7em;line-height:0;margin-left:1px}
-  .cite-ref a{color:#DA7F67;font-weight:600;text-decoration:none;padding:0 1px}
+  .cite-ref{font-size:0.72em;line-height:0}
+  .cite-ref a{color:#DA7F67;font-weight:600;text-decoration:none}
   .blog-references{margin:40px 0 0}
-  .blog-references h2{font-size:18px;font-weight:700;margin:0 0 12px}
-  .blog-references ol{padding-left:1.4em;margin:0}
-  .blog-references li{font-size:14px;color:#666;margin:6px 0;line-height:1.5}
-  .blog-references a{color:#8a8a8a;text-decoration:none;word-break:break-all}
-  .blog-references a:hover{text-decoration:underline}
-  .blog-references .ref-back{color:#DA7F67;word-break:normal}
+  .blog-references h2{font-size:20px;font-weight:700;color:#1a1a1a;padding-bottom:8px;margin:0 0 12px;border-bottom:1px solid #DA7F67}
+  .blog-references ol{list-style:none;padding:0;margin:0}
+  .blog-references li{font-size:15px;color:#555;margin:2px 0;line-height:1.6}
+  .blog-references .ref-num{color:#999}
+  .blog-references a{color:#555;text-decoration:none;word-break:break-all}
+  .blog-references a:hover{color:#DA7F67}
+  .blog-references .ref-back{color:#DA7F67;word-break:normal;margin-left:4px}
   .blog-cta{margin:40px 0 0;text-align:center}
   .cta-btn{display:inline-block;background:#DA7F67;color:#fff;padding:14px 36px;border-radius:6px;text-decoration:none;font-weight:600;font-size:16px}
   .cta-btn:hover{background:#c56b54}
@@ -342,6 +343,15 @@ ${this.buildRelated(post, relatedTitles)}
         return
       }
       if (!host || host === selfHost) return // 자사(예약·CTA·내부 절대링크) 제외
+      // 본문에 이미 있던 리터럴 괄호 "(…)"를 각주 번호로 흡수 → 중복 괄호 방지
+      const prevNode = el.prev
+      const nextNode = el.next
+      if (prevNode && prevNode.type === "text" && /\(\s*$/.test((prevNode as { data?: string }).data ?? "")) {
+        ;(prevNode as { data: string }).data = (prevNode as { data: string }).data.replace(/\(\s*$/, "")
+      }
+      if (nextNode && nextNode.type === "text" && /^\s*\)/.test((nextNode as { data?: string }).data ?? "")) {
+        ;(nextNode as { data: string }).data = (nextNode as { data: string }).data.replace(/^\s*\)/, "")
+      }
       let n = numByHref.get(href)
       const isFirst = n === undefined
       if (isFirst) {
@@ -351,7 +361,7 @@ ${this.buildRelated(post, relatedTitles)}
         refs.push({ href, html: inner })
       }
       const idAttr = isFirst ? ` id="cite-${n}"` : ""
-      $(el).replaceWith(`<sup class="cite-ref"${idAttr}><a href="#ref-${n}">${n}</a></sup>`)
+      $(el).replaceWith(`<sup class="cite-ref"${idAttr}><a href="#ref-${n}">(${n})</a></sup>`)
     })
     let out = $.html()
     if (refs.length) {
@@ -359,7 +369,7 @@ ${this.buildRelated(post, relatedTitles)}
       const lis = refs
         .map(
           (r, i) =>
-            `<li id="ref-${i + 1}"><a href="${esc(r.href)}" target="_blank" rel="noopener noreferrer">${r.html}</a> <a href="#cite-${i + 1}" class="ref-back">↩</a></li>`,
+            `<li id="ref-${i + 1}"><span class="ref-num">(${i + 1}) </span><a href="${esc(r.href)}" target="_blank" rel="noopener noreferrer">${r.html}</a> <a href="#cite-${i + 1}" class="ref-back" aria-label="본문으로 돌아가기">↩</a></li>`,
         )
         .join("")
       out += `<section class="blog-references"><h2>${esc(label)}</h2><ol>${lis}</ol></section>`
