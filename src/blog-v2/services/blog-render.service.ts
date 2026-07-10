@@ -133,7 +133,7 @@ export class BlogRenderService {
     const post = await this.postService.findBySlug(slug, lang)
     if (post) {
       const priceGroups = await this.postService.getBlogPriceData(post.priceRefs, post.productPage, post.lang)
-      const relatedSlugs = (post.internalLinks ?? []).map((l) => l.slug)
+      const relatedSlugs = this.extractRelatedLinks(post.bodyHtml ?? "").map((l) => l.slug)
       const titleMap = await this.postService.getPublishedTitlesBySlugs(relatedSlugs, post.lang)
       const cfg = await this.siteConfigService.getMerged(post.lang).catch(() => null)
       const breadcrumb = await this.postService.getPostBreadcrumb(post.productCategoryId, post.productPage)
@@ -410,10 +410,40 @@ ${assoc}
 </aside>`
   }
 
-  /** 관련 글 — internal_links. 발행된 글은 실제 제목+링크, 미발행이면 미리 적어둔 텍스트만(링크 X) */
+  /**
+   * 관련 글용 — 본문의 내부(상대) 링크 자동 수집. 프론트(blog-detail)와 동일 기준:
+   * http 외부(출처/인용)·#앵커·mailto/tel 제외. 마케터가 본문에 `[텍스트](slug)`로 쓴 링크를 모음.
+   */
+  private extractRelatedLinks(bodyHtml: string): Array<{ slug: string; anchor: string }> {
+    if (!bodyHtml) return []
+    const $ = cheerio.load(bodyHtml, null, false)
+    const seen = new Set<string>()
+    const out: Array<{ slug: string; anchor: string }> = []
+    $("a[href]").each((_, el) => {
+      const href = ($(el).attr("href") ?? "").trim()
+      if (!href) return
+      if (/^https?:\/\//i.test(href)) return // 외부 = 출처/인용(각주)
+      if (/^(mailto|tel):/i.test(href)) return
+      if (href.startsWith("#")) return // 페이지 내 앵커
+      let slug = href.replace(/^[#/]/, "").replace(/^blog\//, "")
+      // 본문 href는 URL 인코딩된 슬러그(%EC%..)로 저장됨 → 디코딩해야 posts.slug(디코딩 상태)와 매칭
+      try {
+        slug = decodeURIComponent(slug)
+      } catch {
+        /* 잘못된 인코딩이면 원본 유지 */
+      }
+      const anchor = $(el).text().trim()
+      if (!slug || seen.has(slug)) return
+      seen.add(slug)
+      out.push({ slug, anchor })
+    })
+    return out
+  }
+
+  /** 관련 글 — 본문 내부 링크 자동 수집. 발행된 글은 실제 제목+링크, 미발행이면 본문 링크 텍스트만(링크 X) */
   private buildRelated(post: BlogPostV2, relatedTitles: Record<string, string> = {}): string {
-    const links = post.internalLinks
-    if (!links?.length) return ""
+    const links = this.extractRelatedLinks(post.bodyHtml ?? "")
+    if (!links.length) return ""
     const lis = links
       .map((l) => {
         const title = relatedTitles[l.slug]
