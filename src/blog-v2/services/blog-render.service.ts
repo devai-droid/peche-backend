@@ -90,7 +90,7 @@ const TYPOGRAPHY_CSS = `
   .cite-ref{font-size:0.72em;line-height:0}
   .cite-ref a{color:#DA7F67;font-weight:600;text-decoration:none}
   .blog-references{margin:72px 0 0;background:#fff;border:1px solid #c8c8c8;padding:16px 20px}
-  .blog-references h2{font-size:25px;font-weight:700;color:#1a1a1a;padding-bottom:8px;margin:0 0 12px;border-bottom:1px solid #c8c8c8}
+  .blog-references h2{font-size:15px;font-weight:700;color:#1a1a1a;padding-bottom:8px;margin:0 0 12px;border-bottom:1px solid #c8c8c8}
   .blog-references ol{list-style:none;padding:0;margin:0}
   .blog-references li{font-size:15px;color:#555;margin:2px 0;line-height:1.6}
   .blog-references .ref-num{color:#DA7F67}
