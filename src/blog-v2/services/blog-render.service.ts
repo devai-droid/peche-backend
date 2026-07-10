@@ -484,24 +484,36 @@ ${assoc}
         }
       }
     }
-    const aboutNodes: Record<string, unknown>[] = []
-    const seenAbout = new Set<string>()
+    //  이름 비교는 띄어쓰기·대소문자 무시(예: "피코라이트블랙 토닝" == "피코라이트블랙토닝") → 같은 시술은 한 항목으로 합침
+    const norm = (s: string) => (s ?? "").replace(/\s+/g, "").toLowerCase()
+    const aboutNodes: Array<Record<string, unknown>> = []
+    const aboutByNorm = new Map<string, Record<string, unknown>>()
     for (const a of marketerAbout) {
       const nm = (a.name ?? "").trim()
-      if (!nm || seenAbout.has(nm)) continue
-      seenAbout.add(nm)
-      aboutNodes.push({
+      if (!nm) continue
+      const key = norm(nm)
+      if (aboutByNorm.has(key)) continue
+      const node: Record<string, unknown> = {
         "@type": "MedicalProcedure",
         name: nm,
         procedureType: a.procedureType || undefined,
         bodyLocation: a.bodyLocation || undefined,
-      })
+      }
+      aboutByNorm.set(key, node)
+      aboutNodes.push(node)
     }
     for (const p of pageProcedures) {
       const nm = (p.name ?? "").trim()
-      if (!nm || seenAbout.has(nm)) continue
-      seenAbout.add(nm)
-      aboutNodes.push({ "@type": "MedicalProcedure", name: nm, url: `${site.baseUrl}/${post.lang}/products/${p.id}` })
+      if (!nm) continue
+      const key = norm(nm)
+      if (aboutByNorm.has(key)) continue // 마케터 about과 같은 시술 → product_page 것은 생략(마케터 표기 유지)
+      const node: Record<string, unknown> = {
+        "@type": "MedicalProcedure",
+        name: nm,
+        url: `${site.baseUrl}/${post.lang}/products/${p.id}`,
+      }
+      aboutByNorm.set(key, node)
+      aboutNodes.push(node)
     }
 
     // 1. MedicalWebPage (페이지)
