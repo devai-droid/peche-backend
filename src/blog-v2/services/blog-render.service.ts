@@ -52,7 +52,7 @@ const TYPOGRAPHY_CSS = `
   .blog-content{font-size:16px;line-height:1.8;color:#1a1a1a}
   .blog-content h1,.blog-content h2,.blog-content h3,.blog-content h4{font-weight:600;margin-top:1.5em;margin-bottom:0.5em;line-height:1.3;scroll-margin-top:80px}
   .blog-content h2{font-size:1.7em}
-  .blog-content h3{font-size:1.15em}
+  .blog-content h3{font-size:1.15em;margin-bottom:0.8em}
   .blog-content p{margin-bottom:1em}
   .blog-content ul{list-style-type:disc;padding-left:1.5em;margin-bottom:1em}
   .blog-content ol{list-style-type:decimal;padding-left:1.5em;margin-bottom:1em}
