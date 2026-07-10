@@ -28,6 +28,16 @@ const TOC_LABEL: Record<string, string> = {
   th: "สารบัญ",
 }
 
+// 출처(각주) 하단 목록 제목 (언어별)
+const REF_LABEL: Record<string, string> = {
+  ko: "출처",
+  en: "References",
+  zh: "参考来源",
+  "zh-TW": "參考來源",
+  ja: "出典",
+  th: "แหล่งอ้างอิง",
+}
+
 const TYPOGRAPHY_CSS = `
   *{box-sizing:border-box}
   body{margin:0;font-family:-apple-system,'Apple SD Gothic Neo','Pretendard',sans-serif;color:#2b2b2b;line-height:1.8;background:#fff}
@@ -77,6 +87,15 @@ const TYPOGRAPHY_CSS = `
   .blog-related li{margin:8px 0}
   .blog-related a{color:#DA7F67;text-decoration:none;font-size:15px}
   .blog-related a:hover{text-decoration:underline}
+  .cite-ref{font-size:0.7em;line-height:0;margin-left:1px}
+  .cite-ref a{color:#DA7F67;font-weight:600;text-decoration:none;padding:0 1px}
+  .blog-references{margin:40px 0 0}
+  .blog-references h2{font-size:18px;font-weight:700;margin:0 0 12px}
+  .blog-references ol{padding-left:1.4em;margin:0}
+  .blog-references li{font-size:14px;color:#666;margin:6px 0;line-height:1.5}
+  .blog-references a{color:#8a8a8a;text-decoration:none;word-break:break-all}
+  .blog-references a:hover{text-decoration:underline}
+  .blog-references .ref-back{color:#DA7F67;word-break:normal}
   .blog-cta{margin:40px 0 0;text-align:center}
   .cta-btn{display:inline-block;background:#DA7F67;color:#fff;padding:14px 36px;border-radius:6px;text-decoration:none;font-weight:600;font-size:16px}
   .cta-btn:hover{background:#c56b54}
@@ -286,7 +305,7 @@ ${post.subtitle ? `<p class="blog-subtitle">${esc(post.subtitle)}</p>` : ""}
 ${post.thumbnailUrl ? `<img class="blog-thumb" src="${esc(post.thumbnailUrl)}" alt="${esc(post.title)}">` : ""}
 ${post.summaryText ? `<div class="blog-summary">${esc(post.summaryText)}</div>` : ""}
 ${this.buildToc(post.bodyHtml ?? "", post.lang)}
-<div class="blog-content">${post.bodyHtml ?? ""}</div>
+<div class="blog-content">${this.buildBodyWithFootnotes(post.bodyHtml ?? "", post.lang)}</div>
 ${this.buildAuthorCard(post)}
 ${this.buildPriceSection(priceGroups, post.lang)}
 </article>
@@ -295,6 +314,57 @@ ${this.buildRelated(post, relatedTitles)}
 <footer class="blog-footer">© ${esc(site.hospitalName)}</footer>
 </body>
 </html>`
+  }
+
+  /**
+   * 각주 — 본문 외부(출처) 링크를 위첨자 번호로 치환하고 본문 끝에 "출처" 목록 생성.
+   * 프론트(blog-detail)와 동일 규칙: 외부(http) 링크=출처, 자사 도메인 제외, 같은 URL은 같은 번호로 병합.
+   */
+  private buildBodyWithFootnotes(bodyHtml: string, lang: string): string {
+    if (!bodyHtml) return ""
+    const selfHost = (() => {
+      try {
+        return new URL(this.site.baseUrl).hostname.replace(/^www\./, "")
+      } catch {
+        return ""
+      }
+    })()
+    const $ = cheerio.load(bodyHtml, null, false)
+    const numByHref = new Map<string, number>()
+    const refs: Array<{ href: string; html: string }> = []
+    $("a[href]").each((_, el) => {
+      const href = ($(el).attr("href") ?? "").trim()
+      if (!/^https?:\/\//i.test(href)) return // 내부 상대링크(관련글)는 각주 아님
+      let host = ""
+      try {
+        host = new URL(href).hostname.replace(/^www\./, "")
+      } catch {
+        return
+      }
+      if (!host || host === selfHost) return // 자사(예약·CTA·내부 절대링크) 제외
+      let n = numByHref.get(href)
+      const isFirst = n === undefined
+      if (isFirst) {
+        n = refs.length + 1
+        numByHref.set(href, n)
+        const inner = ($(el).html() ?? "").trim().replace(/^\(/, "").replace(/\)$/, "").trim()
+        refs.push({ href, html: inner })
+      }
+      const idAttr = isFirst ? ` id="cite-${n}"` : ""
+      $(el).replaceWith(`<sup class="cite-ref"${idAttr}><a href="#ref-${n}">${n}</a></sup>`)
+    })
+    let out = $.html()
+    if (refs.length) {
+      const label = REF_LABEL[lang] ?? REF_LABEL.ko
+      const lis = refs
+        .map(
+          (r, i) =>
+            `<li id="ref-${i + 1}"><a href="${esc(r.href)}" target="_blank" rel="noopener noreferrer">${r.html}</a> <a href="#cite-${i + 1}" class="ref-back">↩</a></li>`,
+        )
+        .join("")
+      out += `<section class="blog-references"><h2>${esc(label)}</h2><ol>${lis}</ol></section>`
+    }
+    return out
   }
 
   /** 목차 — 본문 H2 id 기반(h3 제외, 대제목만). 봇/검색엔진이 목차로 인식하도록 nav[aria-label] 부여 */
