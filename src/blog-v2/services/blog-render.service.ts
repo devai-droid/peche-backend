@@ -619,8 +619,9 @@ ${assoc}
       const url = `${site.baseUrl}/${post.lang}/products/${p.id}`
       const existing = aboutByNorm.get(key)
       if (existing) {
-        // 마케터 about과 같은 시술 → 버리지 말고 링크(url) 보강해 합침(procedureType·bodyLocation 유지)
+        // 마케터 about과 같은 시술 → 링크(url) 보강 + 이름은 product_page 정식명으로 통일(procedureType·bodyLocation 유지)
         if (!existing.url) existing.url = url
+        existing.name = nm
         continue
       }
       const node: Record<string, unknown> = {
