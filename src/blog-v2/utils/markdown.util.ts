@@ -80,9 +80,10 @@ export interface BlogPostFrontmatter {
   // CTA 버튼 링크(최대 2개) — product_page와 별개. 항목별로 page/category/event 중 하나 + text.
   //   page: 상세페이지명 → /products/{id}, category: 상시 대분류명 → /products?category={id}, event: 이벤트 대분류명 → /events?category={id}
   cta?: Array<{ page?: string; category?: string; event?: string; text?: string }>
-  // 스키마 about(핵심 시술) — 이 글이 핵심적으로 다루는 시술. [{ name, procedureType?, bodyLocation? }]
-  //   개별 시술(울쎄라피 등)은 여기 안 써도 product_page에서 자동 합쳐짐. 넓은 개념/비교 시술만 적음.
-  about?: Array<{ name?: string; procedureType?: string; bodyLocation?: string }>
+  // 스키마 about — 이 글에만 해당하는 항목(주로 개요글의 넓은 개념). 자유 키-값(schema.org 속성 그대로 통과).
+  //   product_page 시술·대분류는 여기 안 써도 자동 포함되고, 속성은 blog.schema_attributes 마스터에서 자동으로 붙음.
+  //   name은 필수(식별·병합용). 예: { name, "@type", procedureType, bodyLocation, signOrSymptom, ... }
+  about?: Array<Record<string, unknown>>
   // 가격 보기 섹션 소스 — product_page(탭 노출)와 별개. 항목별로 page/category/event 중 하나.
   //   page: 상세페이지 가격(상품+이벤트) → 더보기 /products/{id}
   //   category: 상품 대분류 소속 상세페이지 상품 → 더보기 /products?category={id}

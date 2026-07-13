@@ -151,7 +151,7 @@ export class BlogPostV2 extends TimeStampEntity {
       "스키마 about(핵심 시술) — frontmatter `about`. [{ name, procedureType?, bodyLocation? }]. BlogPosting.about에 이 값 + product_page 개별 시술(자동 url) 합쳐 노출",
   })
   @Column({ name: "medical_about", type: "jsonb", nullable: true })
-  medicalAbout?: Array<{ name: string; procedureType?: string; bodyLocation?: string }>
+  medicalAbout?: Array<Record<string, unknown>>
 
 
   @ApiProperty({

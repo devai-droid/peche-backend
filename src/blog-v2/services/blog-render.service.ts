@@ -13,6 +13,12 @@ type BlogBreadcrumb = {
   detailPage: { id: string; name: string } | null
 }
 
+/** 스키마 속성 마스터(blog.schema_attributes) 조회 결과 — 이름 → 자유 키-값 속성 */
+type BlogSchemaAttrs = {
+  category: Record<string, Record<string, unknown>>
+  detailPage: Record<string, Record<string, unknown>>
+}
+
 function esc(s?: string): string {
   if (!s) return ""
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!)
@@ -139,8 +145,13 @@ export class BlogRenderService {
       const breadcrumb = await this.postService.getPostBreadcrumb(post.productCategoryId, post.productPage)
       const reviewerDoctors = await this.postService.getReviewerDoctors(post.reviewerDoctorIds)
       const pageProcedures = await this.postService.getProductPageProcedures(post.productPage)
+      // 스키마 속성 마스터 — 대분류·상세페이지 이름으로 조회해 about 노드에 자동 첨부
+      const schemaAttrs = await this.postService.getSchemaAttributes(
+        breadcrumb.category ? [breadcrumb.category.name] : [],
+        pageProcedures.map((p) => p.name),
+      )
       return {
-        html: this.buildHtml(post, priceGroups, titleMap, cfg, breadcrumb, reviewerDoctors, pageProcedures),
+        html: this.buildHtml(post, priceGroups, titleMap, cfg, breadcrumb, reviewerDoctors, pageProcedures, schemaAttrs),
         status: 200,
       }
     }
@@ -271,6 +282,7 @@ ${posts.length ? `<div class="card-grid">${cards}</div>` : `<p>아직 발행된 
     breadcrumb: BlogBreadcrumb = { category: null, detailPage: null },
     reviewerDoctors: BlogDoctor[] = [],
     pageProcedures: Array<{ id: string; name: string }> = [],
+    schemaAttrs: BlogSchemaAttrs = { category: {}, detailPage: {} },
   ): string {
     const site = this.site
     const desc = post.summaryText ?? post.subtitle ?? ""
@@ -294,7 +306,7 @@ ${post.thumbnailUrl ? `<meta property="og:image" content="${esc(post.thumbnailUr
 <meta name="twitter:title" content="${esc(post.title)}">
 <meta name="twitter:description" content="${esc(desc)}">
 ${post.thumbnailUrl ? `<meta name="twitter:image" content="${esc(post.thumbnailUrl)}">` : ""}
-${this.buildJsonLd(post, canonical, priceGroups, cfg, breadcrumb, reviewerDoctors, pageProcedures)}
+${this.buildJsonLd(post, canonical, priceGroups, cfg, breadcrumb, reviewerDoctors, pageProcedures, schemaAttrs)}
 <style>${TYPOGRAPHY_CSS}</style>
 </head>
 <body>
@@ -533,6 +545,7 @@ ${assoc}
     breadcrumb: BlogBreadcrumb = { category: null, detailPage: null },
     reviewerDoctors: BlogDoctor[] = [],
     pageProcedures: Array<{ id: string; name: string }> = [],
+    schemaAttrs: BlogSchemaAttrs = { category: {}, detailPage: {} },
   ): string {
     const site = this.site
     const graph: Record<string, unknown>[] = []
@@ -569,68 +582,63 @@ ${assoc}
     const reviewerRefs = reviewers.map((_doc, i) => ({ "@id": reviewerIdOf(i, reviewers.length) }))
     const reviewedBy = reviewerRefs.length ? (reviewerRefs.length === 1 ? reviewerRefs[0] : reviewerRefs) : undefined
 
-    // ── about(핵심 시술) 병합 ──
-    //  1) 마케터 about(medical_about) 우선. 2) 옛 medical_schema가 MedicalWebPage면 껍데기는 버리고 about만 흡수(중복 방지).
-    //  3) product_page 개별 시술을 name+url로 자동 추가(이름 중복 제외).
+    // ── about 구성 ──
+    //  1) 대분류(자동) → 2) product_page 개별 시술(자동, url) → 3) 마케터 about(프론트매터)
+    //  속성은 blog.schema_attributes 마스터에서 '이름'으로 찾아 자동 첨부한다(자유 키-값 그대로 통과 — 코드가 키를 고정하지 않음).
+    //  이름이 같으면 한 항목으로 합치고(띄어쓰기·대소문자 무시), 마케터 값이 마스터를 덮어쓴다. 이름은 사이트 등록명 유지.
     const extraJsonld =
       post.extraJsonld && typeof post.extraJsonld === "object" ? (post.extraJsonld as Record<string, unknown>) : null
     let skipExtra = false
-    const marketerAbout: Array<{ name: string; procedureType?: string; bodyLocation?: string }> = [
-      ...(post.medicalAbout ?? []),
-    ]
+    const marketerAbout: Array<Record<string, unknown>> = [...(post.medicalAbout ?? [])]
+    // 옛 medical_schema(MedicalWebPage)의 about 흡수 — 껍데기는 버리고 about만(하위호환)
     if (extraJsonld && extraJsonld["@type"] === "MedicalWebPage") {
       skipExtra = true
       if (!marketerAbout.length && extraJsonld.about) {
         const arr = Array.isArray(extraJsonld.about) ? extraJsonld.about : [extraJsonld.about]
         for (const a of arr) {
           if (a && typeof a === "object" && (a as Record<string, unknown>).name) {
-            const o = a as Record<string, unknown>
-            marketerAbout.push({
-              name: String(o.name),
-              procedureType: o.procedureType ? String(o.procedureType) : undefined,
-              bodyLocation: o.bodyLocation ? String(o.bodyLocation) : undefined,
-            })
+            marketerAbout.push({ ...(a as Record<string, unknown>) })
           }
         }
       }
     }
-    //  이름 비교는 띄어쓰기·대소문자 무시(예: "피코라이트블랙 토닝" == "피코라이트블랙토닝") → 같은 시술은 한 항목으로 합침
     const norm = (s: string) => (s ?? "").replace(/\s+/g, "").toLowerCase()
     const aboutNodes: Array<Record<string, unknown>> = []
     const aboutByNorm = new Map<string, Record<string, unknown>>()
-    for (const a of marketerAbout) {
-      const nm = (a.name ?? "").trim()
-      if (!nm) continue
+    /** 이름으로 합치며 추가. 이미 있으면 url 보강 + 속성 덮어쓰기(name은 먼저 등록된 사이트 등록명 유지). */
+    const addAbout = (name: string, url: string | undefined, attrs: Record<string, unknown> | undefined) => {
+      const nm = (name ?? "").trim()
+      if (!nm) return
       const key = norm(nm)
-      if (aboutByNorm.has(key)) continue
-      const node: Record<string, unknown> = {
-        "@type": "MedicalProcedure",
-        name: nm,
-        procedureType: a.procedureType || undefined,
-        bodyLocation: a.bodyLocation || undefined,
-      }
-      aboutByNorm.set(key, node)
-      aboutNodes.push(node)
-    }
-    for (const p of pageProcedures) {
-      const nm = (p.name ?? "").trim()
-      if (!nm) continue
-      const key = norm(nm)
-      const url = `${site.baseUrl}/${post.lang}/products/${p.id}`
       const existing = aboutByNorm.get(key)
-      if (existing) {
-        // 마케터 about과 같은 시술 → 링크(url) 보강 + 이름은 product_page 정식명으로 통일(procedureType·bodyLocation 유지)
-        if (!existing.url) existing.url = url
-        existing.name = nm
-        continue
+      const node: Record<string, unknown> = existing ?? { "@type": "MedicalProcedure", name: nm }
+      if (attrs) {
+        for (const [k, v] of Object.entries(attrs)) {
+          if (k === "name" || v === undefined || v === null) continue
+          node[k] = v
+        }
       }
-      const node: Record<string, unknown> = {
-        "@type": "MedicalProcedure",
-        name: nm,
-        url,
+      if (url && !node.url) node.url = url
+      if (!existing) {
+        aboutByNorm.set(key, node)
+        aboutNodes.push(node)
       }
-      aboutByNorm.set(key, node)
-      aboutNodes.push(node)
+    }
+    // 1) 대분류 — product_page에서 도출된 소속 대분류(질환성 대분류면 마스터에서 MedicalCondition 등으로)
+    if (breadcrumb.category) {
+      addAbout(
+        breadcrumb.category.name,
+        `${site.baseUrl}/${post.lang}/products?category=${breadcrumb.category.id}`,
+        schemaAttrs.category[breadcrumb.category.name],
+      )
+    }
+    // 2) product_page 개별 시술
+    for (const p of pageProcedures) {
+      addAbout(p.name, `${site.baseUrl}/${post.lang}/products/${p.id}`, schemaAttrs.detailPage[p.name])
+    }
+    // 3) 마케터 about — 개요글의 넓은 개념 추가 / 특정 글에서 속성 덮어쓰기
+    for (const a of marketerAbout) {
+      addAbout(String(a.name ?? ""), undefined, a)
     }
 
     // 1. MedicalWebPage (페이지)

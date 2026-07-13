@@ -429,19 +429,65 @@ export class BlogV2PostService {
     return ids.map((id) => docs.find((d) => d.id === id)).filter((d): d is BlogDoctor => !!d)
   }
 
-  /** frontmatter.about(핵심 시술) → 저장 형태 정규화. name 없는 항목 제외. */
+  /**
+   * frontmatter.about → 저장 형태 정규화. **자유 키-값 그대로 통과**(코드가 속성을 고정하지 않음).
+   * name만 필수(식별·병합용), name 없는 항목은 제외. 빈 값 키는 버린다.
+   */
   private parseMedicalAbout(
-    about: Array<{ name?: string; procedureType?: string; bodyLocation?: string }> | undefined,
-  ): Array<{ name: string; procedureType?: string; bodyLocation?: string }> | undefined {
+    about: Array<Record<string, unknown>> | undefined,
+  ): Array<Record<string, unknown>> | undefined {
     if (!Array.isArray(about)) return undefined
-    const out = about
-      .map((a) => ({
-        name: (a?.name ?? "").trim(),
-        procedureType: (a?.procedureType ?? "").trim() || undefined,
-        bodyLocation: (a?.bodyLocation ?? "").trim() || undefined,
-      }))
-      .filter((a) => a.name)
+    const out: Array<Record<string, unknown>> = []
+    for (const a of about) {
+      if (!a || typeof a !== "object") continue
+      const name = String((a as Record<string, unknown>).name ?? "").trim()
+      if (!name) continue
+      const node: Record<string, unknown> = { name }
+      for (const [k, v] of Object.entries(a)) {
+        if (k === "name" || v === undefined || v === null) continue
+        if (typeof v === "string") {
+          const s = v.trim()
+          if (s) node[k] = s
+        } else {
+          node[k] = v
+        }
+      }
+      out.push(node)
+    }
     return out.length ? out : undefined
+  }
+
+  /**
+   * 스키마 속성 마스터 조회 — 대분류·상세페이지 이름으로 blog.schema_attributes에서 속성을 찾는다.
+   * 반환: { category: { 이름 → 속성 }, detailPage: { 이름 → 속성 } }. 실패해도 렌더는 정상(빈 맵).
+   */
+  async getSchemaAttributes(
+    categoryNames: string[],
+    detailPageNames: string[],
+  ): Promise<{ category: Record<string, Record<string, unknown>>; detailPage: Record<string, Record<string, unknown>> }> {
+    const empty = { category: {}, detailPage: {} }
+    const names = [...categoryNames, ...detailPageNames].map((s) => (s ?? "").trim()).filter(Boolean)
+    if (!names.length) return empty
+    try {
+      const rows: Array<{ target_type: string; name: string; attributes: Record<string, unknown> | null }> =
+        await this.postRepo.query(
+          `SELECT target_type, name, attributes FROM blog.schema_attributes WHERE name = ANY($1)`,
+          [Array.from(new Set(names))],
+        )
+      const out = { category: {}, detailPage: {} } as {
+        category: Record<string, Record<string, unknown>>
+        detailPage: Record<string, Record<string, unknown>>
+      }
+      for (const r of rows) {
+        if (!r.attributes) continue
+        if (r.target_type === "category") out.category[r.name] = r.attributes
+        else if (r.target_type === "detail_page") out.detailPage[r.name] = r.attributes
+      }
+      return out
+    } catch (e) {
+      this.logger.warn(`getSchemaAttributes 실패: ${(e as Error).message}`)
+      return empty
+    }
   }
 
   /** product_page 상세페이지명 → { id, name } 목록 (스키마 about 개별 시술 url용). 읽기 전용, 실패 시 []. */
