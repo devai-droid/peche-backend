@@ -50,6 +50,9 @@ import { LangCrmCategoryService } from "@root/smart-doctor/service/lang-crm-cate
 import { LangCrmCategory } from "@root/smart-doctor/entities/lang-crm-category.entity"
 import { CategoryGroup } from "@root/smart-doctor/entities/category-group"
 
+/** 당일 예약 마감 여유시간(분). 분류(초진/재진/제모) 구분 없이 동일 적용 */
+const RESERVATION_CUTOFF_MINUTES = 30
+
 @Injectable()
 export class ReservationService {
   constructor(
@@ -91,6 +94,7 @@ export class ReservationService {
       datetime.getMinutes(),
       0,
     )
+    this.checkNotPast(dto.datetime)
     let planId = undefined
     let eventObjs = undefined
     let productObjs = undefined
@@ -500,6 +504,28 @@ export class ReservationService {
     }
   }
 
+  /**
+   * 예약 마감 기준 시각(한국시간).
+   * 현재 한국시각 + 30분을 30분 단위로 올림 — 프론트 신규예약 화면과 동일한 규칙.
+   * 서버가 UTC로 동작하므로 +9시간으로 한국시각 자릿수를 맞춘다(리마인더 스케줄러와 동일 방식).
+   * 예약 datetime 역시 "저장된 숫자 = 한국시각" 규칙이라 같은 기준에서 비교된다.
+   */
+  private getKstCutoff() {
+    let cutoff = dayjs().add(9, "hour").startOf("minute").add(RESERVATION_CUTOFF_MINUTES, "minute")
+    const remainder = cutoff.minute() % 30
+    if (remainder !== 0) {
+      cutoff = cutoff.add(30 - remainder, "minute")
+    }
+    return cutoff.second(0)
+  }
+
+  /** 이미 지난(마감된) 시각으로는 예약/변경 불가 */
+  private checkNotPast(datetime: Date | string) {
+    if (dayjs(datetime).isBefore(this.getKstCutoff())) {
+      throw new BadRequestException(`Reservation datetime is already past: ${datetime}`)
+    }
+  }
+
   // 예약 업데이트
   async update(id: string, dto: UpdateReservationDto, user?: User) {
     const reservation = await this.findOneWithEvents(id)
@@ -521,6 +547,7 @@ export class ReservationService {
         datetime.getMinutes(),
         0,
       )
+      this.checkNotPast(dto.datetime)
     } else {
       building = reservation.building
     }
@@ -644,8 +671,10 @@ export class ReservationService {
     const scheduleId = resolveScheduleCode(dto.category)
     const slots = await this.doctorPaletteRepository.getScheduleSlots(date, scheduleId)
 
-    // 2. enabled = true 인 슬롯만 필터링
-    const availableSlots = slots.filter((s) => s.enabled)
+    // 2. enabled = true 이면서, 아직 마감되지 않은(지나지 않은) 슬롯만 필터링
+    //    닥팔은 시간 마감 개념이 없어 이미 지난 슬롯도 enabled=true 로 내려준다.
+    const cutoff = this.getKstCutoff()
+    const availableSlots = slots.filter((s) => s.enabled && !dayjs(s.dateTime).isBefore(cutoff))
 
     // 3. 프론트에서 원하는 형태로 변환
     return availableSlots.map((s) => ({
