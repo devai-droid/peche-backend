@@ -81,6 +81,20 @@ export class ProductService {
     return this.repository.findOneOrFail({ where: { id: id } })
   }
 
+  /**
+   * 가장 최근 상품 생성 시각.
+   * 구글시트 임포트는 상품을 전부 지웠다 다시 생성하므로, 상품 중 최신 createdAt이
+   * 사실상 "마지막 임포트 시각"과 일치한다. 별도 임포트 로그가 없어 이 값으로 근사한다.
+   */
+  async findLastImportedAt(): Promise<string | null> {
+    const latest = await this.repository.findOne({
+      where: {},
+      order: { createdAt: "DESC" },
+      select: ["id", "createdAt"],
+    })
+    return latest?.createdAt ?? null
+  }
+
   async findAll() {
     return this.repository.find()
   }

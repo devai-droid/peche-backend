@@ -27,6 +27,12 @@ export class ProductController {
     return this.productService.findManyWithPaginationQuery(query)
   }
 
+  // 장바구니 안내문구용: 마지막 상품 임포트(=최신 상품 생성) 시각. 공개 조회.
+  @Get("last-imported-at")
+  async lastImportedAt() {
+    return { lastImportedAt: await this.productService.findLastImportedAt() }
+  }
+
   @ApiOkResponse({ type: Product })
   @Post("")
   @Auth(AuthGuard(JWT_STRATEGY), SWAGGER_TOKEN_NAME, Role.ADMIN)
