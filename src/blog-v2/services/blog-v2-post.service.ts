@@ -464,9 +464,14 @@ export class BlogV2PostService {
   async getSchemaAttributes(
     categoryNames: string[],
     detailPageNames: string[],
-  ): Promise<{ category: Record<string, Record<string, unknown>>; detailPage: Record<string, Record<string, unknown>> }> {
-    const empty = { category: {}, detailPage: {} }
-    const names = [...categoryNames, ...detailPageNames].map((s) => (s ?? "").trim()).filter(Boolean)
+    clinicName?: string,
+  ): Promise<{
+    category: Record<string, Record<string, unknown>>
+    detailPage: Record<string, Record<string, unknown>>
+    clinic: Record<string, unknown> | null
+  }> {
+    const empty = { category: {}, detailPage: {}, clinic: null }
+    const names = [...categoryNames, ...detailPageNames, clinicName ?? ""].map((s) => (s ?? "").trim()).filter(Boolean)
     if (!names.length) return empty
     try {
       const rows: Array<{ target_type: string; name: string; attributes: Record<string, unknown> | null }> =
@@ -474,14 +479,16 @@ export class BlogV2PostService {
           `SELECT target_type, name, attributes FROM blog.schema_attributes WHERE name = ANY($1)`,
           [Array.from(new Set(names))],
         )
-      const out = { category: {}, detailPage: {} } as {
+      const out = { category: {}, detailPage: {}, clinic: null } as {
         category: Record<string, Record<string, unknown>>
         detailPage: Record<string, Record<string, unknown>>
+        clinic: Record<string, unknown> | null
       }
       for (const r of rows) {
         if (!r.attributes) continue
         if (r.target_type === "category") out.category[r.name] = r.attributes
         else if (r.target_type === "detail_page") out.detailPage[r.name] = r.attributes
+        else if (r.target_type === "clinic" && r.name === clinicName) out.clinic = r.attributes
       }
       return out
     } catch (e) {

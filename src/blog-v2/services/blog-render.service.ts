@@ -17,6 +17,7 @@ type BlogBreadcrumb = {
 type BlogSchemaAttrs = {
   category: Record<string, Record<string, unknown>>
   detailPage: Record<string, Record<string, unknown>>
+  clinic: Record<string, unknown> | null
 }
 
 function esc(s?: string): string {
@@ -145,10 +146,11 @@ export class BlogRenderService {
       const breadcrumb = await this.postService.getPostBreadcrumb(post.productCategoryId, post.productPage)
       const reviewerDoctors = await this.postService.getReviewerDoctors(post.reviewerDoctorIds)
       const pageProcedures = await this.postService.getProductPageProcedures(post.productPage)
-      // 스키마 속성 마스터 — 대분류·상세페이지 이름으로 조회해 about 노드에 자동 첨부
+      // 스키마 속성 마스터 — 대분류·상세페이지·병원 이름으로 조회해 about·병원 노드에 자동 첨부
       const schemaAttrs = await this.postService.getSchemaAttributes(
         breadcrumb.category ? [breadcrumb.category.name] : [],
         pageProcedures.map((p) => p.name),
+        cfg?.hospitalName || this.site.hospitalName,
       )
       return {
         html: this.buildHtml(post, priceGroups, titleMap, cfg, breadcrumb, reviewerDoctors, pageProcedures, schemaAttrs),
@@ -282,7 +284,7 @@ ${posts.length ? `<div class="card-grid">${cards}</div>` : `<p>아직 발행된 
     breadcrumb: BlogBreadcrumb = { category: null, detailPage: null },
     reviewerDoctors: BlogDoctor[] = [],
     pageProcedures: Array<{ id: string; name: string }> = [],
-    schemaAttrs: BlogSchemaAttrs = { category: {}, detailPage: {} },
+    schemaAttrs: BlogSchemaAttrs = { category: {}, detailPage: {}, clinic: null },
   ): string {
     const site = this.site
     const desc = post.summaryText ?? post.subtitle ?? ""
@@ -545,7 +547,7 @@ ${assoc}
     breadcrumb: BlogBreadcrumb = { category: null, detailPage: null },
     reviewerDoctors: BlogDoctor[] = [],
     pageProcedures: Array<{ id: string; name: string }> = [],
-    schemaAttrs: BlogSchemaAttrs = { category: {}, detailPage: {} },
+    schemaAttrs: BlogSchemaAttrs = { category: {}, detailPage: {}, clinic: null },
   ): string {
     const site = this.site
     const graph: Record<string, unknown>[] = []
@@ -715,7 +717,9 @@ ${assoc}
     })
 
     // 2. MedicalClinic (병원) — 어드민 '기본정보'(DB) 우선, 없으면 하드코딩 설정 폴백
-    graph.push({
+    //    + 스키마 속성 마스터(진료과 양식)의 병원 속성(availableService·description 등)을 병합(양식 값 우선).
+    //      핵심 식별 키(@id·@type·name·url·주소·연락처)는 마스터로 덮어쓰지 않는다.
+    const clinicNode: Record<string, unknown> = {
       "@context": "https://schema.org",
       "@type": cfg?.organizationType || site.organizationType,
       "@id": clinicId,
@@ -730,7 +734,15 @@ ${assoc}
       geo: hasGeo
         ? { "@type": "GeoCoordinates", latitude: cfg?.latitude, longitude: cfg?.longitude }
         : undefined,
-    })
+    }
+    if (schemaAttrs.clinic) {
+      const PROTECTED = new Set(["@context", "@type", "@id", "name", "url", "image", "telephone", "address", "geo"])
+      for (const [k, v] of Object.entries(schemaAttrs.clinic)) {
+        if (PROTECTED.has(k) || v === undefined || v === null) continue
+        clinicNode[k] = v
+      }
+    }
+    graph.push(clinicNode)
 
     // 3. BreadcrumbList — Home > Blog > (대분류) > (상세페이지) > 글
     //    대분류/상세페이지는 목록 필터 URL(?cat=&chip=)로 연결. 글 주소는 canonical 하나 그대로(중복 아님).
