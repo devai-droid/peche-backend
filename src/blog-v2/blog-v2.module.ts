@@ -10,6 +10,8 @@ import { BlogCommonTextController } from "@root/blog-v2/controller/blog-common-t
 import { BlogSiteConfig } from "@root/blog-v2/entities/site-config.entity"
 import { BlogSiteConfigI18n } from "@root/blog-v2/entities/site-config-i18n.entity"
 import { BlogSchemaAttribute } from "@root/blog-v2/entities/schema-attribute.entity"
+import { BlogSchemaAttributeService } from "@root/blog-v2/services/blog-schema-attribute.service"
+import { BlogSchemaAttributeController } from "@root/blog-v2/controller/blog-schema-attribute.controller"
 import { BlogSiteConfigService } from "@root/blog-v2/services/blog-site-config.service"
 import { BlogSiteConfigController } from "@root/blog-v2/controller/blog-site-config.controller"
 import { AnthropicService } from "@root/blog-v2/services/anthropic.service"
@@ -47,6 +49,7 @@ import { UploadService } from "@root/upload/upload.service"
     BlogPublicController,
     BlogCommonTextController,
     BlogSiteConfigController,
+    BlogSchemaAttributeController,
   ],
   providers: [
     AnthropicService,
@@ -60,6 +63,7 @@ import { UploadService } from "@root/upload/upload.service"
     BotAnalyticsService,
     BlogCommonTextService,
     BlogSiteConfigService,
+    BlogSchemaAttributeService,
     UploadService,
   ],
   exports: [

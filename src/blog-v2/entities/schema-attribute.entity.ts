@@ -2,10 +2,11 @@ import { Column, Entity, Index, PrimaryGeneratedColumn } from "typeorm"
 import { ApiProperty } from "@nestjs/swagger"
 import { TimeStampEntity } from "@root/shared/entity/time-stamp.entity"
 
-/** 속성 마스터 대상: 상품 대분류 / 상세페이지(=시술) */
+/** 속성 마스터 대상: 상품 대분류 / 상세페이지(=시술) / 병원(진료과 양식) */
 export enum BlogSchemaTarget {
   CATEGORY = "category",
   DETAIL_PAGE = "detail_page",
+  CLINIC = "clinic",
 }
 
 /**
