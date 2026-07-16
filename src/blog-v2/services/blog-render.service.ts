@@ -35,6 +35,9 @@ const TOC_LABEL: Record<string, string> = {
   th: "สารบัญ",
 }
 
+// 출처(각주) 텍스트 끝에 마케터가 붙인 화살표 기호(→ ➡ » 등) 제거. 재업로드 없이 옛 글에도 적용(끝부분만).
+const stripTrailingArrow = (s: string): string => s.replace(/[\s←-⇿➡➔-➿️»›]+$/u, "")
+
 // 출처(각주) 하단 목록 제목 (언어별)
 const REF_LABEL: Record<string, string> = {
   ko: "참고 문헌 및 출처",
@@ -371,7 +374,7 @@ ${this.buildRelated(post, relatedTitles)}
       if (isFirst) {
         n = refs.length + 1
         numByHref.set(href, n)
-        const inner = ($(el).html() ?? "").trim().replace(/^\(/, "").replace(/\)$/, "").trim()
+        const inner = stripTrailingArrow(($(el).html() ?? "").trim().replace(/^\(/, "").replace(/\)$/, "").trim())
         refs.push({ href, html: inner })
       }
       const idAttr = isFirst ? ` id="cite-${n}"` : ""
