@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common"
 import { InjectRepository } from "@nestjs/typeorm"
 import { Repository } from "typeorm"
 import { BlogSchemaAttribute, BlogSchemaTarget } from "@root/blog-v2/entities/schema-attribute.entity"
+import { BlogSchemaSyncLog } from "@root/blog-v2/entities/schema-sync-log.entity"
 import { PECHE_SITE } from "@root/blog-v2/sites/peche.config"
 
 type ParsedRow = { targetType: BlogSchemaTarget; name: string; attributes: Record<string, unknown> }
@@ -21,10 +22,17 @@ export class BlogSchemaAttributeService {
   constructor(
     @InjectRepository(BlogSchemaAttribute)
     private readonly repo: Repository<BlogSchemaAttribute>,
+    @InjectRepository(BlogSchemaSyncLog)
+    private readonly logRepo: Repository<BlogSchemaSyncLog>,
   ) {}
 
   findAll(): Promise<BlogSchemaAttribute[]> {
     return this.repo.find({ order: { targetType: "ASC", name: "ASC" } })
+  }
+
+  /** 양식 업로드(동기화) 이력 — 최근순 */
+  findHistory(limit = 30): Promise<BlogSchemaSyncLog[]> {
+    return this.logRepo.find({ order: { createdAt: "DESC" }, take: limit })
   }
 
   // ── md 파싱 ─────────────────────────────────────────────
@@ -230,7 +238,7 @@ export class BlogSchemaAttributeService {
       }
     })
 
-    return {
+    const result: SyncResult = {
       added,
       updated: rows.length - added,
       deleted: deletedList.length,
@@ -238,5 +246,23 @@ export class BlogSchemaAttributeService {
       unmatched,
       deletedList,
     }
+
+    // 수정 이력 기록 (실패해도 동기화 자체는 성공으로 반환)
+    try {
+      await this.logRepo.save(
+        this.logRepo.create({
+          syncedBy: user,
+          added: result.added,
+          updated: result.updated,
+          deleted: result.deleted,
+          total: result.total,
+          unmatchedCount: unmatched.length,
+        }),
+      )
+    } catch (e) {
+      this.logger.warn(`스키마 동기화 이력 기록 실패: ${e instanceof Error ? e.message : e}`)
+    }
+
+    return result
   }
 }

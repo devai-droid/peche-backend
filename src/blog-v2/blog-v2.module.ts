@@ -10,6 +10,7 @@ import { BlogCommonTextController } from "@root/blog-v2/controller/blog-common-t
 import { BlogSiteConfig } from "@root/blog-v2/entities/site-config.entity"
 import { BlogSiteConfigI18n } from "@root/blog-v2/entities/site-config-i18n.entity"
 import { BlogSchemaAttribute } from "@root/blog-v2/entities/schema-attribute.entity"
+import { BlogSchemaSyncLog } from "@root/blog-v2/entities/schema-sync-log.entity"
 import { BlogSchemaAttributeService } from "@root/blog-v2/services/blog-schema-attribute.service"
 import { BlogSchemaAttributeController } from "@root/blog-v2/controller/blog-schema-attribute.controller"
 import { BlogSiteConfigService } from "@root/blog-v2/services/blog-site-config.service"
@@ -40,6 +41,7 @@ import { UploadService } from "@root/upload/upload.service"
       BlogSiteConfig,
       BlogSiteConfigI18n,
       BlogSchemaAttribute,
+      BlogSchemaSyncLog,
     ]),
   ],
   controllers: [

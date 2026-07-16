@@ -19,6 +19,13 @@ export class BlogSchemaAttributeController {
     return this.service.findAll()
   }
 
+  @ApiOperation({ summary: "스키마 속성 양식 업로드(수정) 이력 — 최근순 (어드민)" })
+  @Get("history")
+  @Auth(AuthGuard(JWT_STRATEGY), SWAGGER_TOKEN_NAME, Role.ADMIN)
+  findHistory() {
+    return this.service.findHistory()
+  }
+
   @ApiOperation({
     summary:
       "스키마 속성 양식(md) 전체 동기화 — md가 원본. md에 있으면 등록/갱신, 없으면 삭제. 사이트에 없는 이름은 unmatched로 보고.",
