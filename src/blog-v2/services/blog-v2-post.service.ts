@@ -174,11 +174,7 @@ export class BlogV2PostService {
     // 재업로드로는 주소(slug)를 바꿀 수 없다. 원고 주소가 이 글과 다르면 (대개 엉뚱한 글에 올린 것) 막고 안내.
     const newSlug = frontmatter.slug || post.slug
     if (newSlug !== post.slug) {
-      throw new BadRequestException(
-        `원고의 주소(slug)가 이 글과 다릅니다. 재업로드로는 주소를 바꿀 수 없습니다. ` +
-          `목록에서 주소가 같은 올바른 글을 선택해 재업로드해주세요. ` +
-          `(이 글: "${post.slug}" / 원고: "${newSlug}")`,
-      )
+      throw new BadRequestException("원고의 주소(slug)가 이 글과 다릅니다.")
     }
 
     post.title = frontmatter.title
