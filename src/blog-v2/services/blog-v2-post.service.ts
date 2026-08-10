@@ -129,11 +129,21 @@ export class BlogV2PostService {
     urlMap?: Map<string, string>,
   ): Promise<{ id: string; slug: string; status: string; warnings: string[] }> {
     const post = await this.findOne(id)
-    const { frontmatter, bodyMd } = parseBlogMarkdown(markdown)
+    // 프론트매터(상단 설정) YAML이 깨지면 파서가 throw → 무의미한 500 대신 명확한 안내
+    const parsed = (() => {
+      try {
+        return parseBlogMarkdown(markdown)
+      } catch (e) {
+        throw new BadRequestException(
+          `글 형식(상단 설정)을 읽지 못했습니다 — 프론트매터 형식을 확인해주세요. (${(e as Error).message})`,
+        )
+      }
+    })()
+    const { frontmatter, bodyMd } = parsed
     const warnings: string[] = []
 
     if (!frontmatter.title || !bodyMd) {
-      throw new BadRequestException("md 파일에 오류가 있습니다. 내용·형식을 확인해주세요.")
+      throw new BadRequestException("md 파일에 오류가 있습니다. 제목·본문·형식을 확인해주세요.")
     }
 
     const authorDoctorId =
@@ -161,9 +171,17 @@ export class BlogV2PostService {
       warnings.push("medical_schema JSON 파싱 실패 — extra_jsonld 미저장")
     }
 
-    // slug 변경 시 history 기록(301 리다이렉트용)
+    // slug 변경 시: 다른 글이 그 주소를 이미 쓰고 있으면 저장 시 unique 충돌(500) → 미리 막고 명확히 안내
     const newSlug = frontmatter.slug || post.slug
     if (newSlug !== post.slug) {
+      const conflict = await this.postRepo.findOne({ where: { slug: newSlug, lang: post.lang } })
+      if (conflict && conflict.id !== post.id) {
+        throw new BadRequestException(
+          `이 글의 주소(slug) "${newSlug}"를 이미 다른 글이 쓰고 있습니다: "${conflict.title}". ` +
+            `이 원고를 수정하려면 목록에서 그 글을 선택해 재업로드하세요.`,
+        )
+      }
+      // history 기록(301 리다이렉트용)
       await this.recordSlugChange(post.id, post.slug, post.lang)
     }
 
