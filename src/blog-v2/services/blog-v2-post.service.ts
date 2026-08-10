@@ -171,18 +171,14 @@ export class BlogV2PostService {
       warnings.push("medical_schema JSON 파싱 실패 — extra_jsonld 미저장")
     }
 
-    // slug 변경 시: 다른 글이 그 주소를 이미 쓰고 있으면 저장 시 unique 충돌(500) → 미리 막고 명확히 안내
+    // 재업로드로는 주소(slug)를 바꿀 수 없다. 원고 주소가 이 글과 다르면 (대개 엉뚱한 글에 올린 것) 막고 안내.
     const newSlug = frontmatter.slug || post.slug
     if (newSlug !== post.slug) {
-      const conflict = await this.postRepo.findOne({ where: { slug: newSlug, lang: post.lang } })
-      if (conflict && conflict.id !== post.id) {
-        throw new BadRequestException(
-          `이 글의 주소(slug) "${newSlug}"를 이미 다른 글이 쓰고 있습니다: "${conflict.title}". ` +
-            `이 원고를 수정하려면 목록에서 그 글을 선택해 재업로드하세요.`,
-        )
-      }
-      // history 기록(301 리다이렉트용)
-      await this.recordSlugChange(post.id, post.slug, post.lang)
+      throw new BadRequestException(
+        `원고의 주소(slug)가 이 글과 다릅니다. 재업로드로는 주소를 바꿀 수 없습니다. ` +
+          `목록에서 주소가 같은 올바른 글을 선택해 재업로드해주세요. ` +
+          `(이 글: "${post.slug}" / 원고: "${newSlug}")`,
+      )
     }
 
     post.title = frontmatter.title
