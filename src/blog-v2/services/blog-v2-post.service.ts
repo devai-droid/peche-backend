@@ -80,7 +80,7 @@ export class BlogV2PostService {
    */
   async uploadFromFiles(files: Express.Multer.File[], user: User): Promise<{ id: string; slug: string; status: string; warnings: string[] }> {
     const mdFile = files.find((f) => f.originalname.toLowerCase().endsWith(".md"))
-    if (!mdFile) throw new BadRequestException(".md 파일이 multipart에 없음")
+    if (!mdFile) throw new BadRequestException(".md 파일이 없습니다. 글 원고(.md)를 포함해 올려주세요.")
 
     const attachments = files.filter((f) => f !== mdFile)
     const rawMarkdown = mdFile.buffer.toString("utf-8")
@@ -105,7 +105,7 @@ export class BlogV2PostService {
     user: User,
   ): Promise<{ id: string; slug: string; status: string; warnings: string[] }> {
     const mdFile = files.find((f) => f.originalname.toLowerCase().endsWith(".md"))
-    if (!mdFile) throw new BadRequestException(".md 파일이 multipart에 없음")
+    if (!mdFile) throw new BadRequestException(".md 파일이 없습니다. 글 원고(.md)를 포함해 올려주세요.")
 
     const attachments = files.filter((f) => f !== mdFile)
     const rawMarkdown = mdFile.buffer.toString("utf-8")
@@ -265,11 +265,21 @@ export class BlogV2PostService {
     user: User,
     urlMap?: Map<string, string>,
   ): Promise<{ id: string; slug: string; status: string; warnings: string[] }> {
-    const { frontmatter, bodyMd } = parseBlogMarkdown(markdown)
+    // 프론트매터(상단 설정) YAML이 깨지면 파서가 throw → 무의미한 500 대신 명확한 안내
+    const parsed = (() => {
+      try {
+        return parseBlogMarkdown(markdown)
+      } catch (e) {
+        throw new BadRequestException(
+          `글 형식(상단 설정)을 읽지 못했습니다 — 프론트매터 형식을 확인해주세요. (${(e as Error).message})`,
+        )
+      }
+    })()
+    const { frontmatter, bodyMd } = parsed
     const warnings: string[] = []
 
     if (!frontmatter.title || !bodyMd) {
-      throw new BadRequestException("md 파일에 오류가 있습니다. 내용·형식을 확인해주세요.")
+      throw new BadRequestException("md 파일에 오류가 있습니다. 제목·본문·형식을 확인해주세요.")
     }
 
     // 이름 → ID 매핑 (직접 ID 입력이 있으면 우선)
@@ -869,7 +879,7 @@ export class BlogV2PostService {
       where: { id },
       relations: ["keyword", "authorDoctor"],
     })
-    if (!post) throw new NotFoundException(`blog post ${id} not found`)
+    if (!post) throw new NotFoundException("글을 찾을 수 없습니다. 목록을 새로고침해 주세요.")
     return post
   }
 
@@ -956,7 +966,7 @@ export class BlogV2PostService {
 
   async remove(id: string): Promise<void> {
     const result = await this.postRepo.delete({ id })
-    if (result.affected === 0) throw new NotFoundException(`blog post ${id} not found`)
+    if (result.affected === 0) throw new NotFoundException("글을 찾을 수 없습니다. 목록을 새로고침해 주세요.")
   }
 
   async publish(id: string, user: User): Promise<BlogPostV2> {
