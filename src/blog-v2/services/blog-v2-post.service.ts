@@ -90,6 +90,40 @@ export class BlogV2PostService {
     return this.createFromMarkdown(bodyReplaced, user, urlMap)
   }
 
+  /**
+   * 상세페이지 원고 업로드 — 상품 설명 모달의 폴더 업로드용.
+   * blog-v2 엔진 재사용: detail_page 대상 + 자동 발행. 같은 상품(product_page)의 상세글이 있으면 재업로드(덮어쓰기), 없으면 새로 등록.
+   * publish_target을 md에 안 적어도 서버가 detail_page로 지정한다.
+   */
+  async uploadDetailPageFromFiles(
+    files: Express.Multer.File[],
+    user: User,
+    productPage: string,
+    lang: string,
+  ): Promise<{ id: string; slug: string; status: string; warnings: string[] }> {
+    if (!productPage) throw new BadRequestException("상품(상세페이지)을 찾을 수 없습니다.")
+    const mdFile = files.find((f) => f.originalname.toLowerCase().endsWith(".md"))
+    if (!mdFile) throw new BadRequestException(".md 파일이 없습니다. 원고(.md)를 포함해 올려주세요.")
+
+    const attachments = files.filter((f) => f !== mdFile)
+    const rawMarkdown = mdFile.buffer.toString("utf-8")
+    const urlMap = await this.imageUpload.uploadAttachments(attachments)
+    const bodyReplaced = this.imageUpload.replacePaths(rawMarkdown, urlMap)
+
+    const existing = await this.findDetailPagePost(productPage, lang)
+    if (existing) {
+      return this.updateFromMarkdown(existing.id, bodyReplaced, user, urlMap, {
+        detailPage: true,
+        langOverride: lang,
+      })
+    }
+    return this.createFromMarkdown(bodyReplaced, user, urlMap, {
+      detailPage: true,
+      publish: true,
+      langOverride: lang,
+    })
+  }
+
   /** 마크다운 텍스트만 업로드 (이미지 없음). */
   async upload(dto: UploadBlogPostDto, user: User): Promise<{ id: string; slug: string; status: string; warnings: string[] }> {
     return this.createFromMarkdown(dto.markdown, user)
@@ -127,6 +161,7 @@ export class BlogV2PostService {
     markdown: string,
     user: User,
     urlMap?: Map<string, string>,
+    opts: { detailPage?: boolean; langOverride?: string } = {},
   ): Promise<{ id: string; slug: string; status: string; warnings: string[] }> {
     const post = await this.findOne(id)
     // 프론트매터(상단 설정) YAML이 깨지면 파서가 throw → 무의미한 500 대신 명확한 안내
@@ -172,8 +207,9 @@ export class BlogV2PostService {
     }
 
     // 재업로드로는 주소(slug)를 바꿀 수 없다. 원고 주소가 이 글과 다르면 (대개 엉뚱한 글에 올린 것) 막고 안내.
+    // 상세페이지는 slug가 공개 URL이 아니라(=/products/:id) 검사 제외. 블로그 글만 주소 변경 차단.
     const newSlug = frontmatter.slug || post.slug
-    if (newSlug !== post.slug) {
+    if (!opts.detailPage && newSlug !== post.slug) {
       throw new BadRequestException("원고의 주소(slug)가 이 글과 다릅니다.")
     }
 
@@ -182,7 +218,7 @@ export class BlogV2PostService {
     post.bodyMd = bodyMd
     post.bodyHtml = renderMarkdownToHtml(bodyMd)
     if (thumbnailUrl) post.thumbnailUrl = thumbnailUrl
-    post.lang = (frontmatter.lang as BlogPostLang) ?? post.lang
+    post.lang = (opts.langOverride as BlogPostLang) ?? (frontmatter.lang as BlogPostLang) ?? post.lang
     post.topicKeyword = frontmatter.topic_keyword ?? frontmatter.keyword
     post.mainKeyword = frontmatter.title_keyword ?? frontmatter.main_keyword
     post.subKeywords =
@@ -212,7 +248,7 @@ export class BlogV2PostService {
     // 스키마 about(핵심 시술) — md가 source of truth.
     post.medicalAbout = this.parseMedicalAbout(frontmatter.about)
     post.publishTarget =
-      frontmatter.publish_target === BlogPublishTarget.DETAIL_PAGE
+      opts.detailPage || frontmatter.publish_target === BlogPublishTarget.DETAIL_PAGE
         ? BlogPublishTarget.DETAIL_PAGE
         : BlogPublishTarget.BLOG
     // 고지문구 적용(notices)은 어드민 미리보기에서 수동 선택 — 재업로드 시 기존 선택 유지(덮어쓰지 않음)
@@ -264,6 +300,7 @@ export class BlogV2PostService {
     markdown: string,
     user: User,
     urlMap?: Map<string, string>,
+    opts: { detailPage?: boolean; publish?: boolean; langOverride?: string } = {},
   ): Promise<{ id: string; slug: string; status: string; warnings: string[] }> {
     // 프론트매터(상단 설정) YAML이 깨지면 파서가 throw → 무의미한 500 대신 명확한 안내
     const parsed = (() => {
@@ -313,7 +350,8 @@ export class BlogV2PostService {
       warnings.push("medical_schema JSON 파싱 실패 — extra_jsonld 미저장")
     }
 
-    const lang = (frontmatter.lang as BlogPostLang) ?? BlogPostLang.KO
+    // 상세페이지는 lang을 상품설명 모달의 언어 탭에서 받음(langOverride) → md에 lang 불필요
+    const lang = (opts.langOverride as BlogPostLang) ?? (frontmatter.lang as BlogPostLang) ?? BlogPostLang.KO
     const post = this.postRepo.create({
       title: frontmatter.title,
       subtitle: frontmatter.subtitle,
@@ -321,7 +359,7 @@ export class BlogV2PostService {
       bodyHtml: renderMarkdownToHtml(bodyMd),
       thumbnailUrl,
       lang,
-      status: BlogPostStatus.DRAFT,
+      status: opts.publish ? BlogPostStatus.PUBLISHED : BlogPostStatus.DRAFT,
       targetSite: "peche",
       topicKeyword: frontmatter.topic_keyword ?? frontmatter.keyword,
       mainKeyword: frontmatter.title_keyword ?? frontmatter.main_keyword,
@@ -358,10 +396,14 @@ export class BlogV2PostService {
       // frontmatter로 명시하면 그 값을 존중(빈 배열로 끄기 가능). 재업로드는 기존 선택 유지(update 경로).
       notices: frontmatter.notices ?? [BlogCommonTextType.AI_IMAGE_NOTICE],
       publishTarget:
-        frontmatter.publish_target === BlogPublishTarget.DETAIL_PAGE
+        opts.detailPage || frontmatter.publish_target === BlogPublishTarget.DETAIL_PAGE
           ? BlogPublishTarget.DETAIL_PAGE
           : BlogPublishTarget.BLOG,
-      publishedAt: frontmatter.published_at ? new Date(frontmatter.published_at) : undefined,
+      publishedAt: frontmatter.published_at
+        ? new Date(frontmatter.published_at)
+        : opts.publish
+          ? new Date()
+          : undefined,
       createdBy: user?.id,
       updatedBy: user?.id,
     })
