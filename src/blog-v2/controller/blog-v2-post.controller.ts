@@ -107,7 +107,11 @@ export class BlogV2PostController {
   })
   @Get("public/detail-page")
   async publicDetailPagePost(@Query("productPage") productPage: string, @Query("lang") lang: string) {
-    return this.service.findDetailPagePost(productPage, lang)
+    const post = await this.service.findDetailPagePost(productPage, lang)
+    if (!post) return null
+    // 대표(canonical) 상품 id — 제모 공통 사본이면 원본 상품을 가리킴(중복 콘텐츠 방지)
+    const canonicalProductId = await this.service.resolveDetailCanonicalProductId(productPage, post)
+    return { ...post, canonicalProductId }
   }
 
   @ApiOperation({ summary: "내부링크 치환용 — slug들 중 발행된 글의 slug→제목 맵" })

@@ -984,18 +984,70 @@ export class BlogV2PostService {
    */
   async findDetailPagePost(productPage: string, lang: string): Promise<BlogPostV2 | null> {
     if (!productPage || !lang) return null
-    // product_page 에 콤마로 여러 상세페이지명이 들어갈 수 있으므로, 각 항목(트림)과 정확 일치 검사
+    // 1) 정확 일치 — 모든 대분류 공통(product_page에 여러 이름을 |/, 로 나열 가능)
+    const exact = await this.queryDetailPost([productPage], lang)
+    if (exact) return exact
+    // 2) 제모 대분류 한정 폴백 — 같은 대분류 + 같은 장비면 공통 콘텐츠 노출(다른 대분류는 폴백 안 함)
+    const peers = await this.hairRemovalSharedNames(productPage)
+    if (!peers.length) return null
+    return this.queryDetailPost(peers, lang)
+  }
+
+  /** product_page 목록 중 하나라도 일치하는 발행 detail_page 글 */
+  private queryDetailPost(names: string[], lang: string): Promise<BlogPostV2 | null> {
+    if (!names.length) return Promise.resolve(null)
     return this.postRepo
       .createQueryBuilder("p")
-      .where("EXISTS (SELECT 1 FROM unnest(string_to_array(p.product_page, CASE WHEN position('|' in p.product_page) > 0 THEN '|' ELSE ',' END)) AS e WHERE trim(e) = :pp)", {
-        pp: productPage,
-      })
+      .where(
+        "EXISTS (SELECT 1 FROM unnest(string_to_array(p.product_page, CASE WHEN position('|' in p.product_page) > 0 THEN '|' ELSE ',' END)) AS e WHERE trim(e) IN (:...names))",
+        { names },
+      )
       .andWhere("p.lang = :lang", { lang })
       .andWhere("p.status = :status", { status: BlogPostStatus.PUBLISHED })
       .andWhere("p.publish_target = :ptgt", { ptgt: BlogPublishTarget.DETAIL_PAGE })
       .orderBy("p.published_at", "DESC")
       .addOrderBy("p.created_at", "DESC")
       .getOne()
+  }
+
+  /**
+   * 제모 대분류 한정: 이 상품과 같은 대분류 + 같은 장비(이름의 부위 괄호 뒤 텍스트)인 상세페이지명 목록.
+   * 제모 대분류가 아니면 빈 배열 → 폴백 안 함(다른 대분류는 정확 일치만).
+   */
+  private async hairRemovalSharedNames(productPage: string): Promise<string[]> {
+    const rows: Array<{ name: string; cat: string }> = await this.postRepo.query(
+      `SELECT dp.name, pc.name AS cat
+       FROM public.product_detail_page dp
+       JOIN public.product_category pc ON pc.id = dp.category_id
+       WHERE dp.category_id = (SELECT category_id FROM public.product_detail_page WHERE name = $1 AND status = 'ACTIVE' LIMIT 1)
+         AND dp.status = 'ACTIVE'`,
+      [productPage],
+    )
+    if (!rows.length || !/제모/.test(rows[0].cat)) return [] // 제모 대분류만
+    const deviceOf = (n: string) => (n.split(")").pop() ?? "").trim()
+    const device = deviceOf(productPage)
+    if (!device) return []
+    return rows.map((r) => r.name).filter((n) => deviceOf(n) === device)
+  }
+
+  /**
+   * 상세페이지 콘텐츠의 대표(canonical) 상품 id.
+   * 현재 상품이 원본(글의 product_page)에 속하면 자기 자신, 아니면(제모 공통 사본) 원본 상품을 가리킨다.
+   */
+  async resolveDetailCanonicalProductId(currentName: string, post: BlogPostV2): Promise<string | null> {
+    const raw = post.productPage ?? ""
+    const sep = raw.includes("|") ? "|" : ","
+    const sourceNames = raw
+      .split(sep)
+      .map((s) => s.trim())
+      .filter(Boolean)
+    const targetName = sourceNames.includes(currentName) ? currentName : sourceNames[0]
+    if (!targetName) return null
+    const rows: Array<{ id: string }> = await this.postRepo.query(
+      `SELECT id FROM public.product_detail_page WHERE name = $1 AND status = 'ACTIVE' LIMIT 1`,
+      [targetName],
+    )
+    return rows.length ? rows[0].id : null
   }
 
   /** 글에 적용할 공통 고지문구 type 목록 설정 (어드민 미리보기 체크박스). */
