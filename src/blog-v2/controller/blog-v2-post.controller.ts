@@ -105,6 +105,12 @@ export class BlogV2PostController {
   @ApiOperation({
     summary: "공개: 시술 상세페이지에 연결된 글 (productPage+lang, 발행·detail_page만) — 상세페이지 영상 아래 노출용",
   })
+  @ApiOperation({ summary: "공개: 상세페이지 원고 업로드 현황 (product_page+lang 목록) — 어드민 목록 표시용" })
+  @Get("public/detail-page-status")
+  async publicDetailPageStatus() {
+    return this.service.getDetailPageStatuses()
+  }
+
   @Get("public/detail-page")
   async publicDetailPagePost(@Query("productPage") productPage: string, @Query("lang") lang: string) {
     const post = await this.service.findDetailPagePost(productPage, lang)

@@ -993,6 +993,14 @@ export class BlogV2PostService {
     return this.queryDetailPost(peers, lang)
   }
 
+  /** 상세페이지 원고 업로드 현황 — 발행된 detail_page 글의 (product_page, lang) 목록. 어드민 목록의 '설명' 컬럼 표시용. */
+  async getDetailPageStatuses(): Promise<Array<{ productPage: string; lang: string }>> {
+    return this.postRepo.query(
+      `SELECT product_page AS "productPage", lang FROM blog.posts
+       WHERE publish_target = 'DETAIL_PAGE' AND status = 'published' AND product_page IS NOT NULL`,
+    )
+  }
+
   /** product_page 목록 중 하나라도 일치하는 발행 detail_page 글 */
   private queryDetailPost(names: string[], lang: string): Promise<BlogPostV2 | null> {
     if (!names.length) return Promise.resolve(null)
