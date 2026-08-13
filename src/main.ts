@@ -49,6 +49,8 @@ async function bootstrap() {
     exclude: [
       { path: ":lang/blog", method: RequestMethod.GET },
       { path: ":lang/blog/:slug", method: RequestMethod.GET },
+      // 시술 상세페이지 봇 SSR — /{lang}/products/{상세페이지 id}
+      { path: ":lang/products/:id", method: RequestMethod.GET },
       { path: "sitemap.xml", method: RequestMethod.GET },
       { path: "robots.txt", method: RequestMethod.GET },
       { path: "rss.xml", method: RequestMethod.GET },

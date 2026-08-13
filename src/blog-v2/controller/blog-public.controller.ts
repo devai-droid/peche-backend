@@ -82,6 +82,20 @@ export class BlogPublicController {
     res.status(status).type("html").send(html)
   }
 
+  /** 시술 상세페이지 봇 SSR — /{lang}/products/{상세페이지 id}. 원고 있으면 200 SSR, 없으면 404(CloudFront가 SPA 폴백). */
+  @Get(":lang/products/:id")
+  async renderDetailPage(
+    @Param("lang") lang: string,
+    @Param("id") id: string,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    const { html, status } = await this.renderService.renderDetailPage(id, lang)
+    this.setCsp(res)
+    this.handleBotRequest(req, res, `/${lang}/products/${id}`, lang)
+    res.status(status).type("html").send(html)
+  }
+
   /**
    * 블로그 공개 페이지용 CSP — SSR HTML이라 인라인 style + JSON-LD(ld+json) + 이미지(S3/로컬) 허용.
    * 기본 helmet의 upgrade-insecure-requests 제거(로컬 http 이미지 로드 위해).

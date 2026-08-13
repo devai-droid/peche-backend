@@ -1002,6 +1002,27 @@ export class BlogV2PostService {
     )
   }
 
+  /** 상세페이지 봇 SSR용 — product_detail_page id로 이름·대분류 조회 (없으면 null). */
+  async getDetailPageProductById(
+    id: string,
+  ): Promise<{ id: string; name: string; categoryId: string | null; categoryName: string | null } | null> {
+    try {
+      const rows: Array<{ id: string; name: string; cid: string | null; cname: string | null }> =
+        await this.postRepo.query(
+          `SELECT dp.id, dp.name, pc.id AS cid, pc.name AS cname
+           FROM public.product_detail_page dp
+           LEFT JOIN public.product_category pc ON pc.id = dp.category_id AND pc.status = 'ACTIVE'
+           WHERE dp.id = $1 AND dp.status = 'ACTIVE' LIMIT 1`,
+          [id],
+        )
+      if (!rows.length) return null
+      return { id: rows[0].id, name: rows[0].name, categoryId: rows[0].cid, categoryName: rows[0].cname }
+    } catch (e) {
+      this.logger.warn(`getDetailPageProductById 실패: ${(e as Error).message}`)
+      return null
+    }
+  }
+
   /** product_page 목록 중 하나라도 일치하는 발행 detail_page 글 */
   private queryDetailPost(names: string[], lang: string): Promise<BlogPostV2 | null> {
     if (!names.length) return Promise.resolve(null)

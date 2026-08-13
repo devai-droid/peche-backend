@@ -130,6 +130,21 @@ const TYPOGRAPHY_CSS = `
   .blog-footer{border-top:1px solid #eee;padding:32px 24px;text-align:center;color:#999;font-size:13px}
 `
 
+/**
+ * 블로그 글 SSR을 시술 상세페이지로 재사용하기 위한 오버라이드.
+ * canonical URL·빵부스러기 경로(Home › Products › 대분류)·최종 노드명(상품명)만 바꾸고
+ * 본문·목차·FAQ·가격·의료진·병원 스키마는 블로그 로직 그대로 쓴다.
+ */
+interface DetailRenderOverride {
+  canonical: string
+  headerHref: string
+  headerLabel: string
+  /** 최종(상품) 노드 앞까지의 빵부스러기 — Home › Products › 대분류 */
+  breadcrumbTrail: Array<{ name: string; item: string }>
+  /** 최종 빵부스러기 노드 이름 = 상품명(product_page). item은 canonical */
+  pageName: string
+}
+
 @Injectable()
 export class BlogRenderService {
   private readonly site: SiteConfig = PECHE_SITE
@@ -166,6 +181,72 @@ export class BlogRenderService {
       return { html: this.render410(), status: 410 }
     }
     return { html: this.render404(), status: 404 }
+  }
+
+  /**
+   * 시술 상세페이지 봇 SSR — /{lang}/products/{상세페이지 id}.
+   * 업로드된 detail_page 원고가 있으면 블로그와 동일 구조(본문·목차·FAQ·가격·의료진 카드·JSON-LD)로 렌더한다.
+   * - 빵부스러기: Home › Products › 대분류 › 상품(product_page)
+   * - canonical: 대표(원본) 상품을 가리켜 제모 공통 사본의 중복 콘텐츠를 방지
+   * - 원고가 없는 상품은 404 → CloudFront가 SPA(index.html)로 폴백(원고 올리기 전 현재 동작 유지)
+   */
+  async renderDetailPage(productId: string, lang: string): Promise<{ html: string; status: number }> {
+    const product = await this.postService.getDetailPageProductById(productId)
+    if (!product) return { html: this.render404(), status: 404 }
+
+    const post = await this.postService.findDetailPagePost(product.name, lang)
+    if (!post) return { html: this.render404(), status: 404 }
+
+    const site = this.site
+    const canonicalId = (await this.postService.resolveDetailCanonicalProductId(product.name, post)) ?? productId
+    const canonical = `${site.baseUrl}/${lang}/products/${canonicalId}`
+
+    const priceGroups = await this.postService.getBlogPriceData(post.priceRefs, post.productPage, post.lang)
+    const relatedSlugs = this.extractRelatedLinks(post.bodyHtml ?? "").map((l) => l.slug)
+    const titleMap = await this.postService.getPublishedTitlesBySlugs(relatedSlugs, post.lang)
+    const cfg = await this.siteConfigService.getMerged(post.lang).catch(() => null)
+    // 빵부스러기·개별 시술은 "현재 상품"(product.name) 기준 — 제모 공통 사본도 자기 대분류로 표시
+    const breadcrumb = await this.postService.getPostBreadcrumb(product.categoryId ?? undefined, product.name)
+    const reviewerDoctors = await this.postService.getReviewerDoctors(post.reviewerDoctorIds)
+    const pageProcedures = await this.postService.getProductPageProcedures(product.name)
+    const schemaAttrs = await this.postService.getSchemaAttributes(
+      breadcrumb.category ? [breadcrumb.category.name] : [],
+      pageProcedures.map((p) => p.name),
+      cfg?.hospitalName || site.hospitalName,
+    )
+
+    const trail: Array<{ name: string; item: string }> = [
+      { name: "Home", item: `${site.baseUrl}/${lang}` },
+      { name: "Products", item: `${site.baseUrl}/${lang}/products` },
+    ]
+    if (breadcrumb.category) {
+      trail.push({
+        name: breadcrumb.category.name,
+        item: `${site.baseUrl}/${lang}/products?category=${encodeURIComponent(breadcrumb.category.id)}`,
+      })
+    }
+    const override: DetailRenderOverride = {
+      canonical,
+      headerHref: `${site.baseUrl}/${lang}/products`,
+      headerLabel: cfg?.hospitalName || site.hospitalName,
+      breadcrumbTrail: trail,
+      pageName: product.name,
+    }
+
+    return {
+      html: this.buildHtml(
+        post,
+        priceGroups,
+        titleMap,
+        cfg,
+        breadcrumb,
+        reviewerDoctors,
+        pageProcedures,
+        schemaAttrs,
+        override,
+      ),
+      status: 200,
+    }
   }
 
   async renderListPage(lang: string): Promise<{ html: string; status: number }> {
@@ -288,10 +369,13 @@ ${posts.length ? `<div class="card-grid">${cards}</div>` : `<p>아직 발행된 
     reviewerDoctors: BlogDoctor[] = [],
     pageProcedures: Array<{ id: string; name: string }> = [],
     schemaAttrs: BlogSchemaAttrs = { category: {}, detailPage: {}, clinic: null },
+    override?: DetailRenderOverride,
   ): string {
     const site = this.site
     const desc = post.summaryText ?? post.subtitle ?? ""
-    const canonical = `${site.baseUrl}/${post.lang}/blog/${encodeURIComponent(post.slug)}`
+    const canonical = override?.canonical ?? `${site.baseUrl}/${post.lang}/blog/${encodeURIComponent(post.slug)}`
+    const headerHref = override?.headerHref ?? `${site.baseUrl}/${post.lang}/blog`
+    const headerLabel = override?.headerLabel ?? `${site.hospitalName} 블로그`
 
     return `<!DOCTYPE html>
 <html lang="${esc(post.lang)}">
@@ -311,11 +395,11 @@ ${post.thumbnailUrl ? `<meta property="og:image" content="${esc(post.thumbnailUr
 <meta name="twitter:title" content="${esc(post.title)}">
 <meta name="twitter:description" content="${esc(desc)}">
 ${post.thumbnailUrl ? `<meta name="twitter:image" content="${esc(post.thumbnailUrl)}">` : ""}
-${this.buildJsonLd(post, canonical, priceGroups, cfg, breadcrumb, reviewerDoctors, pageProcedures, schemaAttrs)}
+${this.buildJsonLd(post, canonical, priceGroups, cfg, breadcrumb, reviewerDoctors, pageProcedures, schemaAttrs, override)}
 <style>${TYPOGRAPHY_CSS}</style>
 </head>
 <body>
-<header class="blog-header"><a href="${site.baseUrl}/${post.lang}/blog">${esc(site.hospitalName)} 블로그</a></header>
+<header class="blog-header"><a href="${esc(headerHref)}">${esc(headerLabel)}</a></header>
 <main class="blog-wrap">
 <article>
 <h1 class="blog-title">${esc(post.title)}</h1>
@@ -551,6 +635,7 @@ ${assoc}
     reviewerDoctors: BlogDoctor[] = [],
     pageProcedures: Array<{ id: string; name: string }> = [],
     schemaAttrs: BlogSchemaAttrs = { category: {}, detailPage: {}, clinic: null },
+    override?: DetailRenderOverride,
   ): string {
     const site = this.site
     const graph: Record<string, unknown>[] = []
@@ -747,28 +832,32 @@ ${assoc}
     }
     graph.push(clinicNode)
 
-    // 3. BreadcrumbList — Home > Blog > (대분류) > (상세페이지) > 글
-    //    대분류/상세페이지는 목록 필터 URL(?cat=&chip=)로 연결. 글 주소는 canonical 하나 그대로(중복 아님).
-    const crumbs: Array<{ name: string; item: string }> = [
-      { name: "Home", item: `${site.baseUrl}/${post.lang}` },
-      { name: "Blog", item: `${site.baseUrl}/${post.lang}/blog` },
-    ]
-    if (breadcrumb.category) {
-      crumbs.push({
-        name: breadcrumb.category.name,
-        item: `${site.baseUrl}/${post.lang}/blog?cat=${encodeURIComponent(breadcrumb.category.id)}`,
-      })
+    // 3. BreadcrumbList
+    //   블로그: Home › Blog › (대분류) › (상세페이지) › 글
+    //   상세페이지(override): Home › Products › 대분류 › 상품(product_page) — trail은 렌더러가 구성해 넘김
+    let crumbs: Array<{ name: string; item: string }>
+    if (override) {
+      crumbs = [...override.breadcrumbTrail, { name: override.pageName, item: canonical }]
+    } else {
+      crumbs = [
+        { name: "Home", item: `${site.baseUrl}/${post.lang}` },
+        { name: "Blog", item: `${site.baseUrl}/${post.lang}/blog` },
+      ]
+      if (breadcrumb.category) {
+        crumbs.push({
+          name: breadcrumb.category.name,
+          item: `${site.baseUrl}/${post.lang}/blog?cat=${encodeURIComponent(breadcrumb.category.id)}`,
+        })
+      }
+      if (breadcrumb.detailPage) {
+        const catPart = breadcrumb.category ? `cat=${encodeURIComponent(breadcrumb.category.id)}&` : ""
+        crumbs.push({
+          name: breadcrumb.detailPage.name,
+          item: `${site.baseUrl}/${post.lang}/blog?${catPart}chip=${encodeURIComponent(breadcrumb.detailPage.id)}`,
+        })
+      }
+      crumbs.push({ name: post.title, item: canonical })
     }
-    if (breadcrumb.detailPage) {
-      const catPart = breadcrumb.category
-        ? `cat=${encodeURIComponent(breadcrumb.category.id)}&`
-        : ""
-      crumbs.push({
-        name: breadcrumb.detailPage.name,
-        item: `${site.baseUrl}/${post.lang}/blog?${catPart}chip=${encodeURIComponent(breadcrumb.detailPage.id)}`,
-      })
-    }
-    crumbs.push({ name: post.title, item: canonical })
     graph.push({
       "@context": "https://schema.org",
       "@type": "BreadcrumbList",
