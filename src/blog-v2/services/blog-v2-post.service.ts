@@ -997,7 +997,8 @@ export class BlogV2PostService {
   async getDetailPageStatuses(): Promise<Array<{ productPage: string; lang: string }>> {
     return this.postRepo.query(
       `SELECT product_page AS "productPage", lang FROM blog.posts
-       WHERE publish_target = 'DETAIL_PAGE' AND status = 'published' AND product_page IS NOT NULL`,
+       WHERE publish_target = $1 AND status = $2 AND product_page IS NOT NULL`,
+      [BlogPublishTarget.DETAIL_PAGE, BlogPostStatus.PUBLISHED],
     )
   }
 
