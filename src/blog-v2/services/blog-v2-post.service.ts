@@ -115,12 +115,14 @@ export class BlogV2PostService {
       return this.updateFromMarkdown(existing.id, bodyReplaced, user, urlMap, {
         detailPage: true,
         langOverride: lang,
+        productPage,
       })
     }
     return this.createFromMarkdown(bodyReplaced, user, urlMap, {
       detailPage: true,
       publish: true,
       langOverride: lang,
+      productPage,
     })
   }
 
@@ -161,7 +163,7 @@ export class BlogV2PostService {
     markdown: string,
     user: User,
     urlMap?: Map<string, string>,
-    opts: { detailPage?: boolean; langOverride?: string } = {},
+    opts: { detailPage?: boolean; langOverride?: string; productPage?: string } = {},
   ): Promise<{ id: string; slug: string; status: string; warnings: string[] }> {
     const post = await this.findOne(id)
     // 프론트매터(상단 설정) YAML이 깨지면 파서가 throw → 무의미한 500 대신 명확한 안내
@@ -238,9 +240,10 @@ export class BlogV2PostService {
     post.internalLinks = Array.isArray(frontmatter.internal_links)
       ? frontmatter.internal_links.map((l) => ({ anchor: l.anchor, slug: l.slug }))
       : undefined
-    post.productPage = Array.isArray(frontmatter.product_page)
-      ? frontmatter.product_page.join(" | ")
-      : frontmatter.product_page
+    // 상세페이지 업로드는 패널이 넘긴 product_page(opts.productPage)를 우선 저장 → md엔 product_page 불필요
+    post.productPage =
+      opts.productPage ??
+      (Array.isArray(frontmatter.product_page) ? frontmatter.product_page.join(" | ") : frontmatter.product_page)
     // CTA는 md가 source of truth — 재업로드 시 md 기준으로 갱신(product_page와 동일 정책). 없으면 해제.
     post.ctaLinks = await this.resolveCtaLinks(frontmatter.cta, warnings)
     // 가격 보기 소스도 md가 source of truth — price 있으면 그대로, 없으면 product_page로 폴백.
@@ -300,7 +303,7 @@ export class BlogV2PostService {
     markdown: string,
     user: User,
     urlMap?: Map<string, string>,
-    opts: { detailPage?: boolean; publish?: boolean; langOverride?: string } = {},
+    opts: { detailPage?: boolean; publish?: boolean; langOverride?: string; productPage?: string } = {},
   ): Promise<{ id: string; slug: string; status: string; warnings: string[] }> {
     // 프론트매터(상단 설정) YAML이 깨지면 파서가 throw → 무의미한 500 대신 명확한 안내
     const parsed = (() => {
@@ -352,6 +355,11 @@ export class BlogV2PostService {
 
     // 상세페이지는 lang을 상품설명 모달의 언어 탭에서 받음(langOverride) → md에 lang 불필요
     const lang = (opts.langOverride as BlogPostLang) ?? (frontmatter.lang as BlogPostLang) ?? BlogPostLang.KO
+    // 상세페이지는 product_page도 패널에서 받음(opts.productPage) → md에 product_page 불필요.
+    // 이 값이 상세페이지↔상품 연결·현황(✅)·SSR 매칭의 기준이므로 반드시 저장한다.
+    const productPageValue =
+      opts.productPage ??
+      (Array.isArray(frontmatter.product_page) ? frontmatter.product_page.join(" | ") : frontmatter.product_page)
     const post = this.postRepo.create({
       title: frontmatter.title,
       subtitle: frontmatter.subtitle,
@@ -380,17 +388,9 @@ export class BlogV2PostService {
       internalLinks: Array.isArray(frontmatter.internal_links)
         ? frontmatter.internal_links.map((l) => ({ anchor: l.anchor, slug: l.slug }))
         : undefined,
-      productPage: Array.isArray(frontmatter.product_page)
-        ? frontmatter.product_page.join(" | ")
-        : frontmatter.product_page,
+      productPage: productPageValue,
       ctaLinks: await this.resolveCtaLinks(frontmatter.cta, warnings),
-      priceRefs: await this.resolvePriceRefs(
-        frontmatter.price,
-        Array.isArray(frontmatter.product_page)
-          ? frontmatter.product_page.join(" | ")
-          : frontmatter.product_page,
-        warnings,
-      ),
+      priceRefs: await this.resolvePriceRefs(frontmatter.price, productPageValue, warnings),
       medicalAbout: this.parseMedicalAbout(frontmatter.about),
       // 고지문구: 일반 면책은 항상 적용(프론트에서 자동), AI 이미지 고지는 신규 글에 기본 등록.
       // frontmatter로 명시하면 그 값을 존중(빈 배열로 끄기 가능). 재업로드는 기존 선택 유지(update 경로).
