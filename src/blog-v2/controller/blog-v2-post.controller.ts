@@ -155,11 +155,12 @@ export class BlogV2PostController {
     return this.service.findOne(id)
   }
 
-  @ApiOperation({ summary: "블로그 글 목록 (어드민용)" })
+  @ApiOperation({ summary: "블로그 글 목록 (어드민용) — 상세페이지 글(detail_page)은 제외(상품설명 패널에서 관리)" })
   @Get()
   @Auth(AuthGuard(JWT_STRATEGY), SWAGGER_TOKEN_NAME, Role.ADMIN)
   async findMany(@Query() query: QueryBlogPostDto) {
-    return this.service.findMany(query)
+    // 어드민 '블로그 글 목록'은 블로그 글만 — 상세페이지 원고는 상품설명 패널/상세페이지 관리에서 관리
+    return this.service.findMany({ ...query, publishTarget: BlogPublishTarget.BLOG })
   }
 
   @ApiOperation({ summary: "블로그 글 상세 (어드민 미리보기용)" })
