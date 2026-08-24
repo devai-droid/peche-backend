@@ -562,7 +562,8 @@ export class BlogV2PostService {
   /** product_page 상세페이지명 → { id, name } 목록 (스키마 about 개별 시술 url용). 읽기 전용, 실패 시 []. */
   async getProductPageProcedures(productPage: string | undefined): Promise<Array<{ id: string; name: string }>> {
     try {
-      const sep = (productPage ?? "").includes("|") ? "|" : ","
+      // 여러 상세페이지명 구분자는 파이프(|)만 사용. 상품명 자체에 쉼표가 들어갈 수 있어(예: 제모(얼굴,목)) 쉼표는 구분자로 쓰지 않는다.
+    const sep = "|"
       const names = (productPage ?? "").split(sep).map((s) => s.trim()).filter(Boolean)
       if (!names.length) return []
       const out: Array<{ id: string; name: string }> = []
@@ -646,7 +647,8 @@ export class BlogV2PostService {
     let category: { id: string; name: string } | null = null
     let detailPage: { id: string; name: string } | null = null
     try {
-      const sep = (productPage ?? "").includes("|") ? "|" : ","
+      // 여러 상세페이지명 구분자는 파이프(|)만 사용. 상품명 자체에 쉼표가 들어갈 수 있어(예: 제모(얼굴,목)) 쉼표는 구분자로 쓰지 않는다.
+    const sep = "|"
       const first = (productPage ?? "").split(sep).map((s) => s.trim()).filter(Boolean)[0]
       if (first) {
         const rows: Array<{ dpid: string; dpname: string; cid: string; cname: string }> =
@@ -771,7 +773,8 @@ export class BlogV2PostService {
       return out.length ? out : undefined
     }
     // 2) 폴백: product_page 상세페이지명 → page 참조 (기존 글 하위호환)
-    const sep = (productPage ?? "").includes("|") ? "|" : ","
+    // 여러 상세페이지명 구분자는 파이프(|)만 사용. 상품명 자체에 쉼표가 들어갈 수 있어(예: 제모(얼굴,목)) 쉼표는 구분자로 쓰지 않는다.
+    const sep = "|"
     const names = (productPage ?? "").split(sep).map((s) => s.trim()).filter(Boolean)
     if (!names.length) return undefined
     const out: BlogPriceRef[] = []
@@ -825,7 +828,8 @@ export class BlogV2PostService {
     // price_refs 우선. 없으면(기존 글) product_page 상세페이지명 → page 참조로 폴백.
     let effective: BlogPriceRef[] = Array.isArray(refs) ? refs : []
     if (!effective.length) {
-      const sep = (productPage ?? "").includes("|") ? "|" : ","
+      // 여러 상세페이지명 구분자는 파이프(|)만 사용. 상품명 자체에 쉼표가 들어갈 수 있어(예: 제모(얼굴,목)) 쉼표는 구분자로 쓰지 않는다.
+    const sep = "|"
       const names = (productPage ?? "").split(sep).map((s) => s.trim()).filter(Boolean)
       for (const nm of names) {
         const dpRows: Array<{ id: string; name: string }> = await this.postRepo.query(
@@ -955,7 +959,7 @@ export class BlogV2PostService {
         `(p.product_category_id = :pid OR EXISTS (
             SELECT 1 FROM public.product_detail_page dp
             WHERE dp.category_id = :pid
-              AND EXISTS (SELECT 1 FROM unnest(string_to_array(p.product_page, CASE WHEN position('|' in p.product_page) > 0 THEN '|' ELSE ',' END)) AS e WHERE trim(e) = dp.name)
+              AND EXISTS (SELECT 1 FROM unnest(string_to_array(p.product_page, '|')) AS e WHERE trim(e) = dp.name)
           ))`,
         { pid: query.productCategoryId },
       )
@@ -964,7 +968,7 @@ export class BlogV2PostService {
     if (query.productPage)
       // product_page 는 콤마로 여러 상세페이지명을 가질 수 있음 → 각 항목(트림)과 정확 일치 검사
       qb.andWhere(
-        "EXISTS (SELECT 1 FROM unnest(string_to_array(p.product_page, CASE WHEN position('|' in p.product_page) > 0 THEN '|' ELSE ',' END)) AS e WHERE trim(e) = :pp)",
+        "EXISTS (SELECT 1 FROM unnest(string_to_array(p.product_page, '|')) AS e WHERE trim(e) = :pp)",
         { pp: query.productPage },
       )
     if (query.productPageContains) {
@@ -1029,7 +1033,7 @@ export class BlogV2PostService {
     return this.postRepo
       .createQueryBuilder("p")
       .where(
-        "EXISTS (SELECT 1 FROM unnest(string_to_array(p.product_page, CASE WHEN position('|' in p.product_page) > 0 THEN '|' ELSE ',' END)) AS e WHERE trim(e) IN (:...names))",
+        "EXISTS (SELECT 1 FROM unnest(string_to_array(p.product_page, '|')) AS e WHERE trim(e) IN (:...names))",
         { names },
       )
       .andWhere("p.lang = :lang", { lang })
@@ -1066,7 +1070,8 @@ export class BlogV2PostService {
    */
   async resolveDetailCanonicalProductId(currentName: string, post: BlogPostV2): Promise<string | null> {
     const raw = post.productPage ?? ""
-    const sep = raw.includes("|") ? "|" : ","
+    // 구분자는 파이프(|)만 — 상품명에 쉼표가 들어갈 수 있음(제모(얼굴,목))
+    const sep = "|"
     const sourceNames = raw
       .split(sep)
       .map((s) => s.trim())
