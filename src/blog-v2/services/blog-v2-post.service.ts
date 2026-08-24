@@ -998,9 +998,9 @@ export class BlogV2PostService {
   }
 
   /** 상세페이지 원고 업로드 현황 — 발행된 detail_page 글의 (product_page, lang) 목록. 어드민 목록의 '설명' 컬럼 표시용. */
-  async getDetailPageStatuses(): Promise<Array<{ productPage: string; lang: string }>> {
+  async getDetailPageStatuses(): Promise<Array<{ productPage: string; lang: string; updatedAt: string }>> {
     return this.postRepo.query(
-      `SELECT product_page AS "productPage", lang FROM blog.posts
+      `SELECT product_page AS "productPage", lang, updated_at AS "updatedAt" FROM blog.posts
        WHERE publish_target = $1 AND status = $2 AND product_page IS NOT NULL`,
       [BlogPublishTarget.DETAIL_PAGE, BlogPostStatus.PUBLISHED],
     )
