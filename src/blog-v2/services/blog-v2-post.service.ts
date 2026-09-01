@@ -802,6 +802,23 @@ export class BlogV2PostService {
   }
 
   /**
+   * 언어 → product_detail_page의 이름 컬럼(snake). 외국어 글의 product_page는 그 언어 이름(예: ja=ウルセラプライム)이라,
+   * 한국어 name만으로는 매칭이 안 됨 → 해당 언어 이름 컬럼도 함께 매칭해 상세페이지를 찾는다.
+   */
+  private static detailNameCol(lang: string): string {
+    const map: Record<string, string> = {
+      ko: "name",
+      en: "name_en",
+      zh: "name_zh",
+      "zh-TW": "name_zhtw",
+      tw: "name_zhtw",
+      ja: "name_ja",
+      th: "name_th",
+    }
+    return map[lang] ?? "name"
+  }
+
+  /**
    * 블로그 가격 섹션 데이터 — product_page(콤마로 여러 상세페이지명)별로 상시 상품 + 게시중 이벤트를 조회.
    * 상세페이지별로 구분(섞지 않음). 정렬은 사이트와 동일(order). 이벤트는 게시기간(bundle) 노출중 + detail_page_show만.
    * 언어별 이름·노출·정렬 컬럼 사용(이름은 번역 없으면 ko로 폴백). 봇 SSR·API 공용.
@@ -831,9 +848,11 @@ export class BlogV2PostService {
       // 여러 상세페이지명 구분자는 파이프(|)만 사용. 상품명 자체에 쉼표가 들어갈 수 있어(예: 제모(얼굴,목)) 쉼표는 구분자로 쓰지 않는다.
     const sep = "|"
       const names = (productPage ?? "").split(sep).map((s) => s.trim()).filter(Boolean)
+      // 외국어 글은 product_page가 그 언어 이름(예: ja=ウルセラプライム) → 한국어 name + 해당 언어 이름 컬럼 둘 다로 매칭
+      const nameCol = BlogV2PostService.detailNameCol(lang)
       for (const nm of names) {
         const dpRows: Array<{ id: string; name: string }> = await this.postRepo.query(
-          `SELECT id, name FROM public.product_detail_page WHERE name = $1 AND status = 'ACTIVE' LIMIT 1`,
+          `SELECT id, name FROM public.product_detail_page WHERE (name = $1 OR ${nameCol} = $1) AND status = 'ACTIVE' LIMIT 1`,
           [nm],
         )
         if (dpRows.length) effective.push({ type: "page", id: dpRows[0].id, name: dpRows[0].name })
