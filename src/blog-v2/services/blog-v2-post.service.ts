@@ -818,6 +818,28 @@ export class BlogV2PostService {
     return map[lang] ?? "name"
   }
 
+  /** ref(type,id)의 언어별 표시 이름 — 가격 그룹 탭 제목용. 외국어 글은 상품/대분류명도 해당 언어로 노출. */
+  private async localizedRefName(
+    type: "page" | "category" | "event",
+    id: string,
+    lang: string,
+    fallback: string,
+  ): Promise<string> {
+    const col = BlogV2PostService.detailNameCol(lang)
+    if (col === "name") return fallback // 한국어는 그대로
+    const table =
+      type === "page" ? "product_detail_page" : type === "category" ? "product_category" : "event_category"
+    try {
+      const rows: Array<{ nm: string }> = await this.postRepo.query(
+        `SELECT COALESCE(NULLIF(${col}, ''), name) AS nm FROM public.${table} WHERE id = $1 LIMIT 1`,
+        [id],
+      )
+      return rows.length && rows[0].nm ? rows[0].nm : fallback
+    } catch {
+      return fallback
+    }
+  }
+
   /**
    * 블로그 가격 섹션 데이터 — product_page(콤마로 여러 상세페이지명)별로 상시 상품 + 게시중 이벤트를 조회.
    * 상세페이지별로 구분(섞지 않음). 정렬은 사이트와 동일(order). 이벤트는 게시기간(bundle) 노출중 + detail_page_show만.
@@ -934,7 +956,13 @@ export class BlogV2PostService {
       }
       // 둘 다 비면 탭 자체를 생략
       if (products.length || events.length)
-        groups.push({ linkType: ref.type, linkId: ref.id, detailPageName: ref.name, products, events })
+        groups.push({
+          linkType: ref.type,
+          linkId: ref.id,
+          detailPageName: await this.localizedRefName(ref.type, ref.id, lang, ref.name),
+          products,
+          events,
+        })
     }
     return groups
   }
