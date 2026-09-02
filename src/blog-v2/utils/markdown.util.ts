@@ -5,6 +5,14 @@ import MarkdownIt = require("markdown-it")
 
 const md = new MarkdownIt({ html: true, linkify: true, breaks: false })
 
+// 요약 섹션 제목 — 언어판별. 한국어 "핵심 요약"과 같은 원리로 각 언어판 제목도 인식한다.
+// (요약 박스 추출 + 본문 중복 제거 두 곳에서 공통 사용)
+const SUMMARY_TITLE_ALT = "핵심\\s*요약|Key\\s*Takeaways|ポイントまとめ|核心要点|核心重點|สรุปสาระสำคัญ"
+// 헤딩 텍스트 안에 요약 제목이 있는지 (본문 제거 필터용)
+const SUMMARY_TITLE_RE = new RegExp(SUMMARY_TITLE_ALT, "i")
+// "## [💡] <요약 제목>" 헤딩 라인 (요약 추출용)
+const SUMMARY_HEADING_RE = new RegExp(`^##\\s*(?:💡\\s*)?(?:${SUMMARY_TITLE_ALT})\\s*$`, "im")
+
 /**
  * 본문 마크다운 → HTML + 기존 블로그 서식 후처리.
  * - 본문 안 HTML(FAQ schema 등)은 그대로 통과(html:true)
@@ -26,7 +34,7 @@ export function renderMarkdownToHtml(bodyMd: string): string {
   // "💡 핵심 요약" 섹션 제거 — 페이지 상단 요약 박스(summary_text)와 중복.
   // 헤딩 + 내용 + 바로 뒤 구분선(hr)까지만 제거하고, 그 다음 인트로는 유지.
   const $summary = $("h2, h3")
-    .filter((_, el) => /핵심\s*요약/.test($(el).text()))
+    .filter((_, el) => SUMMARY_TITLE_RE.test($(el).text()))
     .first()
   if ($summary.length) {
     let $n = $summary.next()
@@ -164,7 +172,7 @@ export function parseBlogMarkdown(markdown: string): ParsedMarkdown {
  * 본문에는 그대로 두고 summary_text로만 복사 (변환 spec 3절).
  */
 export function extractSummaryFromBody(bodyMd: string): string | null {
-  const match = bodyMd.match(/^##\s*(?:💡\s*)?핵심\s*요약\s*$/m)
+  const match = bodyMd.match(SUMMARY_HEADING_RE)
   if (!match || match.index === undefined) return null
 
   const afterHeading = bodyMd.slice(match.index + match[0].length)
