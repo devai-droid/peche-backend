@@ -963,7 +963,7 @@ ${assoc}
     const $ = cheerio.load(bodyHtml, null, false)
     const faqs: Array<{ q: string; a: string }> = []
     const $faqH = $("h2, h3")
-      .filter((_, el) => /FAQ|자주\s*묻는/i.test($(el).text()))
+      .filter((_, el) => /FAQ|자주\s*묻는|常见问题|常見問題/i.test($(el).text()))
       .first()
     if (!$faqH.length) return faqs
 
