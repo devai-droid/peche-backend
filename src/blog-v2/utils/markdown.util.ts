@@ -56,7 +56,7 @@ export function renderMarkdownToHtml(bodyMd: string): string {
     const base = ($el.text() ?? "")
       .trim()
       .replace(/\s+/g, "_")
-      .replace(/[^\wㄱ-ㅎ가-힣ぁ-んァ-ン一-龯]/g, "")
+      .replace(/[^\wㄱ-ㅎ가-힣ぁ-んァ-ン一-龯฀-๿]/g, "")
     if (!base) return
     if (!counter[base]) {
       counter[base] = 1
