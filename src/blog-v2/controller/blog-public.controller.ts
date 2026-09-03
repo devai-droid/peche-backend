@@ -30,10 +30,14 @@ export class BlogPublicController {
     lang: string,
     postSlug?: string,
   ): void {
-    const botName = ((req.headers["x-bot"] as string | undefined) ?? "0").trim()
+    // 이름표에 없는 봇은 CloudFront 가 "other-bot|<UA 원문>" 꼴로 넘긴다. 파이프 앞뒤를 나눠 쓴다.
+    const rawBot = ((req.headers["x-bot"] as string | undefined) ?? "0").trim()
+    const pipe = rawBot.indexOf("|")
+    const botName = pipe === -1 ? rawBot : rawBot.slice(0, pipe)
+    const botUa = pipe === -1 ? undefined : rawBot.slice(pipe + 1).trim() || undefined
     if (botName && botName !== "0") {
       res.setHeader("Cache-Control", "no-store, max-age=0")
-      void this.botAnalytics.trackBotRead({ botName, pagePath, lang, postSlug })
+      void this.botAnalytics.trackBotRead({ botName, pagePath, lang, postSlug, botUa })
       return
     }
     // 사람: AI 답변에서 유입됐으면 ai_referral

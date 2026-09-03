@@ -51,6 +51,9 @@ const BOT_CATEGORY: Record<string, string> = {
   Discordbot: "social",
   WhatsApp: "social",
   TelegramBot: "social",
+  // 이름표에 없는 접속 — bot_ua 파라미터로 정체를 추적한다
+  "other-bot": "other",
+  "unknown-agent": "other",
   // SEO 도구
   AhrefsBot: "seo-tool",
   SemrushBot: "seo-tool",
@@ -139,6 +142,7 @@ export class BotAnalyticsService {
     pagePath: string
     lang: string
     postSlug?: string
+    botUa?: string
   }): Promise<void> {
     const botName = input.botName || "unknown-bot"
     await this.send("bot_read", {
@@ -147,6 +151,9 @@ export class BotAnalyticsService {
       page_path: input.pagePath,
       lang: input.lang,
       ...(input.postSlug ? { post_slug: input.postSlug } : {}),
+      // 이름표에 없는 봇만 UA 원문을 함께 남긴다. 어떤 봇이 오는지 확인해 분류표를 채우기 위한 값.
+      // GA 이벤트 파라미터는 100자 제한이라 잘라서 보낸다.
+      ...(input.botUa ? { bot_ua: input.botUa.slice(0, 100) } : {}),
     })
   }
 
