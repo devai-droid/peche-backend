@@ -250,7 +250,9 @@ export class BlogRenderService {
   }
 
   async renderListPage(lang: string): Promise<{ html: string; status: number }> {
-    const { items } = await this.postService.findMany({ lang: lang as never, status: "published" as never, page: 1, limit: 50 })
+    // 봇 전용 SSR 목록이라 페이지 넘김 없이 전체를 한 장에 내준다.
+    // 50편에서 잘리면 나머지 글로 가는 내부 링크가 사라져 색인에 불리하다.
+    const { items } = await this.postService.findMany({ lang: lang as never, status: "published" as never, page: 1, limit: 500 })
     return { html: this.buildListHtml(items, lang), status: 200 }
   }
 
@@ -974,7 +976,12 @@ ${assoc}
         const qRaw = $strong.text().trim()
         if (qRaw) {
           const full = $n.text()
-          const q = qRaw.replace(/^Q[:.]?\s*/i, "").trim()
+          // "Q:" 접두어와 화면 표시용 번호("1. ", "2) ")를 걷어낸 뒤 스키마에 넣는다.
+          // 번호가 질문 문구에 섞이면 검색어와의 일치도가 떨어진다.
+          const q = qRaw
+            .replace(/^Q[:.]?\s*/i, "")
+            .replace(/^\d+\s*[.)]\s*/, "")
+            .trim()
           const a = full
             .replace(qRaw, "")
             .replace(/^\s*A[:.]?\s*/i, "")
