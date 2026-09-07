@@ -73,6 +73,18 @@ export class BlogPublicController {
     res.status(status).type("html").send(html)
   }
 
+  /**
+   * 글 메타 목록 JSON — /{lang}/blog/__meta.json
+   * 구글 시트 월간 보고서가 발행일·수정일을 가져간다. 사이트맵·RSS로 이미 공개된 정보만 담는다.
+   * CloudFront 라우팅이 /{lang}/blog/* 를 백엔드로 넘기므로 별도 배포 설정 없이 동작한다.
+   * :slug 라우트보다 먼저 선언해야 슬러그로 잡히지 않는다.
+   */
+  @Get(":lang/blog/__meta.json")
+  async postMeta(@Param("lang") lang: string, @Res() res: Response) {
+    const items = await this.renderService.renderPostMeta(lang)
+    res.type("application/json").send(JSON.stringify({ lang, count: items.length, items }))
+  }
+
   @Get(":lang/blog/:slug")
   async renderPost(
     @Param("lang") lang: string,

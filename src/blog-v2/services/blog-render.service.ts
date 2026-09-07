@@ -256,6 +256,26 @@ export class BlogRenderService {
     return { html: this.buildListHtml(items, lang), status: 200 }
   }
 
+  /**
+   * 글 메타 목록(JSON) — 구글 시트 월간 보고서가 발행일·수정일을 가져가는 용도.
+   * 사이트맵·RSS로 이미 공개된 정보만 담는다. 본문과 비공개 항목은 넣지 않는다.
+   */
+  async renderPostMeta(lang: string): Promise<Array<Record<string, unknown>>> {
+    const { items } = await this.postService.findMany({
+      lang: lang as never,
+      status: "published" as never,
+      page: 1,
+      limit: 500,
+    })
+    return items.map((p) => ({
+      slug: p.slug,
+      title: p.title,
+      mainKeyword: p.mainKeyword ?? "",
+      publishedAt: p.publishedAt ? new Date(p.publishedAt as unknown as Date).toISOString() : null,
+      updatedAt: p.updatedAt ? new Date(p.updatedAt as unknown as Date).toISOString() : null,
+    }))
+  }
+
   /** sitemap.xml — 발행 글 전체 (언어 무관) */
   async renderSitemap(): Promise<string> {
     const { items } = await this.postService.findMany({ status: "published" as never, page: 1, limit: 1000 })
