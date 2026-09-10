@@ -92,7 +92,12 @@ export class BlogPublicController {
     @Req() req: Request,
     @Res() res: Response,
   ) {
-    const { html, status } = await this.renderService.renderPostPage(slug, lang)
+    const { html, status, redirectTo } = await this.renderService.renderPostPage(slug, lang)
+    // 상세페이지 글이 블로그 주소로 들어오면 상품 주소로 영구 이전(중복 주소 정리)
+    if (redirectTo) {
+      res.redirect(301, redirectTo)
+      return
+    }
     this.setCsp(res)
     this.handleBotRequest(req, res, `/${lang}/blog/${slug}`, lang, slug)
     res.status(status).type("html").send(html)

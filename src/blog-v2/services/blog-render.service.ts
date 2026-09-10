@@ -6,6 +6,7 @@ import { BlogSiteConfig } from "@root/blog-v2/entities/site-config.entity"
 import { BlogPostV2 } from "@root/blog-v2/entities/post.entity"
 import { BlogDoctor } from "@root/blog-v2/entities/doctor.entity"
 import { PECHE_SITE, SiteConfig } from "@root/blog-v2/sites/peche.config"
+import { BlogPublishTarget } from "@root/blog-v2/enum/blog-v2.enum"
 
 /** 빵부스러기(Breadcrumb)용 대분류·상세페이지 노드 */
 type BlogBreadcrumb = {
@@ -154,9 +155,19 @@ export class BlogRenderService {
     private readonly siteConfigService: BlogSiteConfigService,
   ) {}
 
-  async renderPostPage(slug: string, lang: string): Promise<{ html: string; status: number }> {
+  async renderPostPage(
+    slug: string,
+    lang: string,
+  ): Promise<{ html: string; status: number; redirectTo?: string }> {
     const post = await this.postService.findBySlug(slug, lang)
     if (post) {
+      // 상세페이지 글은 블로그 주소로 열지 않는다. 상품 주소(/products/{id})로 영구 이전(301) → 한 콘텐츠 = 한 주소.
+      if (post.publishTarget === BlogPublishTarget.DETAIL_PAGE) {
+        const first = (post.productPage ?? "").split("|")[0].trim()
+        const pid = first ? await this.postService.resolveDetailCanonicalProductId(first, post) : null
+        if (pid) return { html: "", status: 301, redirectTo: `${this.site.baseUrl}/${lang}/products/${pid}` }
+        return { html: this.render404(), status: 404 } // 상품을 못 찾으면 블로그로 노출하지 않음
+      }
       const priceGroups = await this.postService.getBlogPriceData(post.priceRefs, post.productPage, post.lang)
       const relatedSlugs = this.extractRelatedLinks(post.bodyHtml ?? "").map((l) => l.slug)
       const titleMap = await this.postService.getPublishedTitlesBySlugs(relatedSlugs, post.lang)
@@ -762,42 +773,58 @@ ${assoc}
       name: post.title,
       inLanguage: post.lang,
       breadcrumb: { "@id": breadcrumbId },
-      mainEntity: { "@id": articleId },
+      // 블로그: 페이지 핵심 개체 = 글(BlogPosting). 상세페이지(override): 핵심 개체 = 시술(MedicalProcedure).
+      mainEntity: { "@id": override ? `${canonical}#procedure` : articleId },
       lastReviewed: dateOnly(post.updatedAt as unknown as Date),
       reviewedBy,
       medicalAudience: { "@type": "MedicalAudience", audienceType: "Patient" },
       specialty,
     })
 
-    // 2. BlogPosting (글) — about = 마케터 핵심 시술 + product_page 개별 시술(자동 url)
-    const blogPosting: Record<string, unknown> = {
-      "@context": "https://schema.org",
-      "@type": "BlogPosting",
-      "@id": articleId,
-      headline: post.title,
-      description: post.summaryText ?? post.subtitle ?? undefined,
-      image: post.thumbnailUrl ?? undefined,
-      datePublished: isoDate(post.publishedAt),
-      dateModified: isoDate(post.updatedAt as unknown as Date),
-      inLanguage: post.lang,
-      isPartOf: { "@id": pageId },
-      mainEntityOfPage: { "@id": pageId },
-      publisher: { "@id": clinicId },
-      articleSection: breadcrumb.category?.name || undefined,
-    }
-    if (post.authorDoctor) blogPosting.author = { "@id": authorId }
-    if (reviewedBy) blogPosting.reviewedBy = reviewedBy
-    if (aboutNodes.length) blogPosting.about = aboutNodes
+    // 2. 페이지 핵심 개체
+    //    블로그 = BlogPosting(정보 글), 상세페이지(override) = MedicalProcedure(시술). 상세페이지는 BlogPosting을 내지 않는다.
     // 본문 외부링크 자동 수집 → citation(출처/인용)
-    const citations = this.extractCitations(post.bodyHtml ?? "")
-    if (citations.length > 0) {
-      blogPosting.citation = citations.map((c) => ({
-        "@type": "CreativeWork",
-        ...(c.name ? { name: c.name } : {}),
-        url: c.url,
-      }))
+    const citationNodes = this.extractCitations(post.bodyHtml ?? "").map((c) => ({
+      "@type": "CreativeWork",
+      ...(c.name ? { name: c.name } : {}),
+      url: c.url,
+    }))
+    if (override) {
+      // 상세페이지: 대표 시술(product_page 첫 시술)을 최상위 MedicalProcedure로 올린다. 속성은 about에서 이미 병합됨.
+      const primaryName = pageProcedures[0]?.name ?? override.pageName
+      const procNode: Record<string, unknown> =
+        aboutByNorm.get(norm(primaryName)) ?? { "@type": "MedicalProcedure", name: primaryName }
+      procNode["@context"] = "https://schema.org"
+      procNode["@id"] = `${canonical}#procedure`
+      procNode.url = canonical
+      procNode.inLanguage = post.lang
+      procNode.isPartOf = { "@id": pageId }
+      if (post.summaryText || post.subtitle) procNode.description = post.summaryText ?? post.subtitle
+      if (reviewedBy) procNode.reviewedBy = reviewedBy
+      if (citationNodes.length) procNode.citation = citationNodes
+      graph.push(procNode)
+    } else {
+      const blogPosting: Record<string, unknown> = {
+        "@context": "https://schema.org",
+        "@type": "BlogPosting",
+        "@id": articleId,
+        headline: post.title,
+        description: post.summaryText ?? post.subtitle ?? undefined,
+        image: post.thumbnailUrl ?? undefined,
+        datePublished: isoDate(post.publishedAt),
+        dateModified: isoDate(post.updatedAt as unknown as Date),
+        inLanguage: post.lang,
+        isPartOf: { "@id": pageId },
+        mainEntityOfPage: { "@id": pageId },
+        publisher: { "@id": clinicId },
+        articleSection: breadcrumb.category?.name || undefined,
+      }
+      if (post.authorDoctor) blogPosting.author = { "@id": authorId }
+      if (reviewedBy) blogPosting.reviewedBy = reviewedBy
+      if (aboutNodes.length) blogPosting.about = aboutNodes
+      if (citationNodes.length) blogPosting.citation = citationNodes
+      graph.push(blogPosting)
     }
-    graph.push(blogPosting)
 
     // 3. 작성 의료진 (Person) — author_doctor
     if (post.authorDoctor) {
