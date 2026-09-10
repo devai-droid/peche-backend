@@ -1172,6 +1172,39 @@ export class BlogV2PostService {
     return out
   }
 
+  /**
+   * 상세페이지 언어판 자동 연결 — 같은 상품(product_detail_page)을 공유하는 언어별 detail_page 글을 hreflang로 묶는다.
+   * hreflang_key 없이 동작한다. 대표(canonical) 상품 id를 받아, 그 상품의 언어별 이름 중 하나를 product_page에 가진
+   * 발행 detail_page 글을 언어당 최신 1건 찾아 각자의 상품 주소로 반환한다.
+   */
+  async getDetailPageHreflangAlternates(productId: string): Promise<Array<{ lang: string; path: string }>> {
+    if (!productId) return []
+    const prodRows: Array<{ names: string[] }> = await this.postRepo.query(
+      `SELECT ARRAY_REMOVE(ARRAY[name, name_en, name_ja, name_zh, name_zhtw, name_th], NULL) AS names
+       FROM public.product_detail_page WHERE id = $1 LIMIT 1`,
+      [productId],
+    )
+    const names = (prodRows[0]?.names ?? []).map((n) => n.trim()).filter(Boolean)
+    if (!names.length) return []
+    const rows: Array<{ lang: string; product_page: string | null }> = await this.postRepo.query(
+      `SELECT DISTINCT ON (lang) lang, product_page
+       FROM blog.posts
+       WHERE publish_target = $1 AND status = $2 AND product_page IS NOT NULL
+         AND EXISTS (SELECT 1 FROM unnest(string_to_array(product_page, '|')) AS e WHERE trim(e) = ANY($3::text[]))
+       ORDER BY lang, published_at DESC NULLS LAST, created_at DESC`,
+      [BlogPublishTarget.DETAIL_PAGE, BlogPostStatus.PUBLISHED, names],
+    )
+    const out: Array<{ lang: string; path: string }> = []
+    for (const r of rows) {
+      const first = (r.product_page ?? "").split("|")[0].trim()
+      const pid = first
+        ? await this.resolveDetailCanonicalProductId(first, { productPage: r.product_page } as BlogPostV2)
+        : null
+      if (pid) out.push({ lang: r.lang, path: `/${r.lang}/products/${pid}` })
+    }
+    return out
+  }
+
   /** 글에 적용할 공통 고지문구 type 목록 설정 (어드민 미리보기 체크박스). */
   async setNotices(id: string, notices: string[], user: User): Promise<BlogPostV2> {
     const post = await this.findOne(id)

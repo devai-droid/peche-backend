@@ -256,7 +256,8 @@ export class BlogRenderService {
       pageName: product.name,
     }
 
-    const alternates = await this.postService.getHreflangAlternates(post.hreflangKey)
+    // 상세페이지 언어판 연결은 hreflang_key가 아니라 "같은 상품(canonical)" 기준으로 자동 매칭한다.
+    const alternates = await this.postService.getDetailPageHreflangAlternates(canonicalId)
     return {
       html: this.buildHtml(
         post,
