@@ -181,8 +181,20 @@ export class BlogRenderService {
         pageProcedures.map((p) => p.name),
         cfg?.hospitalName || this.site.hospitalName,
       )
+      const alternates = await this.postService.getHreflangAlternates(post.hreflangKey)
       return {
-        html: this.buildHtml(post, priceGroups, titleMap, cfg, breadcrumb, reviewerDoctors, pageProcedures, schemaAttrs),
+        html: this.buildHtml(
+          post,
+          priceGroups,
+          titleMap,
+          cfg,
+          breadcrumb,
+          reviewerDoctors,
+          pageProcedures,
+          schemaAttrs,
+          undefined,
+          alternates,
+        ),
         status: 200,
       }
     }
@@ -244,6 +256,7 @@ export class BlogRenderService {
       pageName: product.name,
     }
 
+    const alternates = await this.postService.getHreflangAlternates(post.hreflangKey)
     return {
       html: this.buildHtml(
         post,
@@ -255,6 +268,7 @@ export class BlogRenderService {
         pageProcedures,
         schemaAttrs,
         override,
+        alternates,
       ),
       status: 200,
     }
@@ -403,6 +417,7 @@ ${posts.length ? `<div class="card-grid">${cards}</div>` : `<p>아직 발행된 
     pageProcedures: Array<{ id: string; name: string }> = [],
     schemaAttrs: BlogSchemaAttrs = { category: {}, detailPage: {}, clinic: null },
     override?: DetailRenderOverride,
+    alternates: Array<{ lang: string; path: string }> = [],
   ): string {
     const site = this.site
     const desc = post.summaryText ?? post.subtitle ?? ""
@@ -418,6 +433,7 @@ ${posts.length ? `<div class="card-grid">${cards}</div>` : `<p>아직 발행된 
 <title>${esc(post.title)} | ${esc(site.hospitalName)}</title>
 <meta name="description" content="${esc(desc)}">
 <link rel="canonical" href="${canonical}">
+${this.buildHreflang(alternates)}
 <meta property="og:type" content="article">
 <meta property="og:title" content="${esc(post.title)}">
 <meta property="og:description" content="${esc(desc)}">
@@ -449,6 +465,23 @@ ${this.buildRelated(post, relatedTitles)}
 <footer class="blog-footer">© ${esc(site.hospitalName)}</footer>
 </body>
 </html>`
+  }
+
+  /**
+   * hreflang(대체 언어 링크) — 같은 hreflang_key로 묶인 언어판들을 서로 연결.
+   * 짝이 2개 미만이면 생성하지 않는다(단일 언어는 불필요). x-default는 한국어 우선, 없으면 첫 번째.
+   */
+  private buildHreflang(alternates: Array<{ lang: string; path: string }>): string {
+    if (!alternates || alternates.length < 2) return ""
+    const site = this.site
+    // 사이트 언어 코드 → BCP47 hreflang 값(중국어 간체/번체 구분)
+    const HL: Record<string, string> = { ko: "ko", en: "en", ja: "ja", th: "th", zh: "zh-Hans", tw: "zh-Hant" }
+    const links = alternates.map(
+      (a) => `<link rel="alternate" hreflang="${HL[a.lang] ?? a.lang}" href="${site.baseUrl}${a.path}">`,
+    )
+    const def = alternates.find((a) => a.lang === "ko") ?? alternates[0]
+    links.push(`<link rel="alternate" hreflang="x-default" href="${site.baseUrl}${def.path}">`)
+    return links.join("\n")
   }
 
   /**

@@ -244,6 +244,8 @@ export class BlogV2PostService {
     post.productPage =
       opts.productPage ??
       (Array.isArray(frontmatter.product_page) ? frontmatter.product_page.join(" | ") : frontmatter.product_page)
+    // 언어판 연결 키 — md가 source of truth(없으면 해제)
+    post.hreflangKey = frontmatter.hreflang_key?.trim() || undefined
     // CTA는 md가 source of truth — 재업로드 시 md 기준으로 갱신(product_page와 동일 정책). 없으면 해제.
     post.ctaLinks = await this.resolveCtaLinks(frontmatter.cta, warnings)
     // 가격 보기 소스도 md가 source of truth — price 있으면 그대로, 없으면 product_page로 폴백.
@@ -389,6 +391,7 @@ export class BlogV2PostService {
         ? frontmatter.internal_links.map((l) => ({ anchor: l.anchor, slug: l.slug }))
         : undefined,
       productPage: productPageValue,
+      hreflangKey: frontmatter.hreflang_key?.trim() || undefined,
       ctaLinks: await this.resolveCtaLinks(frontmatter.cta, warnings),
       priceRefs: await this.resolvePriceRefs(frontmatter.price, productPageValue, warnings),
       medicalAbout: this.parseMedicalAbout(frontmatter.about),
@@ -1133,6 +1136,40 @@ export class BlogV2PostService {
       [targetName],
     )
     return rows.length ? rows[0].id : null
+  }
+
+  /**
+   * hreflang_key로 묶인 발행 글들의 언어별 경로. 같은 키를 가진 글들을 서로의 언어판으로 본다.
+   * 블로그 = /{lang}/blog/{slug}, 상세페이지 = /{lang}/products/{id}. 언어당 1건(최신 발행).
+   */
+  async getHreflangAlternates(hreflangKey?: string | null): Promise<Array<{ lang: string; path: string }>> {
+    const key = (hreflangKey ?? "").trim()
+    if (!key) return []
+    const rows: Array<{
+      lang: string
+      slug: string
+      publish_target: string
+      product_page: string | null
+    }> = await this.postRepo.query(
+      `SELECT DISTINCT ON (lang) lang, slug, publish_target, product_page
+       FROM blog.posts
+       WHERE hreflang_key = $1 AND status = $2
+       ORDER BY lang, published_at DESC NULLS LAST, created_at DESC`,
+      [key, BlogPostStatus.PUBLISHED],
+    )
+    const out: Array<{ lang: string; path: string }> = []
+    for (const r of rows) {
+      if (r.publish_target === BlogPublishTarget.DETAIL_PAGE) {
+        const first = (r.product_page ?? "").split("|")[0].trim()
+        const pid = first
+          ? await this.resolveDetailCanonicalProductId(first, { productPage: r.product_page } as BlogPostV2)
+          : null
+        if (pid) out.push({ lang: r.lang, path: `/${r.lang}/products/${pid}` })
+      } else {
+        out.push({ lang: r.lang, path: `/${r.lang}/blog/${encodeURIComponent(r.slug)}` })
+      }
+    }
+    return out
   }
 
   /** 글에 적용할 공통 고지문구 type 목록 설정 (어드민 미리보기 체크박스). */

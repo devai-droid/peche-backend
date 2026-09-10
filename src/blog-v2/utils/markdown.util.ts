@@ -85,6 +85,8 @@ export interface BlogPostFrontmatter {
   // [시술 중심 의원] 상세페이지 — 글 노출 위치 (콤마로 여러 개, 사이트 실제 상세페이지명과 일치).
   // 이름에 콤마가 든 상세페이지는 '|'로 구분(또는 YAML 리스트). 파싱 시 '|'로 정규화.
   product_page?: string | string[]
+  // 언어판 연결 키 — 같은 값을 넣은 다른 언어 글들과 hreflang로 연결. 짝이 되는 모든 언어판에 같은 값을 넣는다.
+  hreflang_key?: string
   // CTA 버튼 링크(최대 2개) — product_page와 별개. 항목별로 page/category/event 중 하나 + text.
   //   page: 상세페이지명 → /products/{id}, category: 상시 대분류명 → /products?category={id}, event: 이벤트 대분류명 → /events?category={id}
   cta?: Array<{ page?: string; category?: string; event?: string; text?: string }>

@@ -121,6 +121,10 @@ export class BlogPostV2 extends TimeStampEntity {
   @Column({ name: "product_page", length: 200, nullable: true })
   productPage?: string
 
+  @ApiProperty({ required: false, description: "언어판 연결 키 — 같은 값을 가진 글들을 서로의 언어판으로 보고 hreflang로 연결" })
+  @Column({ name: "hreflang_key", length: 255, nullable: true })
+  hreflangKey?: string
+
   @ApiProperty({
     required: false,
     type: [String],
