@@ -9,7 +9,7 @@ import { BlogKeyword } from "@root/blog-v2/entities/keyword.entity"
 import { BlogSlugService } from "@root/blog-v2/services/slug.service"
 import { BlogSummaryService } from "@root/blog-v2/services/summary.service"
 import { BlogImageUploadService } from "@root/blog-v2/services/blog-image-upload.service"
-import { BlogPostLang, BlogPostStatus, BlogPublishTarget } from "@root/blog-v2/enum/blog-v2.enum"
+import { BlogPostLang, BlogPostStatus, BlogPublishTarget, blogLangToUrlSeg } from "@root/blog-v2/enum/blog-v2.enum"
 import {
   extractSummaryFromBody,
   parseBlogMarkdown,
@@ -1164,9 +1164,9 @@ export class BlogV2PostService {
         const pid = first
           ? await this.resolveDetailCanonicalProductId(first, { productPage: r.product_page } as BlogPostV2)
           : null
-        if (pid) out.push({ lang: r.lang, path: `/${r.lang}/products/${pid}` })
+        if (pid) out.push({ lang: r.lang, path: `/${blogLangToUrlSeg(r.lang)}/products/${pid}` })
       } else {
-        out.push({ lang: r.lang, path: `/${r.lang}/blog/${encodeURIComponent(r.slug)}` })
+        out.push({ lang: r.lang, path: `/${blogLangToUrlSeg(r.lang)}/blog/${encodeURIComponent(r.slug)}` })
       }
     }
     return out
@@ -1200,7 +1200,7 @@ export class BlogV2PostService {
       const pid = first
         ? await this.resolveDetailCanonicalProductId(first, { productPage: r.product_page } as BlogPostV2)
         : null
-      if (pid) out.push({ lang: r.lang, path: `/${r.lang}/products/${pid}` })
+      if (pid) out.push({ lang: r.lang, path: `/${blogLangToUrlSeg(r.lang)}/products/${pid}` })
     }
     return out
   }
@@ -1236,7 +1236,7 @@ export class BlogV2PostService {
   private pingIndexNow(post: BlogPostV2): void {
     const key = PECHE_SITE.indexNowKey
     if (!key) return
-    const url = `${PECHE_SITE.baseUrl}/${post.lang}/blog/${encodeURIComponent(post.slug)}`
+    const url = `${PECHE_SITE.baseUrl}/${blogLangToUrlSeg(post.lang)}/blog/${encodeURIComponent(post.slug)}`
     fetch(`https://api.indexnow.org/IndexNow?url=${encodeURIComponent(url)}&key=${key}`)
       .then((r) => this.logger.log(`IndexNow ping(${r.status}): ${url}`))
       .catch((e) => this.logger.warn(`IndexNow 실패: ${(e as Error).message}`))

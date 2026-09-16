@@ -3,6 +3,7 @@ import { Request, Response } from "express"
 import { ApiExcludeController } from "@nestjs/swagger"
 import { BlogRenderService } from "@root/blog-v2/services/blog-render.service"
 import { BotAnalyticsService } from "@root/blog-v2/services/bot-analytics.service"
+import { blogLangFromUrlSeg } from "@root/blog-v2/enum/blog-v2.enum"
 
 /**
  * 공개 블로그 페이지 SSR.
@@ -67,7 +68,7 @@ export class BlogPublicController {
 
   @Get(":lang/blog")
   async renderList(@Param("lang") lang: string, @Req() req: Request, @Res() res: Response) {
-    const { html, status } = await this.renderService.renderListPage(lang)
+    const { html, status } = await this.renderService.renderListPage(blogLangFromUrlSeg(lang))
     this.setCsp(res)
     this.handleBotRequest(req, res, `/${lang}/blog`, lang)
     res.status(status).type("html").send(html)
@@ -92,7 +93,7 @@ export class BlogPublicController {
     @Req() req: Request,
     @Res() res: Response,
   ) {
-    const { html, status, redirectTo } = await this.renderService.renderPostPage(slug, lang)
+    const { html, status, redirectTo } = await this.renderService.renderPostPage(slug, blogLangFromUrlSeg(lang))
     // 상세페이지 글이 블로그 주소로 들어오면 상품 주소로 영구 이전(중복 주소 정리)
     if (redirectTo) {
       res.redirect(301, redirectTo)
@@ -111,7 +112,7 @@ export class BlogPublicController {
     @Req() req: Request,
     @Res() res: Response,
   ) {
-    const { html, status } = await this.renderService.renderDetailPage(id, lang)
+    const { html, status } = await this.renderService.renderDetailPage(id, blogLangFromUrlSeg(lang))
     this.setCsp(res)
     this.handleBotRequest(req, res, `/${lang}/products/${id}`, lang)
     res.status(status).type("html").send(html)

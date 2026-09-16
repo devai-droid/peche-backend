@@ -6,7 +6,7 @@ import { BlogSiteConfig } from "@root/blog-v2/entities/site-config.entity"
 import { BlogPostV2 } from "@root/blog-v2/entities/post.entity"
 import { BlogDoctor } from "@root/blog-v2/entities/doctor.entity"
 import { PECHE_SITE, SiteConfig } from "@root/blog-v2/sites/peche.config"
-import { BlogPublishTarget } from "@root/blog-v2/enum/blog-v2.enum"
+import { BlogPublishTarget, blogLangToUrlSeg } from "@root/blog-v2/enum/blog-v2.enum"
 
 /** 빵부스러기(Breadcrumb)용 대분류·상세페이지 노드 */
 type BlogBreadcrumb = {
@@ -165,7 +165,8 @@ export class BlogRenderService {
       if (post.publishTarget === BlogPublishTarget.DETAIL_PAGE) {
         const first = (post.productPage ?? "").split("|")[0].trim()
         const pid = first ? await this.postService.resolveDetailCanonicalProductId(first, post) : null
-        if (pid) return { html: "", status: 301, redirectTo: `${this.site.baseUrl}/${lang}/products/${pid}` }
+        if (pid)
+          return { html: "", status: 301, redirectTo: `${this.site.baseUrl}/${blogLangToUrlSeg(lang)}/products/${pid}` }
         return { html: this.render404(), status: 404 } // 상품을 못 찾으면 블로그로 노출하지 않음
       }
       const priceGroups = await this.postService.getBlogPriceData(post.priceRefs, post.productPage, post.lang)
@@ -221,8 +222,9 @@ export class BlogRenderService {
     if (!post) return { html: this.render404(), status: 404 }
 
     const site = this.site
+    const uLang = blogLangToUrlSeg(lang) // URL 세그먼트용(zh-TW→tw)
     const canonicalId = (await this.postService.resolveDetailCanonicalProductId(product.name, post)) ?? productId
-    const canonical = `${site.baseUrl}/${lang}/products/${canonicalId}`
+    const canonical = `${site.baseUrl}/${uLang}/products/${canonicalId}`
 
     const priceGroups = await this.postService.getBlogPriceData(post.priceRefs, post.productPage, post.lang)
     const relatedSlugs = this.extractRelatedLinks(post.bodyHtml ?? "").map((l) => l.slug)
@@ -239,18 +241,18 @@ export class BlogRenderService {
     )
 
     const trail: Array<{ name: string; item: string }> = [
-      { name: "Home", item: `${site.baseUrl}/${lang}` },
-      { name: "Products", item: `${site.baseUrl}/${lang}/products` },
+      { name: "Home", item: `${site.baseUrl}/${uLang}` },
+      { name: "Products", item: `${site.baseUrl}/${uLang}/products` },
     ]
     if (breadcrumb.category) {
       trail.push({
         name: breadcrumb.category.name,
-        item: `${site.baseUrl}/${lang}/products?category=${encodeURIComponent(breadcrumb.category.id)}`,
+        item: `${site.baseUrl}/${uLang}/products?category=${encodeURIComponent(breadcrumb.category.id)}`,
       })
     }
     const override: DetailRenderOverride = {
       canonical,
-      headerHref: `${site.baseUrl}/${lang}/products`,
+      headerHref: `${site.baseUrl}/${uLang}/products`,
       headerLabel: cfg?.hospitalName || site.hospitalName,
       breadcrumbTrail: trail,
       pageName: product.name,
@@ -307,7 +309,7 @@ export class BlogRenderService {
     const { items } = await this.postService.findMany({ status: "published" as never, page: 1, limit: 1000 })
     const urls = items
       .map((p) => {
-        const loc = `${this.site.baseUrl}/${p.lang}/blog/${encodeURIComponent(p.slug)}`
+        const loc = `${this.site.baseUrl}/${blogLangToUrlSeg(p.lang)}/blog/${encodeURIComponent(p.slug)}`
         const lastmod = new Date((p.updatedAt as unknown as Date) ?? p.publishedAt ?? new Date()).toISOString()
         return `  <url><loc>${loc}</loc><lastmod>${lastmod}</lastmod></url>`
       })
@@ -341,7 +343,7 @@ Sitemap: ${this.site.baseUrl}/sitemap.xml`
     const { items } = await this.postService.findMany({ status: "published" as never, page: 1, limit: 50 })
     const entries = items
       .map((p) => {
-        const link = `${this.site.baseUrl}/${p.lang}/blog/${encodeURIComponent(p.slug)}`
+        const link = `${this.site.baseUrl}/${blogLangToUrlSeg(p.lang)}/blog/${encodeURIComponent(p.slug)}`
         const pub = new Date(p.publishedAt ?? new Date()).toUTCString()
         return `  <item>
     <title>${esc(p.title)}</title>
@@ -363,10 +365,11 @@ ${entries}
 
   private buildListHtml(posts: BlogPostV2[], lang: string): string {
     const site = this.site
+    const uLang = blogLangToUrlSeg(lang) // URL 세그먼트용(zh-TW→tw)
     const cards = posts
       .map((p) => {
-        const url = `${site.baseUrl}/${lang}/blog/${encodeURIComponent(p.slug)}`
-        return `<a class="blog-card" href="/${lang}/blog/${encodeURIComponent(p.slug)}">
+        const url = `${site.baseUrl}/${uLang}/blog/${encodeURIComponent(p.slug)}`
+        return `<a class="blog-card" href="/${uLang}/blog/${encodeURIComponent(p.slug)}">
 ${p.thumbnailUrl ? `<div class="card-thumb"><img src="${esc(p.thumbnailUrl)}" alt="${esc(p.title)}"></div>` : `<div class="card-thumb card-thumb-empty"></div>`}
 <div class="card-body">
 ${p.mainKeyword ? `<span class="card-tag">${esc(p.mainKeyword)}</span>` : ""}
@@ -398,7 +401,7 @@ ${p.summaryText ? `<p class="card-desc">${esc(p.summaryText.slice(0, 90))}…</p
 </style>
 </head>
 <body>
-<header class="blog-header"><a href="/${lang}/blog">${esc(site.hospitalName)} 블로그</a></header>
+<header class="blog-header"><a href="/${uLang}/blog">${esc(site.hospitalName)} 블로그</a></header>
 <main class="blog-list">
 <h1>블로그</h1>
 ${posts.length ? `<div class="card-grid">${cards}</div>` : `<p>아직 발행된 글이 없습니다.</p>`}
@@ -421,9 +424,10 @@ ${posts.length ? `<div class="card-grid">${cards}</div>` : `<p>아직 발행된 
     alternates: Array<{ lang: string; path: string }> = [],
   ): string {
     const site = this.site
+    const uLang = blogLangToUrlSeg(post.lang) // URL 세그먼트용(zh-TW→tw)
     const desc = post.summaryText ?? post.subtitle ?? ""
-    const canonical = override?.canonical ?? `${site.baseUrl}/${post.lang}/blog/${encodeURIComponent(post.slug)}`
-    const headerHref = override?.headerHref ?? `${site.baseUrl}/${post.lang}/blog`
+    const canonical = override?.canonical ?? `${site.baseUrl}/${uLang}/blog/${encodeURIComponent(post.slug)}`
+    const headerHref = override?.headerHref ?? `${site.baseUrl}/${uLang}/blog`
     const headerLabel = override?.headerLabel ?? `${site.hospitalName} 블로그`
 
     return `<!DOCTYPE html>
@@ -616,7 +620,7 @@ ${assoc}
       .map((l) => {
         const title = relatedTitles[l.slug]
         return title
-          ? `<li><a href="/${post.lang}/blog/${encodeURIComponent(l.slug)}">${esc(title)}</a></li>`
+          ? `<li><a href="/${blogLangToUrlSeg(post.lang)}/blog/${encodeURIComponent(l.slug)}">${esc(title)}</a></li>`
           : `<li><span>${esc(l.anchor)}</span></li>`
       })
       .join("")
@@ -680,12 +684,13 @@ ${assoc}
             : plain([...g.events, ...g.products])
         if (!inner) return ""
         // 더보기 링크: page=상세페이지, category=상품 대분류, event=이벤트 대분류
+        const uLang = blogLangToUrlSeg(lang)
         const moreHref =
           g.linkType === "category"
-            ? `/${esc(lang)}/products?category=${esc(g.linkId)}`
+            ? `/${esc(uLang)}/products?category=${esc(g.linkId)}`
             : g.linkType === "event"
-              ? `/${esc(lang)}/events?category=${esc(g.linkId)}`
-              : `/${esc(lang)}/products/${esc(g.linkId)}`
+              ? `/${esc(uLang)}/events?category=${esc(g.linkId)}`
+              : `/${esc(uLang)}/products/${esc(g.linkId)}`
         return `<section class="ps-group"><h2>${esc(g.detailPageName)} 가격</h2>${inner}<a class="ps-more" href="${moreHref}">가격 더보기</a></section>`
       })
       .filter(Boolean)
@@ -705,6 +710,7 @@ ${assoc}
     override?: DetailRenderOverride,
   ): string {
     const site = this.site
+    const uLang = blogLangToUrlSeg(post.lang) // URL 세그먼트용(zh-TW→tw)
     const graph: Record<string, unknown>[] = []
     const isoDate = (d?: Date) => (d ? new Date(d).toISOString() : undefined)
     // 병원은 한 번만 정의(@id) → publisher·provider·감수의사 소속 등은 이 id를 참조(중복 MedicalClinic 방지)
@@ -785,13 +791,13 @@ ${assoc}
     if (breadcrumb.category) {
       addAbout(
         breadcrumb.category.name,
-        `${site.baseUrl}/${post.lang}/products?category=${breadcrumb.category.id}`,
+        `${site.baseUrl}/${uLang}/products?category=${breadcrumb.category.id}`,
         schemaAttrs.category[breadcrumb.category.name],
       )
     }
     // 2) product_page 개별 시술
     for (const p of pageProcedures) {
-      addAbout(p.name, `${site.baseUrl}/${post.lang}/products/${p.id}`, schemaAttrs.detailPage[p.name])
+      addAbout(p.name, `${site.baseUrl}/${uLang}/products/${p.id}`, schemaAttrs.detailPage[p.name])
     }
     // 3) 마케터 about — 개요글의 넓은 개념 추가 / 특정 글에서 속성 덮어쓰기
     for (const a of marketerAbout) {
@@ -923,20 +929,20 @@ ${assoc}
       crumbs = [...override.breadcrumbTrail, { name: override.pageName, item: canonical }]
     } else {
       crumbs = [
-        { name: "Home", item: `${site.baseUrl}/${post.lang}` },
-        { name: "Blog", item: `${site.baseUrl}/${post.lang}/blog` },
+        { name: "Home", item: `${site.baseUrl}/${uLang}` },
+        { name: "Blog", item: `${site.baseUrl}/${uLang}/blog` },
       ]
       if (breadcrumb.category) {
         crumbs.push({
           name: breadcrumb.category.name,
-          item: `${site.baseUrl}/${post.lang}/blog?cat=${encodeURIComponent(breadcrumb.category.id)}`,
+          item: `${site.baseUrl}/${uLang}/blog?cat=${encodeURIComponent(breadcrumb.category.id)}`,
         })
       }
       if (breadcrumb.detailPage) {
         const catPart = breadcrumb.category ? `cat=${encodeURIComponent(breadcrumb.category.id)}&` : ""
         crumbs.push({
           name: breadcrumb.detailPage.name,
-          item: `${site.baseUrl}/${post.lang}/blog?${catPart}chip=${encodeURIComponent(breadcrumb.detailPage.id)}`,
+          item: `${site.baseUrl}/${uLang}/blog?${catPart}chip=${encodeURIComponent(breadcrumb.detailPage.id)}`,
         })
       }
       crumbs.push({ name: post.title, item: canonical })
