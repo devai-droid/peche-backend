@@ -144,6 +144,12 @@ export class BlogV2PostController {
     if (!post || post.status !== BlogPostStatus.PUBLISHED) {
       throw new NotFoundException(`발행된 글을 찾을 수 없습니다: ${slug}`)
     }
+    // 상세페이지 글이 블로그 주소로 열리면, 프론트가 상품 주소로 보내도록 대상 상품 id를 함께 준다(중복 주소 방지).
+    if (post.publishTarget === BlogPublishTarget.DETAIL_PAGE) {
+      const first = (post.productPage ?? "").split("|")[0].trim()
+      const canonicalProductId = first ? await this.service.resolveDetailCanonicalProductId(first, post) : null
+      return { ...post, canonicalProductId: canonicalProductId ?? undefined }
+    }
     return post
   }
 
