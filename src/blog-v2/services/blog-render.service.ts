@@ -476,7 +476,7 @@ ${this.buildRelated(post, relatedTitles)}
     if (!alternates || alternates.length < 2) return ""
     const site = this.site
     // 사이트 언어 코드 → BCP47 hreflang 값(중국어 간체/번체 구분)
-    const HL: Record<string, string> = { ko: "ko", en: "en", ja: "ja", th: "th", zh: "zh-Hans", tw: "zh-Hant" }
+    const HL: Record<string, string> = { ko: "ko", en: "en", ja: "ja", th: "th", zh: "zh-Hans", "zh-TW": "zh-Hant" }
     const links = alternates.map(
       (a) => `<link rel="alternate" hreflang="${HL[a.lang] ?? a.lang}" href="${site.baseUrl}${a.path}">`,
     )
