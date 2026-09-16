@@ -224,7 +224,10 @@ export class BlogRenderService {
    * - canonical: 대표(원본) 상품을 가리켜 제모 공통 사본의 중복 콘텐츠를 방지
    * - 원고가 없는 상품은 404 → CloudFront가 SPA(index.html)로 폴백(원고 올리기 전 현재 동작 유지)
    */
-  async renderDetailPage(productId: string, lang: string): Promise<{ html: string; status: number }> {
+  async renderDetailPage(
+    productId: string,
+    lang: string,
+  ): Promise<{ html: string; status: number; slug?: string }> {
     const product = await this.postService.getDetailPageProductById(productId)
     if (!product) return { html: this.render404(), status: 404 }
 
@@ -284,6 +287,7 @@ export class BlogRenderService {
         alternates,
       ),
       status: 200,
+      slug: post.slug, // 봇 노출 통계에서 상세페이지도 글 단위로 구분되게
     }
   }
 

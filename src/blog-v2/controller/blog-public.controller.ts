@@ -112,9 +112,9 @@ export class BlogPublicController {
     @Req() req: Request,
     @Res() res: Response,
   ) {
-    const { html, status } = await this.renderService.renderDetailPage(id, blogLangFromUrlSeg(lang))
+    const { html, status, slug } = await this.renderService.renderDetailPage(id, blogLangFromUrlSeg(lang))
     this.setCsp(res)
-    this.handleBotRequest(req, res, `/${lang}/products/${id}`, lang)
+    this.handleBotRequest(req, res, `/${lang}/products/${id}`, lang, slug)
     res.status(status).type("html").send(html)
   }
 
