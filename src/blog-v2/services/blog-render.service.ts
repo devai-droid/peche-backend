@@ -49,6 +49,16 @@ const REF_LABEL: Record<string, string> = {
   th: "เอกสารอ้างอิงและแหล่งที่มา",
 }
 
+// 관련 글 섹션 제목 (언어별)
+const RELATED_LABEL: Record<string, string> = {
+  ko: "관련 글",
+  en: "Related Articles",
+  zh: "相关文章",
+  "zh-TW": "相關文章",
+  ja: "関連記事",
+  th: "บทความที่เกี่ยวข้อง",
+}
+
 const TYPOGRAPHY_CSS = `
   *{box-sizing:border-box}
   body{margin:0;font-family:-apple-system,'Apple SD Gothic Neo','Pretendard',sans-serif;color:#2b2b2b;line-height:1.8;background:#fff}
@@ -624,7 +634,7 @@ ${assoc}
           : `<li><span>${esc(l.anchor)}</span></li>`
       })
       .join("")
-    return `<aside class="blog-related"><h2>관련 글</h2><ul>${lis}</ul></aside>`
+    return `<aside class="blog-related"><h2>${RELATED_LABEL[post.lang] ?? RELATED_LABEL.ko}</h2><ul>${lis}</ul></aside>`
   }
 
   /** CTA 버튼 — 글별 ctaLinks(최대 2개) 우선, 없으면 사이트 공통 CTA */
