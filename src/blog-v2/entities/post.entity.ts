@@ -43,7 +43,7 @@ export class BlogPostV2 extends TimeStampEntity {
   bodyHtml?: string
 
   @ApiProperty({ required: false })
-  @Column({ name: "thumbnail_url", length: 500, nullable: true })
+  @Column({ name: "thumbnail_url", length: 1000, nullable: true })
   thumbnailUrl?: string
 
   @ApiProperty()

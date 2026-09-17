@@ -65,7 +65,11 @@ export class BlogImageUploadService {
 
   /** S3 업로드. 업로드 전 이미지 최적화(리사이즈+WebP). 로컬 환경 S3 실패 시 디스크 fallback. */
   private async uploadOne(f: Express.Multer.File, name: string): Promise<string> {
-    const opt = await this.optimizeImage(f)
+    // multer가 latin1로 깨뜨린 파일명(모지바케)을 정상 UTF-8 basename으로 되돌려 S3 키·URL에 사용한다.
+    // 깨진 이름을 그대로 인코딩하면 주소가 이중 인코딩돼 일본어 등은 글자당 18자로 폭증 → thumbnail_url(길이 제한) 초과로 저장 실패.
+    const cleanBasename = (name.split("/").pop() ?? name).normalize("NFC")
+    const src = f.originalname === cleanBasename ? f : { ...f, originalname: cleanBasename }
+    const opt = await this.optimizeImage(src)
     try {
       return (await this.uploadService.uploadImage(opt)).url
     } catch (err) {

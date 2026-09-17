@@ -199,6 +199,7 @@ export class BlogV2PostService {
 
     // 폴더 업로드인데 경로가 안 맞아 못 올라간(상대경로로 남은) 로컬 이미지가 있으면 차단
     if (urlMap) this.assertImagesResolved(bodyMd, thumbnailUrl, frontmatter.thumbnail)
+    this.assertThumbnailUrlLength(thumbnailUrl)
 
     const summaryText =
       frontmatter.summary ?? frontmatter.meta_description ?? extractSummaryFromBody(bodyMd) ?? undefined
@@ -297,6 +298,18 @@ export class BlogV2PostService {
     }
   }
 
+  // 썸네일 주소 저장 칸 상한(varchar). 파일명이 지나치게 길면 주소가 이 한계를 넘어 저장 시 무의미한 500이 난다.
+  private static readonly THUMBNAIL_URL_MAX = 1000
+
+  /** 썸네일 주소가 DB 칸(varchar)을 넘치면 저장 전에 막고 명확히 안내(500 대신 400). */
+  private assertThumbnailUrlLength(thumbnailUrl: string | undefined): void {
+    if (thumbnailUrl && thumbnailUrl.length > BlogV2PostService.THUMBNAIL_URL_MAX) {
+      throw new BadRequestException(
+        "썸네일 이미지 파일명이 너무 깁니다. 썸네일 파일명을 짧게 바꿔 다시 올려주세요.",
+      )
+    }
+  }
+
   /**
    * 마크다운 → frontmatter 매핑(이름→ID) + 자동 hook(slug/summary) → 초안 저장.
    * 매핑 실패는 발행 막지 않고 warnings로 반환 (graceful).
@@ -344,6 +357,7 @@ export class BlogV2PostService {
 
     // 폴더 업로드인데 경로가 안 맞아 못 올라간(상대경로로 남은) 로컬 이미지가 있으면 차단
     if (urlMap) this.assertImagesResolved(bodyMd, thumbnailUrl, frontmatter.thumbnail)
+    this.assertThumbnailUrlLength(thumbnailUrl)
 
     // 핵심 요약: frontmatter 우선 → 본문 ## 💡 핵심 요약 → (없으면 LLM fallback)
     const summaryText =
