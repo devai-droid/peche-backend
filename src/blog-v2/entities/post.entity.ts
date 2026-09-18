@@ -118,7 +118,7 @@ export class BlogPostV2 extends TimeStampEntity {
   internalLinks?: Array<{ anchor: string; slug: string }>
 
   @ApiProperty({ required: false, description: "CTA 대상 상세페이지명 — 프론트가 이름으로 product_detail_page 매칭 (없으면 product_category로 fallback)" })
-  @Column({ name: "product_page", length: 200, nullable: true })
+  @Column({ name: "product_page", length: 1000, nullable: true })
   productPage?: string
 
   @ApiProperty({ required: false, description: "언어판 연결 키 — 같은 값을 가진 글들을 서로의 언어판으로 보고 hreflang로 연결" })

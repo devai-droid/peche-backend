@@ -268,6 +268,7 @@ export class BlogV2PostService {
       if (generated) post.summaryText = generated
     }
 
+    this.assertPostFieldLengths(post)
     const saved = await this.postRepo.save(post)
 
     return { id: saved.id, slug: saved.slug, status: saved.status, warnings }
@@ -307,6 +308,28 @@ export class BlogV2PostService {
       throw new BadRequestException(
         "썸네일 이미지 파일명이 너무 깁니다. 썸네일 파일명을 짧게 바꿔 다시 올려주세요.",
       )
+    }
+  }
+
+  // 저장 직전 varchar 컬럼 길이 검증 — 한도를 넘으면 DB에서 무의미한 500이 나므로, 어떤 필드가 문제인지 명확히 안내(400).
+  // [필드명(사람이 읽는 이름), 값, 한도(엔티티 컬럼 length와 일치), 넘쳤을 때 안내]
+  private assertPostFieldLengths(post: BlogPostV2): void {
+    const checks: Array<[string, string | undefined, number, string]> = [
+      ["제목(title)", post.title, 500, "제목이 너무 깁니다 — 줄여주세요."],
+      ["부제(subtitle)", post.subtitle, 500, "부제가 너무 깁니다 — 줄여주세요."],
+      ["주소(slug)", post.slug, 255, "주소(slug)가 너무 깁니다 — 줄여주세요."],
+      ["대표키워드(title_keyword)", post.mainKeyword, 100, "대표 키워드가 너무 깁니다 — 줄여주세요."],
+      ["주제키워드(topic_keyword)", post.topicKeyword, 100, "주제 키워드가 너무 깁니다 — 줄여주세요."],
+      [
+        "연결 상세페이지(product_page)",
+        post.productPage,
+        1000,
+        "연결한 상세페이지 목록이 너무 깁니다 — 상세페이지 개수를 줄여주세요.",
+      ],
+      ["언어판 연결키(hreflang_key)", post.hreflangKey, 255, "hreflang_key가 너무 깁니다 — 줄여주세요."],
+    ]
+    for (const [, value, max, message] of checks) {
+      if (value && value.length > max) throw new BadRequestException(message)
     }
   }
 
@@ -450,6 +473,7 @@ export class BlogV2PostService {
       )
     }
 
+    this.assertPostFieldLengths(post)
     const saved = await this.postRepo.save(post)
 
     // 발행된 글 수정 시 검색엔진 재색인 요청(GEO/AEO 최신화). 초안은 발행 시 핑.
