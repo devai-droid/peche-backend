@@ -4,6 +4,12 @@ import { ApiProperty } from "@nestjs/swagger"
 import { FileObject } from "@root/file/entities/file-object.entity"
 import { MainPopupStatus } from "@root/shared/enum/system"
 
+/** 휴무·안내 팝업의 가운데 항목 1건 (날짜 등 제목 + 시간/휴무 설명). */
+export interface PopupNoticeItem {
+  title: string
+  subtitle: string
+}
+
 @Entity()
 export class MainPopup extends TimeStampEntity {
   @ApiProperty()
@@ -47,6 +53,13 @@ export class MainPopup extends TimeStampEntity {
   @ManyToOne(() => FileObject, { nullable: true, eager: true })
   @JoinColumn()
   imageTH?: FileObject
+
+  @ApiProperty({
+    required: false,
+    description: "휴무·안내 팝업 항목(있으면 이미지 대신 'Information' 안내 팝업으로 표시)",
+  })
+  @Column({ name: "notice_items", type: "jsonb", nullable: true })
+  noticeItems?: PopupNoticeItem[]
 
   @ApiProperty()
   @Column({ nullable: true })

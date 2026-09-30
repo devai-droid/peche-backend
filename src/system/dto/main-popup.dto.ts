@@ -1,8 +1,14 @@
 import { MainPopupStatus } from "@root/shared/enum/system"
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger"
-import { IsEnum, IsOptional, IsUUID } from "class-validator"
+import { IsArray, IsEnum, IsOptional, IsString, IsUUID, ValidateNested } from "class-validator"
+import { Type } from "class-transformer"
 import { Paginated } from "@root/shared/dto/base-list.ro"
-import { MainPopup } from "@root/system/entities/main-popup.entity"
+import { MainPopup, PopupNoticeItem } from "@root/system/entities/main-popup.entity"
+
+export class PopupNoticeItemDto implements PopupNoticeItem {
+  @ApiProperty() @IsString() title: string
+  @ApiProperty() @IsString() subtitle: string
+}
 
 export interface MainPopupDto {
   status?: MainPopupStatus
@@ -13,6 +19,7 @@ export interface MainPopupDto {
   imageZHTWId?: string
   imageJAId?: string
   imageTHId?: string
+  noticeItems?: PopupNoticeItem[]
   order?: number
   startDate?: Date | null
   endDate?: Date | null
@@ -30,6 +37,12 @@ export class CreateMainPopupDto implements MainPopupDto {
   @ApiPropertyOptional() @IsOptional() @IsUUID() readonly imageZHTWId?: string
   @ApiPropertyOptional() @IsOptional() @IsUUID() readonly imageJAId?: string
   @ApiPropertyOptional() @IsOptional() @IsUUID() readonly imageTHId?: string
+  @ApiPropertyOptional({ type: PopupNoticeItemDto, isArray: true })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PopupNoticeItemDto)
+  readonly noticeItems?: PopupNoticeItemDto[]
   @ApiPropertyOptional() @IsOptional() readonly order?: number
   @ApiPropertyOptional() @IsOptional() readonly startDate?: Date | null
   @ApiPropertyOptional() @IsOptional() readonly endDate?: Date | null
@@ -47,6 +60,12 @@ export class UpdateMainPopupDto implements MainPopupDto {
   @ApiPropertyOptional() @IsOptional() @IsUUID() readonly imageZHTWId?: string
   @ApiPropertyOptional() @IsOptional() @IsUUID() readonly imageJAId?: string
   @ApiPropertyOptional() @IsOptional() @IsUUID() readonly imageTHId?: string
+  @ApiPropertyOptional({ type: PopupNoticeItemDto, isArray: true })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PopupNoticeItemDto)
+  readonly noticeItems?: PopupNoticeItemDto[]
   @ApiPropertyOptional() @IsOptional() readonly order?: number
   @ApiPropertyOptional() @IsOptional() readonly startDate?: Date | null
   @ApiPropertyOptional() @IsOptional() readonly endDate?: Date | null
