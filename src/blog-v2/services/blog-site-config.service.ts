@@ -19,6 +19,13 @@ const LOCALIZABLE: (keyof BlogSiteConfigI18n)[] = [
   "sameAs",
   "knowsAbout",
   "certifications",
+  "weekdayHours",
+  "weekendHours",
+  "lunchInfo",
+  "representativeName",
+  "displayAddress",
+  "landmark",
+  "socialLinks",
 ]
 
 @Injectable()

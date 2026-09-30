@@ -1,6 +1,7 @@
 import { Column, Entity, PrimaryColumn } from "typeorm"
 import { ApiProperty } from "@nestjs/swagger"
 import { TimeStampEntity } from "@root/shared/entity/time-stamp.entity"
+import { SiteSocialLink } from "@root/blog-v2/entities/site-config.entity"
 
 /**
  * 사이트 공통 정보의 언어별 표시값 오버라이드.
@@ -56,4 +57,32 @@ export class BlogSiteConfigI18n extends TimeStampEntity {
   @ApiProperty({ required: false, type: [String] })
   @Column({ name: "certifications", type: "text", array: true, nullable: true })
   certifications?: string[]
+
+  @ApiProperty({ required: false, description: "진료시간 - 평일" })
+  @Column({ name: "weekday_hours", length: 200, nullable: true })
+  weekdayHours?: string
+
+  @ApiProperty({ required: false, description: "진료시간 - 주말·공휴일" })
+  @Column({ name: "weekend_hours", length: 200, nullable: true })
+  weekendHours?: string
+
+  @ApiProperty({ required: false, description: "진료시간 - 점심/안내 문구" })
+  @Column({ name: "lunch_info", length: 300, nullable: true })
+  lunchInfo?: string
+
+  @ApiProperty({ required: false, description: "대표자명 (언어별 표기)" })
+  @Column({ name: "representative_name", length: 100, nullable: true })
+  representativeName?: string
+
+  @ApiProperty({ required: false, description: "표시용 주소 (언어별, 줄바꿈 허용)" })
+  @Column({ name: "display_address", type: "text", nullable: true })
+  displayAddress?: string
+
+  @ApiProperty({ required: false, description: "약도·교통 안내 (언어별)" })
+  @Column({ name: "landmark", length: 200, nullable: true })
+  landmark?: string
+
+  @ApiProperty({ required: false, description: "푸터·헤더 SNS 링크 목록 (언어별)" })
+  @Column({ name: "social_links", type: "jsonb", nullable: true })
+  socialLinks?: SiteSocialLink[]
 }
