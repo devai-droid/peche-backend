@@ -99,6 +99,7 @@ export class BlogV2PostController {
       ...query,
       status: BlogPostStatus.PUBLISHED,
       publishTarget: BlogPublishTarget.BLOG,
+      excludeRedirected: true,
     })
   }
 

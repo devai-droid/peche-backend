@@ -44,6 +44,10 @@ export class QueryBlogPostDto {
   @IsString()
   q?: string
 
+  @ApiProperty({ required: false, description: "영구 이전(redirect_to_slug) 글 제외 — 공개 목록·사이트맵·RSS용" })
+  @IsOptional()
+  excludeRedirected?: boolean
+
   @ApiProperty({ required: false, default: 1 })
   @IsOptional()
   @Type(() => Number)

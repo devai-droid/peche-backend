@@ -171,6 +171,14 @@ export class BlogRenderService {
   ): Promise<{ html: string; status: number; redirectTo?: string }> {
     const post = await this.postService.findBySlug(slug, lang)
     if (post) {
+      // 옛 글을 새 글로 영구 이전(301) — 블로그→블로그. 같은 언어의 /blog/{redirect_to_slug}로 보낸다.
+      if (post.redirectToSlug) {
+        return {
+          html: "",
+          status: 301,
+          redirectTo: `${this.site.baseUrl}/${blogLangToUrlSeg(lang)}/blog/${encodeURIComponent(post.redirectToSlug)}`,
+        }
+      }
       // 상세페이지 글은 블로그 주소로 열지 않는다. 상품 주소(/products/{id})로 영구 이전(301) → 한 콘텐츠 = 한 주소.
       if (post.publishTarget === BlogPublishTarget.DETAIL_PAGE) {
         const first = (post.productPage ?? "").split("|")[0].trim()
@@ -306,6 +314,7 @@ export class BlogRenderService {
     const { items } = await this.postService.findMany({
       lang: lang as never,
       status: "published" as never,
+      excludeRedirected: true,
       page: 1,
       limit: 500,
     })
@@ -320,7 +329,7 @@ export class BlogRenderService {
 
   /** sitemap.xml — 발행 글 전체 (언어 무관) */
   async renderSitemap(): Promise<string> {
-    const { items } = await this.postService.findMany({ status: "published" as never, page: 1, limit: 1000 })
+    const { items } = await this.postService.findMany({ status: "published" as never, excludeRedirected: true, page: 1, limit: 1000 })
     const urls = items
       .map((p) => {
         const loc = `${this.site.baseUrl}/${blogLangToUrlSeg(p.lang)}/blog/${encodeURIComponent(p.slug)}`
@@ -354,7 +363,7 @@ Sitemap: ${this.site.baseUrl}/sitemap.xml`
 
   /** rss.xml — 발행 글 피드 */
   async renderRss(): Promise<string> {
-    const { items } = await this.postService.findMany({ status: "published" as never, page: 1, limit: 50 })
+    const { items } = await this.postService.findMany({ status: "published" as never, excludeRedirected: true, page: 1, limit: 50 })
     const entries = items
       .map((p) => {
         const link = `${this.site.baseUrl}/${blogLangToUrlSeg(p.lang)}/blog/${encodeURIComponent(p.slug)}`

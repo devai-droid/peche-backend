@@ -1068,6 +1068,10 @@ export class BlogV2PostService {
     if (query.q) {
       qb.andWhere("(p.title ILIKE :q OR p.summary_text ILIKE :q OR p.body_md ILIKE :q)", { q: `%${query.q}%` })
     }
+    // 영구 이전(301)된 옛 글은 공개 목록·사이트맵·RSS에서 제외 (글 자체는 유지, 주소만 이동)
+    if (query.excludeRedirected) {
+      qb.andWhere("p.redirect_to_slug IS NULL")
+    }
 
     const [items, total] = await qb.skip((page - 1) * limit).take(limit).getManyAndCount()
     return { items, total, page, limit }

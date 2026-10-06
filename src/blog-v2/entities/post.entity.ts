@@ -127,6 +127,13 @@ export class BlogPostV2 extends TimeStampEntity {
 
   @ApiProperty({
     required: false,
+    description: "옛 글 영구 이전(301) 대상 slug. 값이 있으면 같은 언어의 /blog/{이 slug}로 301 + 목록·사이트맵 제외(글은 유지)",
+  })
+  @Column({ name: "redirect_to_slug", length: 255, nullable: true })
+  redirectToSlug?: string
+
+  @ApiProperty({
+    required: false,
     type: [String],
     description: "이 글에 적용할 추가 고지문구 type 목록 (ai_image_notice 등). 일반 면책은 항상 적용되어 미포함",
   })
