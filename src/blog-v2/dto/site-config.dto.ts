@@ -75,4 +75,14 @@ export class UpdateSiteConfigDto {
   @ValidateNested({ each: true })
   @Type(() => SiteSocialLinkDto)
   socialLinks?: SiteSocialLinkDto[]
+
+  @ApiProperty({ required: false, type: [SiteSocialLinkDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SiteSocialLinkDto)
+  commonSocialLinks?: SiteSocialLinkDto[]
+
+  @ApiProperty({ required: false }) @IsOptional() @IsString() primaryConsultPlatform?: string
+  @ApiProperty({ required: false }) @IsOptional() @IsString() primaryConsultUrl?: string
 }

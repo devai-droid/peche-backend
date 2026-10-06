@@ -117,7 +117,19 @@ export class BlogSiteConfig extends TimeStampEntity {
   @Column({ name: "landmark", length: 200, nullable: true })
   landmark?: string
 
-  @ApiProperty({ required: false, description: "푸터·헤더 SNS 링크 목록" })
+  @ApiProperty({ required: false, description: "푸터·헤더 SNS 링크 목록 (언어별)" })
   @Column({ name: "social_links", type: "jsonb", nullable: true })
   socialLinks?: SiteSocialLink[]
+
+  @ApiProperty({ required: false, description: "모든 언어 공통 노출 SNS 링크(같은 링크)" })
+  @Column({ name: "common_social_links", type: "jsonb", nullable: true })
+  commonSocialLinks?: SiteSocialLink[]
+
+  @ApiProperty({ required: false, description: "대표 상담 채널 플랫폼 (상담 버튼·모바일 탭바 목적지)" })
+  @Column({ name: "primary_consult_platform", length: 40, nullable: true })
+  primaryConsultPlatform?: string
+
+  @ApiProperty({ required: false, description: "대표 상담 채널 링크 (wechat 등 모달은 비움)" })
+  @Column({ name: "primary_consult_url", type: "text", nullable: true })
+  primaryConsultUrl?: string
 }

@@ -85,4 +85,12 @@ export class BlogSiteConfigI18n extends TimeStampEntity {
   @ApiProperty({ required: false, description: "푸터·헤더 SNS 링크 목록 (언어별)" })
   @Column({ name: "social_links", type: "jsonb", nullable: true })
   socialLinks?: SiteSocialLink[]
+
+  @ApiProperty({ required: false, description: "대표 상담 채널 플랫폼 (언어별)" })
+  @Column({ name: "primary_consult_platform", length: 40, nullable: true })
+  primaryConsultPlatform?: string
+
+  @ApiProperty({ required: false, description: "대표 상담 채널 링크 (언어별)" })
+  @Column({ name: "primary_consult_url", type: "text", nullable: true })
+  primaryConsultUrl?: string
 }

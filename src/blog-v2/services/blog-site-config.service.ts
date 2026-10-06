@@ -26,6 +26,8 @@ const LOCALIZABLE: (keyof BlogSiteConfigI18n)[] = [
   "displayAddress",
   "landmark",
   "socialLinks",
+  "primaryConsultPlatform",
+  "primaryConsultUrl",
 ]
 
 @Injectable()
