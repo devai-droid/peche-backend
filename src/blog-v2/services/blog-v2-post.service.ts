@@ -243,7 +243,7 @@ export class BlogV2PostService {
       : undefined
     // 상세페이지 업로드는 패널이 넘긴 product_page(opts.productPage)를 우선 저장 → md엔 product_page 불필요
     post.productPage =
-      opts.productPage ??
+      opts.productPage?.trim() ??
       (Array.isArray(frontmatter.product_page) ? frontmatter.product_page.join(" | ") : frontmatter.product_page)
     // 언어판 연결 키 — md가 source of truth(없으면 해제)
     post.hreflangKey = frontmatter.hreflang_key?.trim() || undefined
@@ -397,7 +397,7 @@ export class BlogV2PostService {
     // 상세페이지는 product_page도 패널에서 받음(opts.productPage) → md에 product_page 불필요.
     // 이 값이 상세페이지↔상품 연결·현황(✅)·SSR 매칭의 기준이므로 반드시 저장한다.
     const productPageValue =
-      opts.productPage ??
+      opts.productPage?.trim() ??
       (Array.isArray(frontmatter.product_page) ? frontmatter.product_page.join(" | ") : frontmatter.product_page)
     const post = this.postRepo.create({
       title: frontmatter.title,
@@ -1120,12 +1120,15 @@ export class BlogV2PostService {
 
   /** product_page 목록 중 하나라도 일치하는 발행 detail_page 글 */
   private queryDetailPost(names: string[], lang: string): Promise<BlogPostV2 | null> {
-    if (!names.length) return Promise.resolve(null)
+    // 저장값은 trim(e)로 공백을 떼고 비교하므로, 입력값도 trim 해서 맞춘다.
+    // (안 맞추면 "클라디에 R "처럼 끝에 공백이 섞인 값이 "클라디에 R"과 안 맞아 매칭 실패 → 중복 생성·본문 미노출)
+    const trimmed = names.map((n) => n.trim()).filter(Boolean)
+    if (!trimmed.length) return Promise.resolve(null)
     return this.postRepo
       .createQueryBuilder("p")
       .where(
         "EXISTS (SELECT 1 FROM unnest(string_to_array(p.product_page, '|')) AS e WHERE trim(e) IN (:...names))",
-        { names },
+        { names: trimmed },
       )
       .andWhere("p.lang = :lang", { lang })
       .andWhere("p.status = :status", { status: BlogPostStatus.PUBLISHED })
