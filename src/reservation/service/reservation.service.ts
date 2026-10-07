@@ -169,12 +169,35 @@ export class ReservationService {
         dto.status = ReservationStatus.WAITING
       }
     }
+    // 예약 이력 보존용 스냅샷(이름·가격·수량). 상품 재임포트·가격변경과 무관하게 남긴다.
+    if (!eventObjs && dto.eventIds && dto.eventIds.length > 0) {
+      eventObjs = await this.eventService.findManyByIds(dto.eventIds)
+    }
+    if (!productObjs && dto.productIds && dto.productIds.length > 0) {
+      productObjs = await this.productService.findManyByIds(dto.productIds)
+    }
+    const snapQty = (id: string) => Number(dto.quantities?.[id]) || 1
+    const snapPrice = (o: { price?: number; discountPrice?: number }) =>
+      Number(o?.discountPrice ?? o?.price ?? 0)
+    const productSnapshot = (productObjs ?? []).map((p) => ({
+      name: p.name,
+      price: snapPrice(p),
+      count: snapQty(p.id),
+    }))
+    const eventSnapshot = (eventObjs ?? []).map((e) => ({
+      name: e.category?.name ? `[${e.category.name}] ${e.name}` : e.name,
+      price: snapPrice(e),
+      count: snapQty(e.id),
+    }))
+
     const reservation = await this.repository.save(
       Object.assign(dto, {
         user: user,
         building: building,
         palettePlanId: planId?.id,
         paletteScheduleId: scheduleId,
+        productSnapshot,
+        eventSnapshot,
       }),
     )
     if (dto.eventIds && dto.eventIds.length > 0) {

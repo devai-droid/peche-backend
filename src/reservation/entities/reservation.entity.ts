@@ -9,6 +9,16 @@ import { ReservationEvent } from "@root/reservation/entities/reservation-event.e
 import { IntegratedCrmCategory } from "@root/smart-doctor/entities/integrated-crm-category.entity"
 import { LangCrmCategory } from "@root/smart-doctor/entities/lang-crm-category.entity"
 
+/**
+ * 예약 당시 상품/이벤트 스냅샷 1건. 상품 재임포트(삭제+재생성)·가격변경과 무관하게 이력을 보존한다.
+ * name=표시명(이벤트는 '[대분류] 이벤트명'), price=예약 당시 단가(할인가 우선), count=수량.
+ */
+export interface ReservationItemSnapshot {
+  name: string
+  price: number
+  count: number
+}
+
 @Entity()
 export class Reservation extends TimeStampEntity {
   @ApiProperty()
@@ -75,6 +85,15 @@ export class Reservation extends TimeStampEntity {
   @ApiProperty()
   @Column({ nullable: true })
   detailVisit?: string
+
+  // 예약 당시 상품/이벤트 스냅샷(이름·가격·수량). 재임포트·가격변경에도 이력 보존.
+  @ApiProperty({ required: false })
+  @Column({ name: "product_snapshot", type: "jsonb", nullable: true })
+  productSnapshot?: ReservationItemSnapshot[]
+
+  @ApiProperty({ required: false })
+  @Column({ name: "event_snapshot", type: "jsonb", nullable: true })
+  eventSnapshot?: ReservationItemSnapshot[]
 
   // 닥터팔레트 plan id 저장
   @ApiProperty()
