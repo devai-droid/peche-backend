@@ -552,6 +552,7 @@ export class ReservationService {
   // 예약 업데이트
   async update(id: string, dto: UpdateReservationDto, user?: User) {
     const reservation = await this.findOneWithEvents(id)
+    const oldDatetime = reservation.datetime // 변경 전 시각(닥팔 메모 '변경 건' 표기용)
     let building: Building
     if (dto.datetime) {
       if (reservation.events && reservation.events.length > 0) {
@@ -582,8 +583,15 @@ export class ReservationService {
         ...(building && { building: building }),
       }),
     )
+    // 닥팔 메모에 '변경 건' 표기: 기존 시각 → 변경 시각 (+ 고객 메모 유지)
+    const changeNote = this.buildReservationChangeNote(oldDatetime, dto.datetime, reservation.userMemo)
     // 팔레트 api 콜 (예약 원본 스케줄 유지)
-    await this.updateReservationAndGetPlanId(reservation.palettePlanId, dto, reservation.paletteScheduleId)
+    await this.updateReservationAndGetPlanId(
+      reservation.palettePlanId,
+      dto,
+      reservation.paletteScheduleId,
+      changeNote,
+    )
 
     // 예약 변경 후 메시지 전송
     const newReservation = await this.findOne(reservation.id)
@@ -1322,7 +1330,12 @@ export class ReservationService {
   }
 
   // 닥터 팔레트 예약(플랜) 수정 (scheduleId 미지정 시 초진 스케줄로 폴백)
-  private async updateReservationAndGetPlanId(planId: string, dto: UpdateReservationDto, scheduleId?: string) {
+  private async updateReservationAndGetPlanId(
+    planId: string,
+    dto: UpdateReservationDto,
+    scheduleId?: string,
+    requestMessage?: string,
+  ) {
     // 전달할 payload 생성 (닥터팔레트는 REQUESTED/CONFIRMED만 허용)
     const payload: any = {}
 
@@ -1334,13 +1347,28 @@ export class ReservationService {
     // 내부는 WAITING이지만, 팔레트에는 REQUESTED로 통일
     payload.status = "REQUESTED"
 
-    // 메모가 있을 경우
-    if (dto.userMemo) {
+    // 변경 메모(있으면 우선) → 없으면 고객 메모
+    if (requestMessage) {
+      payload.requestMessage = requestMessage
+    } else if (dto.userMemo) {
       payload.requestMessage = dto.userMemo
     }
 
     // scheduleId(예약 원본 스케줄)가 없으면 repository가 초진 스케줄로 폴백
     return await this.doctorPaletteRepository.updatePlan(planId, payload, scheduleId || undefined)
+  }
+
+  /** 닥팔 메모용 '예약 변경' 문구. 기존 시각 → 변경 시각 + 고객 메모(있으면). */
+  private buildReservationChangeNote(oldDatetime: Date, newDatetime?: Date, userMemo?: string): string {
+    const fmt = (d: Date) => {
+      const x = new Date(d)
+      const p = (n: number) => String(n).padStart(2, "0")
+      return `${x.getFullYear()}-${p(x.getMonth() + 1)}-${p(x.getDate())} ${p(x.getHours())}:${p(x.getMinutes())}`
+    }
+    const head = newDatetime
+      ? `[사이트 예약 변경] 기존 ${fmt(oldDatetime)} → 변경 ${fmt(newDatetime)}`
+      : `[사이트 예약 변경]`
+    return userMemo ? `${head}\n${userMemo}` : head
   }
 
   // yyyy-MM-ddTHH:mm:00 형태로 변환
