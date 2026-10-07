@@ -132,4 +132,12 @@ export class BlogSiteConfig extends TimeStampEntity {
   @ApiProperty({ required: false, description: "대표 상담 채널 링크 (wechat 등 모달은 비움)" })
   @Column({ name: "primary_consult_url", type: "text", nullable: true })
   primaryConsultUrl?: string
+
+  @ApiProperty({ required: false, description: "구글 플레이스(지도) 링크 — 모든 언어 공통. 위치/지도 버튼 연결" })
+  @Column({ name: "google_place_url", type: "text", nullable: true })
+  googlePlaceUrl?: string
+
+  @ApiProperty({ required: false, description: "네이버 플레이스(지도) 링크 — 모든 언어 공통. 위치/지도 버튼 연결" })
+  @Column({ name: "naver_place_url", type: "text", nullable: true })
+  naverPlaceUrl?: string
 }

@@ -85,4 +85,6 @@ export class UpdateSiteConfigDto {
 
   @ApiProperty({ required: false }) @IsOptional() @IsString() primaryConsultPlatform?: string
   @ApiProperty({ required: false }) @IsOptional() @IsString() primaryConsultUrl?: string
+  @ApiProperty({ required: false }) @IsOptional() @IsString() googlePlaceUrl?: string
+  @ApiProperty({ required: false }) @IsOptional() @IsString() naverPlaceUrl?: string
 }
