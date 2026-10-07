@@ -179,13 +179,31 @@ export class ReservationService {
     const snapQty = (id: string) => Number(dto.quantities?.[id]) || 1
     const snapPrice = (o: { price?: number; discountPrice?: number }) =>
       Number(o?.discountPrice ?? o?.price ?? 0)
+    // 언어별 이름이 비어 있으면 한국어로 폴백
+    const orKo = (loc?: string, ko?: string) => (loc && loc.trim() ? loc : (ko ?? ""))
+    // 이벤트 표시명: '[대분류] 이벤트명' (대분류·이벤트명 각각 해당 언어, 없으면 한국어)
+    const evName = (catLoc?: string, catKo?: string, evLoc?: string, evKo?: string) => {
+      const cat = orKo(catLoc, catKo)
+      const ev = orKo(evLoc, evKo)
+      return cat ? `[${cat}] ${ev}` : ev
+    }
     const productSnapshot = (productObjs ?? []).map((p) => ({
-      name: p.name,
+      name: p.name ?? "",
+      nameEN: orKo(p.nameEN, p.name),
+      nameZH: orKo(p.nameZH, p.name),
+      nameZHTW: orKo(p.nameZHTW, p.name),
+      nameJA: orKo(p.nameJA, p.name),
+      nameTH: orKo(p.nameTH, p.name),
       price: snapPrice(p),
       count: snapQty(p.id),
     }))
     const eventSnapshot = (eventObjs ?? []).map((e) => ({
-      name: e.category?.name ? `[${e.category.name}] ${e.name}` : e.name,
+      name: e.category?.name ? `[${e.category.name}] ${e.name}` : (e.name ?? ""),
+      nameEN: evName(e.category?.nameEN, e.category?.name, e.nameEN, e.name),
+      nameZH: evName(e.category?.nameZH, e.category?.name, e.nameZH, e.name),
+      nameZHTW: evName(e.category?.nameZHTW, e.category?.name, e.nameZHTW, e.name),
+      nameJA: evName(e.category?.nameJA, e.category?.name, e.nameJA, e.name),
+      nameTH: evName(e.category?.nameTH, e.category?.name, e.nameTH, e.name),
       price: snapPrice(e),
       count: snapQty(e.id),
     }))

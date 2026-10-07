@@ -11,10 +11,16 @@ import { LangCrmCategory } from "@root/smart-doctor/entities/lang-crm-category.e
 
 /**
  * 예약 당시 상품/이벤트 스냅샷 1건. 상품 재임포트(삭제+재생성)·가격변경과 무관하게 이력을 보존한다.
- * name=표시명(이벤트는 '[대분류] 이벤트명'), price=예약 당시 단가(할인가 우선), count=수량.
+ * name=한국어 표시명(이벤트는 '[대분류] 이벤트명'), nameXX=언어별 표시명(해외 사이트 예약 내역용),
+ * price=예약 당시 단가(할인가 우선), count=수량. 언어별 이름이 비면 한국어(name)로 폴백한다.
  */
 export interface ReservationItemSnapshot {
   name: string
+  nameEN?: string
+  nameZH?: string
+  nameZHTW?: string
+  nameJA?: string
+  nameTH?: string
   price: number
   count: number
 }
