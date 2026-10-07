@@ -7,12 +7,14 @@ import { TimeStampEntity } from "@root/shared/entity/time-stamp.entity"
  * platform: kakao(카카오 상담)·naverPlace·googlePlace·instagram·naverBlog·whatsapp·line·wechat·facebook·tiktok·x 등
  * url: 링크 주소. wechat처럼 QR 모달로 뜨는 항목은 url이 비고 프론트가 정적 QR 이미지를 사용한다.
  * enabled: 노출 여부. order: 표시 순서(오름차순).
+ * isPrimary: 대표 상담 채널 여부(언어당 1개). 상담하기 버튼·모바일 하단 탭바·장바구니/예약 상담채널이 가는 곳.
  */
 export interface SiteSocialLink {
   platform: string
   url?: string
   enabled: boolean
   order: number
+  isPrimary?: boolean
 }
 
 /**
@@ -140,4 +142,8 @@ export class BlogSiteConfig extends TimeStampEntity {
   @ApiProperty({ required: false, description: "네이버 플레이스(지도) 링크 — 모든 언어 공통. 위치/지도 버튼 연결" })
   @Column({ name: "naver_place_url", type: "text", nullable: true })
   naverPlaceUrl?: string
+
+  @ApiProperty({ required: false, description: "카카오맵(지도) 링크 — 모든 언어 공통. 위치/지도 버튼 연결" })
+  @Column({ name: "kakao_place_url", type: "text", nullable: true })
+  kakaoPlaceUrl?: string
 }

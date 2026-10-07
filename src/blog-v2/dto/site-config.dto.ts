@@ -15,6 +15,11 @@ export class SiteSocialLinkDto {
   @ApiProperty() @IsBoolean() enabled: boolean
 
   @ApiProperty() @Type(() => Number) @IsNumber() order: number
+
+  @ApiProperty({ required: false, description: "대표 상담 채널 여부(언어당 1개)" })
+  @IsOptional()
+  @IsBoolean()
+  isPrimary?: boolean
 }
 
 export class UpdateSiteConfigDto {
@@ -87,4 +92,5 @@ export class UpdateSiteConfigDto {
   @ApiProperty({ required: false }) @IsOptional() @IsString() primaryConsultUrl?: string
   @ApiProperty({ required: false }) @IsOptional() @IsString() googlePlaceUrl?: string
   @ApiProperty({ required: false }) @IsOptional() @IsString() naverPlaceUrl?: string
+  @ApiProperty({ required: false }) @IsOptional() @IsString() kakaoPlaceUrl?: string
 }
