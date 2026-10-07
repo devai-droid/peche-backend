@@ -19,6 +19,10 @@ export interface SiteSocialLink {
   iconUrl?: string
   /** 표시용 이름(선택). 커스텀 항목 식별용. */
   label?: string
+  /** 링크 이동 대신 이미지 팝업으로 띄움(위챗 QR 등). 사이트·챗봇이 동일하게 처리. */
+  isModal?: boolean
+  /** isModal일 때 팝업에 띄울 이미지 URL(QR 등). */
+  modalImageUrl?: string
 }
 
 /**

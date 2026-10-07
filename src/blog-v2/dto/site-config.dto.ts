@@ -30,6 +30,16 @@ export class SiteSocialLinkDto {
   @IsOptional()
   @IsString()
   label?: string
+
+  @ApiProperty({ required: false, description: "링크 대신 이미지 팝업으로 띄움(위챗 QR 등)" })
+  @IsOptional()
+  @IsBoolean()
+  isModal?: boolean
+
+  @ApiProperty({ required: false, description: "팝업 이미지 URL(isModal일 때)" })
+  @IsOptional()
+  @IsString()
+  modalImageUrl?: string
 }
 
 export class UpdateSiteConfigDto {
