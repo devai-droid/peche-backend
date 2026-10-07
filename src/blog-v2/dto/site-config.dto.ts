@@ -20,6 +20,16 @@ export class SiteSocialLinkDto {
   @IsOptional()
   @IsBoolean()
   isPrimary?: boolean
+
+  @ApiProperty({ required: false, description: "업로드한 아이콘 이미지 URL(없으면 기본 아이콘)" })
+  @IsOptional()
+  @IsString()
+  iconUrl?: string
+
+  @ApiProperty({ required: false, description: "표시용 이름(선택)" })
+  @IsOptional()
+  @IsString()
+  label?: string
 }
 
 export class UpdateSiteConfigDto {

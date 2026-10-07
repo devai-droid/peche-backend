@@ -15,6 +15,10 @@ export interface SiteSocialLink {
   enabled: boolean
   order: number
   isPrimary?: boolean
+  /** 직접 업로드한 아이콘 이미지 URL. 없으면 platform 기준 기본(내장) 아이콘을 쓴다. */
+  iconUrl?: string
+  /** 표시용 이름(선택). 커스텀 항목 식별용. */
+  label?: string
 }
 
 /**
