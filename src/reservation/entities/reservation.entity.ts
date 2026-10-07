@@ -19,6 +19,13 @@ export interface ReservationItemSnapshot {
   count: number
 }
 
+/** 예약 변경 1건: 기존 일시 → 변경 일시 + 변경 시점. (예약 변경은 '일시'만 바뀜) */
+export interface ReservationChangeEntry {
+  fromDatetime: Date
+  toDatetime: Date
+  changedAt: Date
+}
+
 @Entity()
 export class Reservation extends TimeStampEntity {
   @ApiProperty()
@@ -94,6 +101,11 @@ export class Reservation extends TimeStampEntity {
   @ApiProperty({ required: false })
   @Column({ name: "event_snapshot", type: "jsonb", nullable: true })
   eventSnapshot?: ReservationItemSnapshot[]
+
+  // 예약 변경 이력(일시 변경 기록). 예약 상세 '예약변경내역'에 노출.
+  @ApiProperty({ required: false })
+  @Column({ name: "change_history", type: "jsonb", nullable: true })
+  changeHistory?: ReservationChangeEntry[]
 
   // 닥터팔레트 plan id 저장
   @ApiProperty()

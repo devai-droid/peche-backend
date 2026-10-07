@@ -576,10 +576,24 @@ export class ReservationService {
       building = reservation.building
     }
 
+    // 예약 변경 이력(일시 변경) 누적 — 예약 상세 '예약변경내역'에 노출
+    const newChangeHistory = [...(reservation.changeHistory ?? [])]
+    if (
+      dto.datetime &&
+      new Date(dto.datetime).getTime() !== new Date(oldDatetime).getTime()
+    ) {
+      newChangeHistory.push({
+        fromDatetime: oldDatetime,
+        toDatetime: new Date(dto.datetime),
+        changedAt: new Date(),
+      })
+    }
+
     const saved = await this.repository.save(
       Object.assign(reservation, dto, {
         status: ReservationStatus.WAITING, // 예약 변경 '요청' 이기 때문에 WAITING 으로
         updatedBy: user?.id,
+        changeHistory: newChangeHistory,
         ...(building && { building: building }),
       }),
     )
