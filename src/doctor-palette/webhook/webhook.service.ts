@@ -41,27 +41,45 @@ export class WebhookService {
     }
 
     // 예약 확정 케이스. 메시지 발송 등 처리
+    // 닥팔이 같은 확정 웹훅을 거의 동시에 두 번 보내면, 두 요청이 모두 WAITING을 읽고
+    // 둘 다 알림톡을 보내는 경쟁 조건이 생긴다. 상태 전환을 '조건부 단일 UPDATE'로 처리해
+    // 실제로 WAITING -> DONE 으로 바꾼 요청 하나만 알림톡을 발송하도록 막는다.
     if (data.status === "CONFIRMED" && reservation.status === ReservationStatus.WAITING) {
-      // 예약 시간, 예약 status DB 업데이트
-      reservation.datetime = dayjs(data.dateTime).toDate()
-      reservation.status = ReservationStatus.DONE
-      await this.reservationRepo.save(reservation)
-      // 메시지 발송 서비스 호출
-      await this.reservationService.sendPaletteReservationConfirmationMessage(reservation)
+      const confirmedDatetime = dayjs(data.dateTime).toDate()
+      const result = await this.reservationRepo.update(
+        { id: reservation.id, status: ReservationStatus.WAITING },
+        { datetime: confirmedDatetime, status: ReservationStatus.DONE },
+      )
+      // 실제로 상태를 바꾼(= 경쟁에서 이긴) 요청만 메시지 발송
+      if (result.affected === 1) {
+        reservation.datetime = confirmedDatetime
+        reservation.status = ReservationStatus.DONE
+        await this.reservationService.sendPaletteReservationConfirmationMessage(reservation)
+      }
     }
 
     // 예약 취소 (확정 후 취소)
     if (data.status === "CANCELED" && reservation.status === ReservationStatus.DONE) {
-      reservation.status = ReservationStatus.CANCELED
-      await this.reservationRepo.save(reservation)
-      await this.reservationService.sendCancelReservationMessage(reservation)
+      const result = await this.reservationRepo.update(
+        { id: reservation.id, status: ReservationStatus.DONE },
+        { status: ReservationStatus.CANCELED },
+      )
+      if (result.affected === 1) {
+        reservation.status = ReservationStatus.CANCELED
+        await this.reservationService.sendCancelReservationMessage(reservation)
+      }
     }
 
     // 예약 거부 (확정 전 거부)
     if (data.status === "CANCELED" && reservation.status === ReservationStatus.WAITING) {
-      reservation.status = ReservationStatus.CANCELED
-      await this.reservationRepo.save(reservation)
-      await this.reservationService.sendRejectReservationMessage(reservation)
+      const result = await this.reservationRepo.update(
+        { id: reservation.id, status: ReservationStatus.WAITING },
+        { status: ReservationStatus.CANCELED },
+      )
+      if (result.affected === 1) {
+        reservation.status = ReservationStatus.CANCELED
+        await this.reservationService.sendRejectReservationMessage(reservation)
+      }
     }
   }
 }
