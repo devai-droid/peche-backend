@@ -29,6 +29,7 @@ import { BlogPublicController } from "@root/blog-v2/controller/blog-public.contr
 import { BlogRenderService } from "@root/blog-v2/services/blog-render.service"
 import { BotAnalyticsService } from "@root/blog-v2/services/bot-analytics.service"
 import { UploadService } from "@root/upload/upload.service"
+import { PiModule } from "@root/pi/pi.module"
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { UploadService } from "@root/upload/upload.service"
       BlogSchemaAttribute,
       BlogSchemaSyncLog,
     ]),
+    PiModule,
   ],
   controllers: [
     BlogV2PostController,

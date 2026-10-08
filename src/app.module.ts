@@ -22,6 +22,7 @@ import { ScheduleModule } from "@nestjs/schedule"
 import { BlogModule } from "@root/blog/blog.module"
 import { BlogV2Module } from "@root/blog-v2/blog-v2.module"
 import { UploadModule } from "@root/upload/upload.module"
+import { PiModule } from "@root/pi/pi.module"
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { UploadModule } from "@root/upload/upload.module"
     BlogModule,
     BlogV2Module,
     UploadModule,
+    PiModule,
   ],
   controllers: [],
   providers: [],

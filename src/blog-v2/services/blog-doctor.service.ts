@@ -4,10 +4,14 @@ import { FindOptionsWhere, Repository } from "typeorm"
 import { BlogDoctor } from "@root/blog-v2/entities/doctor.entity"
 import { CreateBlogDoctorDto, QueryBlogDoctorDto, UpdateBlogDoctorDto } from "@root/blog-v2/dto/doctor.dto"
 import { User } from "@root/shared/interface/user"
+import { PiSyncService } from "@root/pi/pi-sync.service"
 
 @Injectable()
 export class BlogDoctorService {
-  constructor(@InjectRepository(BlogDoctor) private readonly repo: Repository<BlogDoctor>) {}
+  constructor(
+    @InjectRepository(BlogDoctor) private readonly repo: Repository<BlogDoctor>,
+    private readonly piSync: PiSyncService,
+  ) {}
 
   async create(dto: CreateBlogDoctorDto, user: User): Promise<BlogDoctor> {
     const entity = this.repo.create({
@@ -18,7 +22,9 @@ export class BlogDoctorService {
       createdBy: user?.id,
       updatedBy: user?.id,
     })
-    return this.repo.save(entity)
+    const saved = await this.repo.save(entity)
+    await this.piSync.syncSafe("doctor.create")
+    return saved
   }
 
   async findMany(query: QueryBlogDoctorDto) {
@@ -77,11 +83,14 @@ export class BlogDoctorService {
   async update(id: string, dto: UpdateBlogDoctorDto, user: User): Promise<BlogDoctor> {
     const found = await this.findOne(id)
     Object.assign(found, dto, { updatedBy: user?.id })
-    return this.repo.save(found)
+    const saved = await this.repo.save(found)
+    await this.piSync.syncSafe("doctor.update")
+    return saved
   }
 
   async remove(id: string): Promise<void> {
     const result = await this.repo.delete({ id })
     if (result.affected === 0) throw new NotFoundException(`doctor ${id} not found`)
+    await this.piSync.syncSafe("doctor.remove")
   }
 }

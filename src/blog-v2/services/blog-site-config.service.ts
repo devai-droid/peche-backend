@@ -5,6 +5,7 @@ import { BlogSiteConfig } from "@root/blog-v2/entities/site-config.entity"
 import { BlogSiteConfigI18n } from "@root/blog-v2/entities/site-config-i18n.entity"
 import { UpdateSiteConfigDto } from "@root/blog-v2/dto/site-config.dto"
 import { User } from "@root/shared/interface/user"
+import { PiSyncService } from "@root/pi/pi-sync.service"
 
 const SITE = "peche"
 const DEFAULT_LANG = "ko"
@@ -35,6 +36,7 @@ export class BlogSiteConfigService {
   constructor(
     @InjectRepository(BlogSiteConfig) private readonly repo: Repository<BlogSiteConfig>,
     @InjectRepository(BlogSiteConfigI18n) private readonly i18nRepo: Repository<BlogSiteConfigI18n>,
+    private readonly piSync: PiSyncService,
   ) {}
 
   /** 기본(공통+ko) 행. 없으면 생성. */
@@ -74,7 +76,9 @@ export class BlogSiteConfigService {
     const row = await this.getBase()
     Object.assign(row, dto, { updatedBy: user?.id })
     if (!row.createdBy) row.createdBy = user?.id
-    return this.repo.save(row)
+    const saved = await this.repo.save(row)
+    await this.piSync.syncSafe("site-config.base")
+    return saved
   }
 
   async updateI18n(lang: string, dto: UpdateSiteConfigDto, user: User): Promise<BlogSiteConfigI18n> {
