@@ -40,9 +40,13 @@ export class BlogDoctor extends TimeStampEntity {
   @Column({ name: "profile_url", length: 500, nullable: true })
   profileUrl?: string
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, description: "의료진 소개 페이지(웹사이트) 사진" })
   @Column({ name: "photo_url", length: 500, nullable: true })
   photoUrl?: string
+
+  @ApiProperty({ required: false, description: "블로그 카드 전용 사진. 없으면 photoUrl 사용" })
+  @Column({ name: "blog_photo_url", length: 500, nullable: true })
+  blogPhotoUrl?: string
 
   @ApiProperty()
   @Index("idx_blog_doctors_visible", { where: '"is_visible" = true' })

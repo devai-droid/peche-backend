@@ -594,8 +594,9 @@ ${this.buildRelated(post, relatedTitles)}
     if (!d) return ""
     const meta = [d.specialty, d.jobTitle].filter(Boolean).join(" · ")
     const assoc = d.associations?.length ? `<div class="ac-assoc">${esc(d.associations.join(" · "))}</div>` : ""
+    const cardPhoto = d.blogPhotoUrl || d.photoUrl
     return `<aside class="author-card">
-${d.photoUrl ? `<img class="ac-photo" src="${esc(d.photoUrl)}" alt="${esc(d.name)}">` : `<div class="ac-photo ac-photo-empty">${esc(d.name[0] ?? "")}</div>`}
+${cardPhoto ? `<img class="ac-photo" src="${esc(cardPhoto)}" alt="${esc(d.name)}">` : `<div class="ac-photo ac-photo-empty">${esc(d.name[0] ?? "")}</div>`}
 <div class="ac-body">
 <div class="ac-label">의학 정보 감수</div>
 <div class="ac-name">${esc(d.name)}${d.profileUrl ? "" : ""}</div>
@@ -909,7 +910,7 @@ ${assoc}
         "@id": reviewerIdOf(i, reviewers.length),
         name: doc.name,
         medicalSpecialty: doc.specialty ?? undefined,
-        image: doc.photoUrl || clinicImage,
+        image: doc.blogPhotoUrl || doc.photoUrl || clinicImage,
         worksFor: { "@id": clinicId },
         telephone: clinicTelephone,
         address: clinicAddress,

@@ -51,11 +51,17 @@ export class CreateBlogDoctorDto {
   @MaxLength(500)
   profileUrl?: string
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, description: "의료진 소개 페이지 사진" })
   @IsOptional()
   @IsString()
   @MaxLength(500)
   photoUrl?: string
+
+  @ApiProperty({ required: false, description: "블로그 카드 전용 사진(없으면 photoUrl)" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  blogPhotoUrl?: string
 
   @ApiProperty({ required: false, default: true })
   @IsOptional()
