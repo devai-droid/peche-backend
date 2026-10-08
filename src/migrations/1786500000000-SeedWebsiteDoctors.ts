@@ -84,11 +84,11 @@ export class SeedWebsiteDoctors1786500000000 implements MigrationInterface {
         const createdAt = new Date(base + i * 60000).toISOString() // 분 단위 오프셋으로 순서 고정
         await queryRunner.query(
           `INSERT INTO "blog"."doctors"
-             ("id","lang","name","job_title","photo_url","is_visible","linked_to_blog_card","target_site","created_at","updated_at")
-           SELECT gen_random_uuid(), $1, $2, $3, $4, true, false, 'peche', $5::timestamptz, now()
+             ("lang","name","job_title","photo_url","is_visible","linked_to_blog_card","target_site","created_at","updated_at")
+           SELECT $1::text, $2::text, $3::text, $4::text, true, false, 'peche', $5::timestamptz, now()
            WHERE NOT EXISTS (
              SELECT 1 FROM "blog"."doctors"
-             WHERE "target_site" = 'peche' AND "lang" = $1 AND "name" = $2
+             WHERE "target_site" = 'peche' AND "lang" = $1::text AND "name" = $2::text
            )`,
           [lang, name, jobTitle, this.photo[key], createdAt],
         )
