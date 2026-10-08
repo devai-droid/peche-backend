@@ -49,6 +49,12 @@ export class BlogDoctor extends TimeStampEntity {
   @Column({ name: "is_visible", default: true })
   isVisible: boolean
 
+  @ApiProperty({
+    description: "블로그 의료진 카드 연결 여부. 켠 의료진만 블로그 글 하단 카드에 쓰이고 소개글·연결링크를 노출",
+  })
+  @Column({ name: "linked_to_blog_card", default: false })
+  linkedToBlogCard: boolean
+
   @ApiProperty()
   @Column({ name: "target_site", length: 50, default: "peche" })
   targetSite: string

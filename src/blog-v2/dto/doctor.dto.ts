@@ -61,6 +61,11 @@ export class CreateBlogDoctorDto {
   @IsOptional()
   @IsBoolean()
   isVisible?: boolean
+
+  @ApiProperty({ required: false, description: "블로그 의료진 카드 연결 여부(켠 의료진만 블로그 카드에 사용)" })
+  @IsOptional()
+  @IsBoolean()
+  linkedToBlogCard?: boolean
 }
 
 export class UpdateBlogDoctorDto extends PartialType(CreateBlogDoctorDto) {}

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common"
 import { InjectRepository } from "@nestjs/typeorm"
-import { Repository } from "typeorm"
+import { FindOptionsWhere, Repository } from "typeorm"
 import { BlogDoctor } from "@root/blog-v2/entities/doctor.entity"
 import { CreateBlogDoctorDto, QueryBlogDoctorDto, UpdateBlogDoctorDto } from "@root/blog-v2/dto/doctor.dto"
 import { User } from "@root/shared/interface/user"
@@ -43,16 +43,32 @@ export class BlogDoctorService {
   /**
    * 대표 의료진 1명 (블로그 글 하단 공통 의료진 카드용).
    * 글에 author_doctor가 지정 안 된 경우 이 의료진으로 카드를 채운다.
-   * 노출(isVisible) 의료진 중 가장 먼저 등록된 1명. 없으면 null.
+   * 우선순위: '블로그 카드 연결(linkedToBlogCard)' 켠 의료진 → (없으면) 노출 의료진 중 최초 등록.
+   * 각 단계는 해당 언어 → 기본 언어(ko) 순으로 폴백.
    */
   async findRepresentative(lang = "ko"): Promise<BlogDoctor | null> {
-    const found = await this.repo.findOne({
+    const pick = (where: FindOptionsWhere<BlogDoctor>) =>
+      this.repo.findOne({ where: { targetSite: "peche", ...where }, order: { createdAt: "ASC" } })
+
+    return (
+      (await pick({ isVisible: true, linkedToBlogCard: true, lang })) ||
+      (lang !== "ko" ? await pick({ isVisible: true, linkedToBlogCard: true, lang: "ko" }) : null) ||
+      (await pick({ isVisible: true, lang })) ||
+      (lang !== "ko" ? await pick({ isVisible: true, lang: "ko" }) : null)
+    )
+  }
+
+  /**
+   * 공개 의료진 목록 (챗봇·외부 연동용). 노출(isVisible) 의료진을 등록순으로 반환.
+   * 해당 언어가 하나도 없으면 기본 언어(ko)로 폴백.
+   */
+  async findPublicList(lang = "ko"): Promise<BlogDoctor[]> {
+    const byLang = await this.repo.find({
       where: { isVisible: true, targetSite: "peche", lang },
       order: { createdAt: "ASC" },
     })
-    if (found || lang === "ko") return found
-    // 해당 언어 대표 의료진이 없으면 기본 언어(ko)로 폴백
-    return this.repo.findOne({
+    if (byLang.length > 0 || lang === "ko") return byLang
+    return this.repo.find({
       where: { isVisible: true, targetSite: "peche", lang: "ko" },
       order: { createdAt: "ASC" },
     })

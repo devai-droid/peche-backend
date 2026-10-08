@@ -35,6 +35,14 @@ export class BlogDoctorController {
     return this.service.findRepresentative(lang)
   }
 
+  @ApiOperation({
+    summary: "공개 의료진 목록 (인증 불필요) — 챗봇·외부 연동용",
+  })
+  @Get("public")
+  publicList(@Query("lang") lang?: string) {
+    return this.service.findPublicList(lang)
+  }
+
   @ApiOperation({ summary: "감수의사 상세" })
   @Get(":id")
   @Auth(AuthGuard(JWT_STRATEGY), SWAGGER_TOKEN_NAME, Role.ADMIN)
