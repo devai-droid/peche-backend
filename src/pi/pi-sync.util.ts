@@ -10,6 +10,14 @@ export interface PiHours {
   weekly: { days: string[]; open: string; close: string; break: { start: string; end: string } | null }[]
   notes: string[]
 }
+export interface PiSnsLink {
+  platform: string
+  url: string
+}
+export interface PiSnsByLang {
+  // 언어별 대표(공식채널 안내용) + 전체 채널
+  [lang: string]: { primary: PiSnsLink | null; channels: PiSnsLink[] }
+}
 export interface PiLocationPayload {
   key?: string
   name: string
@@ -22,6 +30,12 @@ export interface PiLocationPayload {
   kakao_url?: string
   place_url?: string
   channel_url?: string
+  // 위치/지도 링크
+  map_links?: { naver?: string; google?: string; kakao?: string }
+  // 공통 SNS(모든 언어 공통 노출)
+  common_sns?: PiSnsLink[]
+  // 언어별 SNS(대표 표시 포함 — 공식채널 안내는 primary만 사용)
+  sns_by_lang?: PiSnsByLang
 }
 export interface PiPractitionerPayload {
   name: string
@@ -173,10 +187,24 @@ export function pruneUpdate(
   return out
 }
 export const LOC_ALWAYS = ["name", "address", "phone", "hours", "sort_order"]
-export const LOC_OPT = ["parking", "booking_url", "place_url", "kakao_url", "channel_url"]
+export const LOC_OPT = [
+  "parking",
+  "booking_url",
+  "place_url",
+  "kakao_url",
+  "channel_url",
+  "map_links",
+  "common_sns",
+  "sns_by_lang",
+]
 export const PRAC_ALWAYS = ["name", "education", "career"]
 export const PRAC_OPT = ["gender", "specialty", "photo_url"]
 
+function norm(v: unknown): string {
+  if (v == null) return ""
+  if (typeof v === "object") return JSON.stringify(v)
+  return String(v)
+}
 function locChanged(payload: Record<string, unknown>, piLoc: PiFactLocation): boolean {
   const pruned = pruneUpdate(payload, LOC_ALWAYS, LOC_OPT)
   for (const k of Object.keys(pruned)) {
@@ -184,9 +212,7 @@ function locChanged(payload: Record<string, unknown>, piLoc: PiFactLocation): bo
       if (canonHours(pruned.hours as PiHours) !== canonHours(piLoc.hours)) return true
       continue
     }
-    const a = pruned[k] == null ? "" : String(pruned[k])
-    const b = (piLoc as Record<string, unknown>)[k] == null ? "" : String((piLoc as Record<string, unknown>)[k])
-    if (a !== b) return true
+    if (norm(pruned[k]) !== norm((piLoc as Record<string, unknown>)[k])) return true
   }
   return false
 }

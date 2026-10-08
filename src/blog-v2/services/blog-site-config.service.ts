@@ -92,6 +92,8 @@ export class BlogSiteConfigService {
     }
     row.updatedBy = user?.id
     if (!row.createdBy) row.createdBy = user?.id
-    return this.i18nRepo.save(row)
+    const saved = await this.i18nRepo.save(row)
+    await this.piSync.syncSafe("site-config.i18n")
+    return saved
   }
 }
