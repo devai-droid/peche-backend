@@ -70,6 +70,9 @@ export class PiClientService {
   updatePractitioner(id: string, b: Record<string, unknown>) {
     return this.req("PATCH", `/api/orgs/${this.orgId}/practitioners/${id}`, b)
   }
+  deletePractitioner(id: string) {
+    return this.req("DELETE", `/api/orgs/${this.orgId}/practitioners/${id}`)
+  }
   setRole(practitionerId: string, locationId: string, position: string) {
     return this.req("PUT", `/api/orgs/${this.orgId}/roles`, { practitionerId, locationId, position })
   }
@@ -103,6 +106,9 @@ export class PiClientService {
         hasCreate = true
       } else if (p.action === "update" && p.id) {
         await this.updatePractitioner(p.id, p.payload)
+      } else if (p.action === "delete" && p.id) {
+        // 사이트에 없는 의료진은 PI에서 완전 삭제(사이트 데이터 최우선)
+        await this.deletePractitioner(p.id)
       }
     }
     const needRole =

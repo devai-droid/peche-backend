@@ -71,7 +71,7 @@ export interface PiFacts {
 }
 export type PiOp =
   | { kind: "location"; action: "create" | "update"; key: string; id?: string; name: string; payload: Record<string, unknown>; reason: string }
-  | { kind: "practitioner"; action: "create" | "update"; name: string; id?: string; at?: string; position?: string; payload: Record<string, unknown>; reason: string }
+  | { kind: "practitioner"; action: "create" | "update" | "delete"; name: string; id?: string; at?: string; position?: string; payload: Record<string, unknown>; reason: string }
   | { kind: "role"; action: "set"; name: string; id?: string; at: string; position: string; reason: string }
 
 const DAY_WEEKDAY = ["mon", "tue", "wed", "thu", "fri"]
@@ -324,12 +324,27 @@ export function planSync(
     }
   })
 
-  // PI에만 있는 의료진 → 삭제 후보(자동 안 함)
-  ;(facts.practitioners || []).forEach((p) => {
-    if (!siteNames[nfc(p.name)]) {
-      warnings.push({ type: "orphan-practitioner", name: p.name, note: "사이트에 없음 — 퇴사면 역할 제거 확인" })
-    }
-  })
+  // PI에만 있고 사이트에 없는 의료진 → 자동 삭제(사이트 데이터 최우선).
+  // 숨김(isVisible=false)은 애초에 doctors에 없으므로 여기서 자동으로 삭제 대상이 됨.
+  // 안전장치: 사이트 의료진이 0명이면(조회 오류 등) 전부 지우는 사고를 막기 위해 삭제 안 함.
+  if (doctors.length > 0) {
+    ;(facts.practitioners || []).forEach((p) => {
+      if (!siteNames[nfc(p.name)]) {
+        ops.push({
+          kind: "practitioner",
+          action: "delete",
+          name: p.name,
+          id: p.id,
+          payload: {},
+          reason: "사이트에 없음 — 자동 삭제",
+        })
+      }
+    })
+  } else {
+    ;(facts.practitioners || []).forEach((p) => {
+      warnings.push({ type: "skip-delete", name: p.name, note: "사이트 의료진 0명이라 삭제 보류(안전장치)" })
+    })
+  }
 
   return { ops, warnings }
 }
