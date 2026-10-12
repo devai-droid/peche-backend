@@ -21,6 +21,14 @@ export class ProductDetailPage extends TimeStampEntity {
   @Column({ type: "uuid", nullable: true })
   categoryId?: string | null
 
+  @ApiProperty({
+    required: false,
+    description:
+      "대표(canonical) 상세페이지 id. 값이 있으면 이 상세페이지는 '사본'이고 대표를 가리킴(같은 원고를 여러 상품에 노출할 때 중복 콘텐츠 통합). 비면 원본",
+  })
+  @Column({ name: "canonical_detail_page_id", type: "uuid", nullable: true })
+  canonicalDetailPageId?: string | null
+
   @ApiProperty()
   @Column({ type: "enum", enum: ProductDetailPageStatus, nullable: false, default: ProductDetailPageStatus.ACTIVE })
   status?: ProductDetailPageStatus

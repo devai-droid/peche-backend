@@ -6,6 +6,8 @@ import { Paginated } from "@root/shared/dto/base-list.ro"
 
 export interface ProductDetailPageDto {
   categoryId?: string
+  // 대표(canonical) 상세페이지 id. 값이 있으면 이 상세페이지는 사본. null로 보내면 원본으로 해제.
+  canonicalDetailPageId?: string | null
   status?: ProductDetailPageStatus
   name?: string
   nameEN?: string
@@ -75,6 +77,11 @@ export class CreateProductDetailPageDto implements ProductDetailPageDto {
   @ApiPropertyOptional() @IsOptional() @ValidateIf((_, value) => value !== null) @IsUUID() readonly categoryId?:
     | string
     | null
+  @ApiPropertyOptional({ description: "대표 상세페이지 id(사본이면). null이면 원본" })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsUUID()
+  readonly canonicalDetailPageId?: string | null
   @ApiPropertyOptional({ enum: ProductDetailPageStatus })
   @IsOptional()
   @IsEnum(ProductDetailPageStatus)
@@ -147,6 +154,11 @@ export class UpdateProductDetailPageDto implements ProductDetailPageDto {
   @ApiPropertyOptional() @IsOptional() @ValidateIf((_, value) => value !== null) @IsUUID() readonly categoryId?:
     | string
     | null
+  @ApiPropertyOptional({ description: "대표 상세페이지 id(사본이면). null이면 원본으로 해제" })
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsUUID()
+  readonly canonicalDetailPageId?: string | null
   @ApiPropertyOptional({ enum: ProductDetailPageStatus })
   @IsOptional()
   @IsEnum(ProductDetailPageStatus)

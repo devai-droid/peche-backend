@@ -1102,20 +1102,35 @@ export class BlogV2PostService {
   }
 
   /** 상세페이지 봇 SSR용 — product_detail_page id로 이름·대분류 조회 (없으면 null). */
-  async getDetailPageProductById(
-    id: string,
-  ): Promise<{ id: string; name: string; categoryId: string | null; categoryName: string | null } | null> {
+  async getDetailPageProductById(id: string): Promise<{
+    id: string
+    name: string
+    categoryId: string | null
+    categoryName: string | null
+    canonicalDetailPageId: string | null
+  } | null> {
     try {
-      const rows: Array<{ id: string; name: string; cid: string | null; cname: string | null }> =
-        await this.postRepo.query(
-          `SELECT dp.id, dp.name, pc.id AS cid, pc.name AS cname
+      const rows: Array<{
+        id: string
+        name: string
+        cid: string | null
+        cname: string | null
+        canonical: string | null
+      }> = await this.postRepo.query(
+        `SELECT dp.id, dp.name, pc.id AS cid, pc.name AS cname, dp.canonical_detail_page_id AS canonical
            FROM public.product_detail_page dp
            LEFT JOIN public.product_category pc ON pc.id = dp.category_id AND pc.status = 'ACTIVE'
            WHERE dp.id = $1 AND dp.status = 'ACTIVE' LIMIT 1`,
-          [id],
-        )
+        [id],
+      )
       if (!rows.length) return null
-      return { id: rows[0].id, name: rows[0].name, categoryId: rows[0].cid, categoryName: rows[0].cname }
+      return {
+        id: rows[0].id,
+        name: rows[0].name,
+        categoryId: rows[0].cid,
+        categoryName: rows[0].cname,
+        canonicalDetailPageId: rows[0].canonical,
+      }
     } catch (e) {
       this.logger.warn(`getDetailPageProductById 실패: ${(e as Error).message}`)
       return null

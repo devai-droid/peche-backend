@@ -244,7 +244,11 @@ export class BlogRenderService {
 
     const site = this.site
     const uLang = blogLangToUrlSeg(lang) // URL 세그먼트용(zh-TW→tw)
-    const canonicalId = (await this.postService.resolveDetailCanonicalProductId(product.name, post)) ?? productId
+    // 대표 지정(사본→대표)이 있으면 그 대표 상세페이지를 canonical로, 없으면 기존 이름기반(제모 공통) 로직
+    const canonicalId =
+      product.canonicalDetailPageId ??
+      (await this.postService.resolveDetailCanonicalProductId(product.name, post)) ??
+      productId
     const canonical = `${site.baseUrl}/${uLang}/products/${canonicalId}`
 
     const priceGroups = await this.postService.getBlogPriceData(post.priceRefs, post.productPage, post.lang)
