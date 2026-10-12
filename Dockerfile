@@ -1,6 +1,6 @@
 # dev
 FROM node:20 AS development
-RUN npm install -g pnpm
+RUN npm install -g pnpm@8.15.4
 
 WORKDIR /usr/src/app
 
@@ -14,7 +14,7 @@ USER node
 
 # build
 FROM node:20 AS build
-RUN npm install -g pnpm
+RUN npm install -g pnpm@8.15.4
 
 WORKDIR /usr/src/app
 
