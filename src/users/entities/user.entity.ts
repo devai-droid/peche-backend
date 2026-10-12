@@ -57,6 +57,7 @@ export class AccountUser extends TimeStampEntity {
   @Column({ nullable: true })
   marketingAccepted?: boolean
 
+  @ApiProperty({ enum: Role, isArray: true, required: false })
   @Column({ type: "enum", enum: Role, array: true, default: [] })
   roles: Role[]
 

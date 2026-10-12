@@ -57,10 +57,8 @@ docker compose -f docker-compose.prod.yml restart backend  # 재시작
 
 ## 어드민 계정
 
-| 이메일 | 역할 |
-|---|---|
-| `dev.philomedi@gmail.com` | ADMIN |
-| `rudalsnn@daum.net` | ADMIN |
+- 어드민(admin.pecheskin.clinic) 로그인은 공용 계정 `admin@pecheskin.clinic` 하나를 여러 명이 함께 쓴다.
+- 어드민 접근은 DB `account_user.roles` 에 `ADMIN` 이 있는 계정만 가능(RolesGuard).
 
 <!-- sync-docs:start -->
 

@@ -23,6 +23,7 @@ import { BlogModule } from "@root/blog/blog.module"
 import { BlogV2Module } from "@root/blog-v2/blog-v2.module"
 import { UploadModule } from "@root/upload/upload.module"
 import { PiModule } from "@root/pi/pi.module"
+import { B2bModule } from "@root/b2b/b2b.module"
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { PiModule } from "@root/pi/pi.module"
     BlogV2Module,
     UploadModule,
     PiModule,
+    B2bModule,
   ],
   controllers: [],
   providers: [],

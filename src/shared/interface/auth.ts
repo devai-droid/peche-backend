@@ -11,6 +11,7 @@ export interface JwtPayload {
   iat?: number
   roles?: Role[]
   locale?: LanguageLocale
+  b2bVerificationId?: string // B2B 회사 이메일 인증 1건(예약 1건용) 식별자
 }
 
 export type TokenDecodedHeader = JwtHeader & { kid: string }

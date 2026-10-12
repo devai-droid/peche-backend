@@ -29,6 +29,8 @@ import {
   JWT_EXPIRED_IN_30_DAYS,
   JWT_ISSUER,
   SIXTY_SECONDS,
+  AUTH_CODE_TTL_MS,
+  AUTH_CODE_MAX_ATTEMPTS,
 } from "../../shared/constant/auth"
 import { JwtPayload, SocialAuthPayload } from "../../shared/interface/auth"
 import { ROLES_KEY } from "../../shared/decorator/auth-user.decorator"
@@ -45,6 +47,9 @@ import { SesService } from "@root/message/service/ses.service"
 
 @Injectable()
 export class AuthService {
+  // 인증번호별 오입력 횟수(단일 인스턴스 메모리). 인증번호 폐기·성공 시 제거.
+  private readonly failedAttempts = new Map<string, number>()
+
   constructor(
     private readonly datasource: DataSource,
     private readonly jwtService: JwtService,
@@ -108,6 +113,22 @@ export class AuthService {
     if (!user || user.status == UserStatus.INACTIVE) {
       throw new UnauthorizedException(this.i18n.t("MESSAGES.ERROR.UNAUTHORIZED", { lang: I18nContext.current().lang }))
     }
+    return user
+  }
+
+  /** 이메일 소유 확인을 마친 사용자 조회, 없으면 가입(B2B 회사 이메일 인증 등). */
+  async findOrCreateUserByEmail(email: string, name?: string): Promise<AccountUser> {
+    const existing = await this.findUserByEmail(email)
+    if (existing) return existing
+    return await this.createUser(<SignUpDto>{ email, name, languageLocale: LanguageLocale.ko })
+  }
+
+  /** 짧은 수명의 토큰 발급(추가 클레임 포함). B2B 예약 1건용 인증 등에 사용. */
+  signShortLivedToken(user: AccountUser, claims: Record<string, unknown>, expiresIn: string) {
+    return this.jwtService.sign(
+      { id: user.id, email: user.email, phoneNumber: user.phoneNumber, [ROLES_KEY]: user.roles, ...claims },
+      { expiresIn, issuer: JWT_ISSUER },
+    )
   }
 
   async changePassword(dto: PasswordChangeDto, userId: string) {
@@ -213,15 +234,43 @@ export class AuthService {
   }
 
   private async findAuthCodeByEmail(email: string, code: string) {
-    return await this.authRepository.findOne({
-      where: { email: email, code: code },
-    })
+    return await this.findValidAuthCode({ email }, code)
   }
 
   private async findAuthCodeByPhoneNumber(phoneNumber: string, code: string) {
-    return await this.authRepository.findOne({
-      where: { phoneNumber: phoneNumber, code: code },
-    })
+    return await this.findValidAuthCode({ phoneNumber }, code)
+  }
+
+  /**
+   * 인증번호 검증. 유효시간(AUTH_CODE_TTL_MS)이 지났거나 오입력이 AUTH_CODE_MAX_ATTEMPTS 회에 달하면
+   * 해당 인증번호를 폐기해 재발급을 강제한다(무차별 대입 방지). 성공 시 AuthCode 반환, 실패 시 null.
+   * 인증번호 행 자체는 호출부가 사용 후 삭제한다.
+   */
+  async findValidAuthCode(factor: AuthFactor, code: string): Promise<AuthCode | null> {
+    const where = factor.email ? { email: factor.email } : { phoneNumber: factor.phoneNumber }
+    if (!where.email && !where.phoneNumber) return null
+    const authCode = await this.authRepository.findOne({ where, order: { createdAt: "DESC" } })
+    if (!authCode) return null
+    if (Date.now() - new Date(authCode.createdAt).getTime() > AUTH_CODE_TTL_MS) {
+      await this.discardAuthCode(authCode)
+      return null
+    }
+    if (authCode.code !== code) {
+      const failed = (this.failedAttempts.get(authCode.id) ?? 0) + 1
+      if (failed >= AUTH_CODE_MAX_ATTEMPTS) {
+        await this.discardAuthCode(authCode)
+      } else {
+        this.failedAttempts.set(authCode.id, failed)
+      }
+      return null
+    }
+    this.failedAttempts.delete(authCode.id)
+    return authCode
+  }
+
+  async discardAuthCode(authCode: AuthCode) {
+    this.failedAttempts.delete(authCode.id)
+    await this.authRepository.remove(authCode)
   }
 
   private async authenticateByCode(authCode?: AuthCode, name?: string) {
@@ -234,7 +283,7 @@ export class AuthService {
     }
     const user = await this.findUserByAuth(authCode)
     const token = user ? await this.getSignedToken(user) : await this.signUpByAuthentication(authCode, name)
-    await this.authRepository.remove(authCode)
+    await this.discardAuthCode(authCode)
     return new AuthTokenResponse(token, false)
   }
 
