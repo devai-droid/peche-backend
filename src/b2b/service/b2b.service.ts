@@ -157,6 +157,24 @@ export class B2bService {
     }
   }
 
+  /**
+   * B2B 사이트 예약확인: 이 회사 이메일로 B2B 사이트에서 한 예약만 돌려준다(공식 사이트 예약과 분리).
+   * 고객 이름·연락처는 회원 정보가 아니라 예약 때 입력한 B2B 정보(b2bName·b2bPhone)를 붙인다.
+   */
+  async findMyReservations(user: User) {
+    const email = this.normalizeEmail(user?.email ?? "")
+    if (!email) return { items: [] }
+    const rows = await this.reservationRepository.find({ where: { email }, order: { createdAt: "DESC" } })
+    const reservations = await this.reservationService.findManyByIds(rows.map((r) => r.reservationId))
+    const byId = new Map(rows.map((r) => [r.reservationId, r]))
+    const items = reservations
+      // 본인 계정 예약만(같은 이메일 계정)
+      .filter((r) => r.user?.id === user.id)
+      .map((r) => Object.assign(r, { b2bName: byId.get(r.id)?.name, b2bPhone: byId.get(r.id)?.phone }))
+      .sort((a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime())
+    return { items }
+  }
+
   // ── 협약사 관리(어드민) ────────────────────
 
   async findCompanies() {
