@@ -28,9 +28,8 @@ describe("RolesGuard", () => {
       getClass: () => null,
       switchToHttp: () => ({ getRequest: () => ({ user }) }),
       _roles: roles,
-    }) as any
-  const guardWith = (required?: Role[]) =>
-    new RolesGuard({ getAllAndOverride: () => required } as unknown as Reflector)
+    } as any)
+  const guardWith = (required?: Role[]) => new RolesGuard({ getAllAndOverride: () => required } as unknown as Reflector)
 
   it("ADMIN 필요 API는 ADMIN 역할만 통과", () => {
     expect(guardWith([Role.ADMIN]).canActivate(ctx(undefined, { roles: [Role.USER] }))).toBe(false)
@@ -67,6 +66,7 @@ describe("B2bService.createReservation", () => {
     const service = new B2bService(
       companyRepository,
       verificationRepository,
+      {} as any,
       {} as any,
       {} as any,
       reservationService,

@@ -11,11 +11,13 @@ import * as dayjs from "dayjs"
 import { B2bCompany } from "@root/b2b/entities/b2b-company.entity"
 import { B2bVerification } from "@root/b2b/entities/b2b-verification.entity"
 import { B2bReservation } from "@root/b2b/entities/b2b-reservation.entity"
+import { B2bSetting, B2B_SETTING_RESERVATION_NOTICE } from "@root/b2b/entities/b2b-setting.entity"
 import {
   B2bRequestCodeDto,
   B2bReservationList,
   B2bReservationQueryDto,
   B2bVerifyDto,
+  B2bNoticeDto,
   B2bVerifyResponse,
   CreateB2bCompanyDto,
   UpdateB2bCompanyDto,
@@ -34,6 +36,7 @@ export class B2bService {
     @InjectRepository(B2bCompany) private readonly companyRepository: Repository<B2bCompany>,
     @InjectRepository(B2bVerification) private readonly verificationRepository: Repository<B2bVerification>,
     @InjectRepository(B2bReservation) private readonly reservationRepository: Repository<B2bReservation>,
+    @InjectRepository(B2bSetting) private readonly settingRepository: Repository<B2bSetting>,
     private readonly authService: AuthService,
     private readonly reservationService: ReservationService,
   ) {}
@@ -179,6 +182,19 @@ export class B2bService {
       }
     })
     return { items, total, page, limit }
+  }
+
+  // ── 사이트 안내 문구 ──────────────────────
+
+  async getNotice(): Promise<B2bNoticeDto> {
+    const row = await this.settingRepository.findOne({ where: { key: B2B_SETTING_RESERVATION_NOTICE } })
+    return { reservationNotice: row?.value ?? null }
+  }
+
+  async updateNotice(dto: B2bNoticeDto, user?: User): Promise<B2bNoticeDto> {
+    const value = dto.reservationNotice?.trim() || null
+    await this.settingRepository.save({ key: B2B_SETTING_RESERVATION_NOTICE, value, updatedBy: user?.id })
+    return { reservationNotice: value }
   }
 
   // ── 내부 ──────────────────────────────────

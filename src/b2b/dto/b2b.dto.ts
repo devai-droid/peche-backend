@@ -104,3 +104,13 @@ export class B2bReservationList {
   @ApiProperty() page: number
   @ApiProperty() limit: number
 }
+
+// ── B2B 사이트 안내 문구 ───────────────────
+
+export class B2bNoticeDto {
+  @ApiPropertyOptional({ nullable: true, description: "예약 화면 안내 문구. 비우면 사이트에 표시하지 않음" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  reservationNotice?: string | null
+}
