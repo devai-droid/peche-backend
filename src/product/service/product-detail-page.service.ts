@@ -144,19 +144,21 @@ export class ProductDetailPageService {
     // 이 상세페이지(대표)의 "사본" 목록 반영 — 목록의 상세페이지들이 이걸 대표로 가리키게 하고,
     // 기존에 이걸 가리키던 것 중 목록에서 빠진 건 해제(원본으로 되돌림). 목록을 안 보내면 건드리지 않음.
     if (dto.copyDetailPageIds !== undefined) {
-      const ids = dto.copyDetailPageIds.filter((v) => v && v !== id)
+      // 그룹 대표(copyRepId) 기준. 사본 드로어에서 저장해도 그룹 전체가 올바르게 묶이도록 자신이 아닌 대표를 쓸 수 있음.
+      const repId = dto.copyRepId ?? id
+      const ids = dto.copyDetailPageIds.filter((v) => v && v !== repId)
       const clear = this.repository
         .createQueryBuilder()
         .update(ProductDetailPage)
         .set({ canonicalDetailPageId: null })
-        .where("canonical_detail_page_id = :id", { id })
+        .where("canonical_detail_page_id = :repId", { repId })
       if (ids.length) clear.andWhere("id NOT IN (:...ids)", { ids })
       await clear.execute()
       if (ids.length) {
         await this.repository
           .createQueryBuilder()
           .update(ProductDetailPage)
-          .set({ canonicalDetailPageId: id })
+          .set({ canonicalDetailPageId: repId })
           .where("id IN (:...ids)", { ids })
           .execute()
       }

@@ -66,6 +66,8 @@ export interface ProductDetailPageDto {
   relatedDetailPageIds?: string[]
   // 이 상세페이지(대표)의 사본 상세페이지 id들 — 지정하면 그 상세페이지들의 canonical이 이걸 가리킴(중복 콘텐츠 통합)
   copyDetailPageIds?: string[]
+  // 사본들이 가리킬 그룹 대표 id. 안 주면 수정 중인 상세페이지 자신이 대표.
+  copyRepId?: string | null
   order?: number
   imageId?: string
   imageENId?: string
@@ -144,6 +146,7 @@ export class CreateProductDetailPageDto implements ProductDetailPageDto {
   @ApiPropertyOptional() @IsOptional() readonly cautionTH?: string
   @ApiPropertyOptional() @IsOptional() readonly relatedDetailPageIds?: string[]
   @ApiPropertyOptional({ description: "이 상세페이지(대표)의 사본 id 목록" }) @IsOptional() readonly copyDetailPageIds?: string[]
+  @ApiPropertyOptional({ description: "사본들이 가리킬 그룹 대표 id(없으면 자신)" }) @IsOptional() @ValidateIf((_, v) => v !== null) @IsUUID() readonly copyRepId?: string | null
   @ApiPropertyOptional() @IsOptional() order?: number
   @ApiPropertyOptional() @IsOptional() @IsUUID() readonly imageId?: string
   @ApiPropertyOptional() @IsOptional() @IsUUID() readonly imageENId?: string
@@ -222,6 +225,7 @@ export class UpdateProductDetailPageDto implements ProductDetailPageDto {
   @ApiPropertyOptional() @IsOptional() readonly cautionTH?: string
   @ApiPropertyOptional() @IsOptional() readonly relatedDetailPageIds?: string[]
   @ApiPropertyOptional({ description: "이 상세페이지(대표)의 사본 id 목록" }) @IsOptional() readonly copyDetailPageIds?: string[]
+  @ApiPropertyOptional({ description: "사본들이 가리킬 그룹 대표 id(없으면 자신)" }) @IsOptional() @ValidateIf((_, v) => v !== null) @IsUUID() readonly copyRepId?: string | null
   @ApiPropertyOptional() @IsOptional() order?: number
   @ApiPropertyOptional() @IsOptional() @IsUUID() readonly imageId?: string
   @ApiPropertyOptional() @IsOptional() @IsUUID() readonly imageENId?: string
