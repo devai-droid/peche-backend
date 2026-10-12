@@ -17,6 +17,9 @@ import {
   B2bReservationList,
   B2bReservationQueryDto,
   B2bVerifyDto,
+  B2bLookupCodeDto,
+  B2bLookupVerifyDto,
+  B2bLookupVerifyResponse,
   B2bNoticeDto,
   B2bVerifyResponse,
   CreateB2bCompanyDto,
@@ -81,6 +84,34 @@ export class B2bService {
       `${B2B_VERIFICATION_TTL_MINUTES}m`,
     )
     return { token, expiresAt, companyName: company.name, name }
+  }
+
+  // ── 예약확인(조회·변경·취소) 인증 ─────────────
+
+  /**
+   * 예약확인용 인증번호 발송. 협약이 끝났거나 중지된 회사 직원도 기존 예약은 확인·취소할 수 있어야 하므로
+   * 등록된 협약사 도메인(사용 여부 무관)이면 허용한다.
+   */
+  async requestLookupCode(dto: B2bLookupCodeDto, ip: string) {
+    const email = this.normalizeEmail(dto.email)
+    await this.requireRegisteredDomain(email)
+    await this.authService.createAuthCodeByEmail({ email }, ip)
+    return { sent: true }
+  }
+
+  /** 인증번호 확인 → 예약확인용 토큰(30분). 기존 예약 화면의 본인 예약 조회·변경·취소 API 를 그대로 쓴다. */
+  async verifyLookup(dto: B2bLookupVerifyDto): Promise<B2bLookupVerifyResponse> {
+    const email = this.normalizeEmail(dto.email)
+    await this.requireRegisteredDomain(email)
+    const authCode = await this.authService.findValidAuthCode({ email }, dto.code.trim())
+    if (!authCode) {
+      throw new UnauthorizedException("인증번호가 올바르지 않거나 만료되었습니다. 다시 요청해 주세요.")
+    }
+    await this.authService.discardAuthCode(authCode)
+    const user = await this.authService.findOrCreateUserByEmail(email)
+    const expiresAt = dayjs().add(B2B_VERIFICATION_TTL_MINUTES, "minute").toDate()
+    const token = this.authService.signShortLivedToken(user, {}, `${B2B_VERIFICATION_TTL_MINUTES}m`)
+    return { token, expiresAt }
   }
 
   // ── 예약 ──────────────────────────────────
@@ -223,6 +254,20 @@ export class B2bService {
     if (exceptId) qb.andWhere("c.id <> :exceptId", { exceptId })
     const dup = await qb.getOne()
     if (dup) throw new BadRequestException(`이미 '${dup.name}'에 등록된 도메인이 있습니다.`)
+  }
+
+  private async requireRegisteredDomain(email: string) {
+    const domain = email.split("@")[1]
+    const company = domain
+      ? await this.companyRepository
+          .createQueryBuilder("c")
+          .where(":domain = ANY(c.email_domains)", { domain })
+          .getOne()
+      : null
+    if (!company) {
+      throw new BadRequestException("협약된 회사 이메일이 아닙니다. 회사 이메일 주소를 확인해 주세요.")
+    }
+    return company
   }
 
   private async requireCompanyByEmail(email: string) {

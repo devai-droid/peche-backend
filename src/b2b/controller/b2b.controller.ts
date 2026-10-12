@@ -9,6 +9,9 @@ import { User } from "@root/shared/interface/user"
 import { getIpFromRequest } from "@root/shared/helper/base.helper"
 import { B2bService } from "@root/b2b/service/b2b.service"
 import {
+  B2bLookupCodeDto,
+  B2bLookupVerifyDto,
+  B2bLookupVerifyResponse,
   B2bNoticeDto,
   B2bRequestCodeDto,
   B2bReservationList,
@@ -46,6 +49,19 @@ export class B2bController {
   @ApiOperation({ summary: "인증번호 확인 → 예약 1건용 토큰(30분)" })
   async verify(@Body() dto: B2bVerifyDto) {
     return this.service.verify(dto)
+  }
+
+  @Post("lookup/code")
+  @ApiOperation({ summary: "예약확인용: 협약사 회사 이메일로 인증번호 발송" })
+  async requestLookupCode(@Body() dto: B2bLookupCodeDto, @Req() request: Request) {
+    return this.service.requestLookupCode(dto, getIpFromRequest(request))
+  }
+
+  @Post("lookup/verify")
+  @ApiOkResponse({ type: B2bLookupVerifyResponse })
+  @ApiOperation({ summary: "예약확인용: 인증번호 확인 → 30분 토큰(본인 예약 조회·변경·취소)" })
+  async verifyLookup(@Body() dto: B2bLookupVerifyDto) {
+    return this.service.verifyLookup(dto)
   }
 
   @Post("reservations")

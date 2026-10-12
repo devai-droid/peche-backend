@@ -29,6 +29,20 @@ export class B2bVerifyDto extends B2bRequestCodeDto {
   @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(10) code: string
 }
 
+// 예약확인(조회·변경·취소)용 인증: 회사 이메일만 받는다
+export class B2bLookupCodeDto {
+  @ApiProperty() @IsEmail() @MaxLength(200) email: string
+}
+
+export class B2bLookupVerifyDto extends B2bLookupCodeDto {
+  @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(10) code: string
+}
+
+export class B2bLookupVerifyResponse {
+  @ApiProperty({ description: "예약확인용 토큰(30분). 본인 예약 조회·변경·취소에만 쓴다" }) token: string
+  @ApiProperty() expiresAt: Date
+}
+
 export class B2bVerifyResponse {
   @ApiProperty({ description: "예약 1건용 토큰(30분)" }) token: string
   @ApiProperty() expiresAt: Date
