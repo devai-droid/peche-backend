@@ -11,25 +11,34 @@ import {
   PiSnsByLang,
   PiSnsLink,
   SyncDoctor,
+  bookingUrlOf,
   cleanText,
   pecheHoursToPI,
   planSync,
 } from "./pi-sync.util"
 
-// PI에 보낼 언어(내부 코드). 번체는 zh-TW.
-const SNS_LANGS = ["ko", "en", "zh", "ja", "th", "zh-TW"]
+// 사이트 내부 언어 코드 → PI 언어 코드(챗봇이 요청마다 받는 값과 같은 표기 — 간체는 zh-CN).
+const SNS_LANGS: Record<string, string> = { ko: "ko", en: "en", zh: "zh-CN", ja: "ja", th: "th", "zh-TW": "zh-TW" }
 
-/** 노출 SNS만(링크 있거나 wechat) order순 → {platform,url} */
+/** SNS 1건 → PI 링크. 링크 대신 QR 이미지로 뜨는 항목(위챗)은 image_url로 — 챗봇이 그 이미지를 안내한다. */
+function toPiLink(l: SiteSocialLink): PiSnsLink | null {
+  const url = (l.url || "").trim() || null
+  const image = l.isModal && l.modalImageUrl ? String(l.modalImageUrl).trim() : ""
+  if (!url && !image) return null
+  return image ? { platform: l.platform, url, image_url: image } : { platform: l.platform, url }
+}
+/** 노출 SNS만(링크 또는 QR 이미지 있는 것) order순 */
 function activeSns(links?: SiteSocialLink[]): PiSnsLink[] {
   return (links || [])
-    .filter((l) => l.enabled && (!!l.url || l.platform === "wechat"))
+    .filter((l) => l.enabled)
     .sort((a, b) => a.order - b.order)
-    .map((l) => ({ platform: l.platform, url: l.url || "" }))
+    .map(toPiLink)
+    .filter((l): l is PiSnsLink => l !== null)
 }
 /** 대표(isPrimary) SNS 1개 — 공식채널 안내용 */
 function primarySns(links?: SiteSocialLink[]): PiSnsLink | null {
   const p = (links || []).find((l) => l.isPrimary && l.enabled)
-  return p ? { platform: p.platform, url: p.url || "" } : null
+  return p ? toPiLink(p) : null
 }
 
 const SITE = "peche"
@@ -58,9 +67,9 @@ export class PiSyncService {
       if (row.socialLinks && row.socialLinks.length > 0) byLang[row.lang] = row.socialLinks
     })
     const out: PiSnsByLang = {}
-    SNS_LANGS.forEach((lang) => {
-      const links = byLang[lang] && byLang[lang]!.length > 0 ? byLang[lang] : base?.socialLinks
-      out[lang] = { primary: primarySns(links), channels: activeSns(links) }
+    Object.entries(SNS_LANGS).forEach(([siteLang, piLang]) => {
+      const links = byLang[siteLang] && byLang[siteLang]!.length > 0 ? byLang[siteLang] : base?.socialLinks
+      out[piLang] = { primary: primarySns(links), channels: activeSns(links) }
     })
     return out
   }
@@ -86,6 +95,8 @@ export class PiSyncService {
         lunchInfo: cfg?.lunchInfo,
       }),
       parking: cleanText(cfg?.parkingInfo),
+      // 예약 페이지는 사이트 주소에서 만든다(PI에 손으로 넣어 둔 값이 남지 않게).
+      booking_url: bookingUrlOf(cfg?.baseUrl),
       kakao_url: kakaoUrl,
       place_url: String(cfg?.naverPlaceUrl || "").trim(),
       map_links: Object.keys(mapLinks).length ? mapLinks : undefined,
@@ -101,6 +112,7 @@ export class PiSyncService {
       order: { createdAt: "ASC" },
     })
     return docs.map((d) => ({
+      id: d.id,
       name: d.name,
       jobTitle: d.jobTitle,
       specialty: d.specialty,
