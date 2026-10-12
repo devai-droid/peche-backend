@@ -35,25 +35,29 @@ export class ReservationController {
   @Post()
   @Auth(AuthGuard(JWT_STRATEGY), SWAGGER_TOKEN_NAME, Role.USER)
   async create(@Body() dto: CreateReservationDto, @AuthUser() user: User) {
-    return this.reservationService.create(dto, user)
+    return this.reservationService.create(this.reservationService.stripAdminFields(dto, user), user)
   }
 
   @ApiOkResponse({ type: Reservation })
+  // 고객(본인 예약만, 일시·메모 변경) + 어드민(전체) 공용
   @Put(":id")
-  @Auth(AuthGuard(JWT_STRATEGY), SWAGGER_TOKEN_NAME, Role.ADMIN)
+  @Auth(AuthGuard(JWT_STRATEGY), SWAGGER_TOKEN_NAME, Role.USER)
   async update(@Param("id", ParseUUIDPipe) id: string, @Body() dto: UpdateReservationDto, @AuthUser() user?: User) {
-    return this.reservationService.update(id, dto, user)
+    await this.reservationService.assertOwnerOrAdmin(id, user)
+    return this.reservationService.update(id, this.reservationService.stripAdminFields(dto, user), user)
   }
 
+  // 고객(본인 예약 취소) + 어드민(전체) 공용
   @Delete(":id")
-  @Auth(AuthGuard(JWT_STRATEGY), SWAGGER_TOKEN_NAME, Role.ADMIN)
-  async remove(@Param("id", ParseUUIDPipe) id: string) {
+  @Auth(AuthGuard(JWT_STRATEGY), SWAGGER_TOKEN_NAME, Role.USER)
+  async remove(@Param("id", ParseUUIDPipe) id: string, @AuthUser() user?: User) {
+    await this.reservationService.assertOwnerOrAdmin(id, user)
     return this.reservationService.remove(id)
   }
 
   @ApiOkResponse({ type: ReservationList })
   @Get("/mine")
-  @Auth(AuthGuard(JWT_STRATEGY), SWAGGER_TOKEN_NAME, Role.ADMIN)
+  @Auth(AuthGuard(JWT_STRATEGY), SWAGGER_TOKEN_NAME, Role.USER)
   async findMine(@Query() query: ReservationQueryDto, @AuthUser() user: User) {
     return this.reservationService.refreshAndFindReservation(Object.assign(query, { userId: user.id }), user)
   }

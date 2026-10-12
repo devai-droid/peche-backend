@@ -3,6 +3,6 @@ import { User } from "@root/shared/interface/user"
 
 export class UserHelper {
   static isAdmin(user?: User) {
-    return user?.roles.find((role) => role == Role.ADMIN) ?? false
+    return user?.roles?.find((role) => role == Role.ADMIN) ?? false
   }
 }

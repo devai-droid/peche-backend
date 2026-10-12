@@ -1,4 +1,4 @@
-import { BadRequestException, forwardRef, Inject, Injectable } from "@nestjs/common"
+import { BadRequestException, ForbiddenException, forwardRef, Inject, Injectable } from "@nestjs/common"
 import { InjectRepository } from "@nestjs/typeorm"
 import { Between, FindManyOptions, ILike, In, Repository } from "typeorm"
 import { paginate } from "@root/shared/pagination"
@@ -52,6 +52,8 @@ import { CategoryGroup } from "@root/smart-doctor/entities/category-group"
 
 /** 당일 예약 마감 여유시간(분). 분류(초진/재진/제모) 구분 없이 동일 적용 */
 const RESERVATION_CUTOFF_MINUTES = 30
+
+const MAX_ITEM_QUANTITY = 99
 
 @Injectable()
 export class ReservationService {
@@ -506,6 +508,26 @@ export class ReservationService {
 
   async findOne(id: string) {
     return this.repository.findOneOrFail({ where: { id: id } })
+  }
+
+  /** 어드민이 아니면 본인 예약만 변경·취소할 수 있다. */
+  async assertOwnerOrAdmin(id: string, user?: User) {
+    if (UserHelper.isAdmin(user)) return
+    const reservation = await this.repository.findOne({ where: { id: id } })
+    if (!reservation || !user?.id || reservation.user?.id !== user.id) {
+      throw new ForbiddenException()
+    }
+  }
+
+  /** 어드민 전용 필드(상태·관리자 메모·유입경로)는 고객 요청에서 제거한다. */
+  stripAdminFields<T extends ReservationDto>(dto: T, user?: User): T {
+    if (UserHelper.isAdmin(user)) return dto
+    return Object.assign(dto, {
+      status: undefined,
+      adminMemo: undefined,
+      pathVisit: undefined,
+      detailVisit: undefined,
+    })
   }
 
   async findOneWithEvents(id: string) {
@@ -1220,6 +1242,14 @@ export class ReservationService {
       (dto.eventIds == undefined || dto.eventIds.length == 0)
     ) {
       throw new BadRequestException(`Reservation must have productIds or eventIds`)
+    }
+    // 수량은 1~99 정수만 허용(닥팔 메모 단가·소계 계산 오염 방지)
+    if (dto.quantities) {
+      for (const value of Object.values(dto.quantities)) {
+        if (!Number.isInteger(value) || value < 1 || value > MAX_ITEM_QUANTITY) {
+          throw new BadRequestException(`Invalid quantity`)
+        }
+      }
     }
   }
 

@@ -16,7 +16,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, JWT_STRATEGY) {
   }
 
   async validate(payload: JwtPayload) {
-    await this.authService.validateUser(payload)
-    return payload
+    // 역할은 토큰 발급 시점이 아니라 DB 기준으로 판단(권한 회수 즉시 반영)
+    const user = await this.authService.validateUser(payload)
+    return { ...payload, roles: user.roles ?? [] }
   }
 }
