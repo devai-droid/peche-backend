@@ -49,6 +49,9 @@ import { Event } from "@root/event/entities/event.entity"
 import { LangCrmCategoryService } from "@root/smart-doctor/service/lang-crm-category.service"
 import { LangCrmCategory } from "@root/smart-doctor/entities/lang-crm-category.entity"
 import { CategoryGroup } from "@root/smart-doctor/entities/category-group"
+import { B2bReservation } from "@root/b2b/entities/b2b-reservation.entity"
+import { B2bReservationContext, buildB2bMemoLine } from "@root/b2b/b2b.util"
+import { AccountUser } from "@root/users/entities/user.entity"
 
 /** 당일 예약 마감 여유시간(분). 분류(초진/재진/제모) 구분 없이 동일 적용 */
 const RESERVATION_CUTOFF_MINUTES = 30
@@ -80,9 +83,11 @@ export class ReservationService {
     private readonly integratedCrmCategoryService: IntegratedCrmCategoryService,
     @Inject(forwardRef(() => LangCrmCategoryService))
     private readonly langCrmCategoryService: LangCrmCategoryService,
+    @InjectRepository(B2bReservation) private readonly b2bReservationRepository: Repository<B2bReservation>,
   ) {}
 
-  async create(dto: CreateReservationDto, user: User) {
+  /** b2b: B2B 사이트 예약일 때만 전달. 닥팔 메모 회사 줄·환자명/연락처·알림 수신처가 직원 입력값으로 바뀐다. */
+  async create(dto: CreateReservationDto, user: User, b2b?: B2bReservationContext) {
     this.checkDto(dto)
     await this.checkAvailableEvent(dto.eventIds, dto.datetime)
     user.locale = await this.getUserLanguage(user)
@@ -113,9 +118,9 @@ export class ReservationService {
           // 일단 WAITING 으로 세팅. 팔레트 측에서 확정할 것 임.
           dto.status = ReservationStatus.WAITING
         }
-        const customerName = await this.getCustomerName(user)
+        const customerName = b2b?.name ?? (await this.getCustomerName(user))
         const customerId = await this.getCustomerId(user)
-        const phone = await this.getCustomerPhone(user)
+        const phone = b2b?.phone ?? (await this.getCustomerPhone(user))
         const email = await this.getCustomerEmail(user)
         const contact = phone || email
         // 이벤트 이름, 상품 이름 조회
@@ -136,8 +141,7 @@ export class ReservationService {
         const realProductObjs = (productObjs ?? []).filter((p) => !MARKER_PRODUCT_IDS.has(p.id))
 
         const qtyOf = (id: string) => Number(dto.quantities?.[id]) || 1
-        const unitPriceOf = (o: { price?: number; discountPrice?: number }) =>
-          Number(o.discountPrice ?? o.price ?? 0)
+        const unitPriceOf = (o: { price?: number; discountPrice?: number }) => Number(o.discountPrice ?? o.price ?? 0)
         const formatLine = (name: string, unit: number, qty: number) =>
           `${name}(${unit.toLocaleString("ko-KR")}원) x${qty} - ${(unit * qty).toLocaleString("ko-KR")}원`
 
@@ -158,11 +162,15 @@ export class ReservationService {
             : productLines
         // 분류(A/B/C)에 맞는 닥터팔레트 스케줄로 예약 생성 (미지정 시 초진 스케줄)
         scheduleId = resolveScheduleCode(dto.category)
+        // B2B 예약은 닥팔 메모 맨 위에 회사 줄 추가(예약 레코드의 고객 메모에는 넣지 않음)
+        const planDto = b2b
+          ? Object.assign({}, dto, { userMemo: [buildB2bMemoLine(b2b), dto.userMemo].filter(Boolean).join("\n") })
+          : dto
         planId = await this.postReservationAndGetPlanId(
           customerName,
           customerId,
           contact,
-          dto,
+          planDto,
           eventNames,
           productNames,
           scheduleId,
@@ -179,10 +187,9 @@ export class ReservationService {
       productObjs = await this.productService.findManyByIds(dto.productIds)
     }
     const snapQty = (id: string) => Number(dto.quantities?.[id]) || 1
-    const snapPrice = (o: { price?: number; discountPrice?: number }) =>
-      Number(o?.discountPrice ?? o?.price ?? 0)
+    const snapPrice = (o: { price?: number; discountPrice?: number }) => Number(o?.discountPrice ?? o?.price ?? 0)
     // 언어별 이름이 비어 있으면 한국어로 폴백
-    const orKo = (loc?: string, ko?: string) => (loc && loc.trim() ? loc : (ko ?? ""))
+    const orKo = (loc?: string, ko?: string) => (loc && loc.trim() ? loc : ko ?? "")
     // 이벤트 표시명: '[대분류] 이벤트명' (대분류·이벤트명 각각 해당 언어, 없으면 한국어)
     const evName = (catLoc?: string, catKo?: string, evLoc?: string, evKo?: string) => {
       const cat = orKo(catLoc, catKo)
@@ -200,7 +207,7 @@ export class ReservationService {
       count: snapQty(p.id),
     }))
     const eventSnapshot = (eventObjs ?? []).map((e) => ({
-      name: e.category?.name ? `[${e.category.name}] ${e.name}` : (e.name ?? ""),
+      name: e.category?.name ? `[${e.category.name}] ${e.name}` : e.name ?? "",
       nameEN: evName(e.category?.nameEN, e.category?.name, e.nameEN, e.name),
       nameZH: evName(e.category?.nameZH, e.category?.name, e.nameZH, e.name),
       nameZHTW: evName(e.category?.nameZHTW, e.category?.name, e.nameZHTW, e.name),
@@ -226,13 +233,56 @@ export class ReservationService {
     if (dto.productIds && dto.productIds.length > 0) {
       await this.reservationProductService.bulkCreate(reservation, dto.productIds)
     }
+    if (b2b) {
+      await this.b2bReservationRepository.save({
+        reservationId: reservation.id,
+        companyId: b2b.companyId,
+        verificationId: b2b.verificationId,
+        companyName: b2b.companyName,
+        discountRate: b2b.discountRate ?? null,
+        discountNote: b2b.discountNote ?? null,
+        email: b2b.email,
+        name: b2b.name,
+        phone: b2b.phone,
+      })
+    }
     const newReservation = await this.findOne(reservation.id)
     await this.sendNewReservationMessage(newReservation)
     return newReservation
   }
 
+  /**
+   * 알림 수신자. B2B 예약은 회원 정보(회사 이메일 계정) 대신 예약 때 입력한 이름·휴대폰으로 알림톡을 보낸다.
+   * 그 외 예약은 예약 회원 그대로.
+   */
+  private async recipientOf(reservation: Reservation): Promise<AccountUser> {
+    const b2b = await this.findB2bReservation(reservation.id)
+    if (!b2b) return reservation.user
+    return Object.assign(new AccountUser(), reservation.user, {
+      name: b2b.name,
+      phoneNumber: b2b.phone,
+      email: undefined,
+      languageLocale: LanguageLocale.ko,
+    })
+  }
+
+  /** B2B 예약이면 닥팔 메모용 회사 줄, 아니면 undefined */
+  private async b2bMemoLineOf(reservationId: string) {
+    const b2b = await this.findB2bReservation(reservationId)
+    return b2b ? buildB2bMemoLine(b2b) : undefined
+  }
+
+  /** B2B 조회 실패가 일반 예약 알림·변경을 막지 않도록 오류는 무시(null) */
+  private async findB2bReservation(reservationId: string) {
+    try {
+      return await this.b2bReservationRepository.findOne({ where: { reservationId } })
+    } catch (e) {
+      return null
+    }
+  }
+
   async sendNewReservationMessage(reservation: Reservation) {
-    const { user } = reservation
+    const user = await this.recipientOf(reservation)
     const lang = user.languageLocale ?? I18nContext.current().lang
     const title = this.i18n.t("MESSAGES.NOTIFICATION.SUBJECT_NEW_RESERVATION", { lang })
     const args = {
@@ -264,7 +314,7 @@ export class ReservationService {
 
   // 팔레트 웹훅 받고 예약 확정 알림 발송
   async sendPaletteReservationConfirmationMessage(reservation: Reservation) {
-    const { user } = reservation
+    const user = await this.recipientOf(reservation)
     const lang = user.languageLocale ?? I18nContext.current().lang
     const reservationBuilding = reservation.building
     const title = this.i18n.t("MESSAGES.NOTIFICATION.SUBJECT_CONFIRMATION", { lang })
@@ -303,13 +353,13 @@ export class ReservationService {
       where: { datetime: Between(startDatetime, endDatetime), status: ReservationStatus.DONE },
     })
     for (const reservation of reservations) {
-      const user = reservation.user
+      const user = await this.recipientOf(reservation)
       const lang = user.languageLocale
       const title = this.i18n.t("MESSAGES.NOTIFICATION.TITLE", { lang })
       const longMessage = this.i18n.t("MESSAGES.NOTIFICATION.ON_THE_DAY_LONG", {
         lang: lang,
         args: {
-          name: reservation.user.name ?? "",
+          name: user.name ?? "",
           date: dayjs(reservation.datetime).format("MM-DD"),
           time: dayjs(reservation.datetime).format("A hh:mm"),
         },
@@ -338,13 +388,13 @@ export class ReservationService {
       where: { datetime: Between(startDatetime, endDatetime), status: ReservationStatus.DONE },
     })
     for (const reservation of reservations) {
-      const user = reservation.user
+      const user = await this.recipientOf(reservation)
       const lang = user.languageLocale
       const title = this.i18n.t("MESSAGES.NOTIFICATION.TITLE", { lang })
       const longMessage = this.i18n.t("MESSAGES.NOTIFICATION.THE_DAY_BEFORE_LONG", {
         lang: lang,
         args: {
-          name: reservation.user.name ?? "",
+          name: user.name ?? "",
           date: dayjs(reservation.datetime).format("MM-DD"),
           time: dayjs(reservation.datetime).format("A hh:mm"),
         },
@@ -368,7 +418,7 @@ export class ReservationService {
 
   async sendCancelReservationMessage(reservation: Reservation) {
     try {
-      const user = reservation.user
+      const user = await this.recipientOf(reservation)
       const lang = user.languageLocale
       if (user.email) {
         await this.sendSesEmail(
@@ -386,7 +436,7 @@ export class ReservationService {
       }
 
       if (user.phoneNumber && (user.phoneNumber.startsWith("+82") || user.provider == AuthProvider.KAKAO)) {
-        await this.kakaoService.sendReservationCancelMessage([reservation.user.phoneNumber], {
+        await this.kakaoService.sendReservationCancelMessage([user.phoneNumber], {
           [KAKAO_TEMPLATE.FIELD_NAME]: user.name ?? "고객",
           [KAKAO_TEMPLATE.FIELD_RESERVATION_DATE_FOR_CANCEL]: dayjs(reservation.datetime).format("MM-DD"),
           [KAKAO_TEMPLATE.FIELD_RESERVATION_TIME_FOR_CANCEL]: dayjs(reservation.datetime).format("A hh:mm"),
@@ -394,13 +444,12 @@ export class ReservationService {
       } else if (user.phoneNumber) {
         await this.smsService.sendCancelReservationSms(user.phoneNumber, reservation.datetime)
       }
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   async sendRejectReservationMessage(reservation: Reservation) {
     try {
-      const user = reservation.user
+      const user = await this.recipientOf(reservation)
       const lang = user.languageLocale ?? I18nContext.current().lang
       if (user.email) {
         await this.sendSesEmail(
@@ -421,8 +470,7 @@ export class ReservationService {
           [KAKAO_TEMPLATE.FIELD_NAME]: user.name ?? "고객",
         })
       }
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   async refreshAndFindReservation(query?: ReservationQueryDto, user?: User) {
@@ -530,6 +578,11 @@ export class ReservationService {
     })
   }
 
+  async findManyByIds(ids: string[]) {
+    if (ids.length === 0) return []
+    return this.repository.find({ where: { id: In(ids) } })
+  }
+
   async findOneWithEvents(id: string) {
     return this.repository.findOneOrFail({ relations: ["events", "events.event"], where: { id: id } })
   }
@@ -618,10 +671,7 @@ export class ReservationService {
 
     // 예약 변경 이력(일시 변경) 누적 — 예약 상세 '예약변경내역'에 노출
     const newChangeHistory = [...(reservation.changeHistory ?? [])]
-    if (
-      dto.datetime &&
-      new Date(dto.datetime).getTime() !== new Date(oldDatetime).getTime()
-    ) {
+    if (dto.datetime && new Date(dto.datetime).getTime() !== new Date(oldDatetime).getTime()) {
       newChangeHistory.push({
         fromDatetime: oldDatetime,
         toDatetime: new Date(dto.datetime),
@@ -638,14 +688,12 @@ export class ReservationService {
       }),
     )
     // 닥팔 메모에 '변경 건' 표기: 기존 시각 → 변경 시각 (+ 고객 메모 유지)
-    const changeNote = this.buildReservationChangeNote(oldDatetime, dto.datetime, reservation.userMemo)
+    const b2bMemoLine = await this.b2bMemoLineOf(reservation.id)
+    const changeNote = [b2bMemoLine, this.buildReservationChangeNote(oldDatetime, dto.datetime, reservation.userMemo)]
+      .filter(Boolean)
+      .join("\n")
     // 팔레트 api 콜 (예약 원본 스케줄 유지)
-    await this.updateReservationAndGetPlanId(
-      reservation.palettePlanId,
-      dto,
-      reservation.paletteScheduleId,
-      changeNote,
-    )
+    await this.updateReservationAndGetPlanId(reservation.palettePlanId, dto, reservation.paletteScheduleId, changeNote)
 
     // 예약 변경 후 메시지 전송
     const newReservation = await this.findOne(reservation.id)
@@ -668,8 +716,7 @@ export class ReservationService {
           isNoShow: false,
           reason: "사용자 취소",
         })
-      } catch (e) {
-      }
+      } catch (e) {}
     }
     if (reservation.status == ReservationStatus.DONE) {
       await this.cancelReservation(reservation)
@@ -962,8 +1009,7 @@ export class ReservationService {
   private async sendSesEmail(email: string, subject: string, body: string) {
     try {
       return await this.sesService.sendSesEmail(email, subject, body)
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   private dayRange(day?: Date) {

@@ -26,6 +26,7 @@ import { UsersModule } from "@root/users/users.module"
 import { SystemModule } from "@root/system/system.module"
 import { MessageModule } from "@root/message/message.module"
 import { NotificationScheduler } from "@root/reservation/scheduler/notification-scheduler"
+import { B2bReservation } from "@root/b2b/entities/b2b-reservation.entity"
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { NotificationScheduler } from "@root/reservation/scheduler/notification-
       CloseDay,
       SpecificDate,
       SpecificDateSlot,
+      B2bReservation,
     ]),
     forwardRef(() => ProductModule),
     forwardRef(() => EventModule),

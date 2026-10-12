@@ -116,6 +116,21 @@ export class AuthService {
     return user
   }
 
+  /** 이메일 소유 확인을 마친 사용자 조회, 없으면 가입(B2B 회사 이메일 인증 등). */
+  async findOrCreateUserByEmail(email: string, name?: string): Promise<AccountUser> {
+    const existing = await this.findUserByEmail(email)
+    if (existing) return existing
+    return await this.createUser(<SignUpDto>{ email, name, languageLocale: LanguageLocale.ko })
+  }
+
+  /** 짧은 수명의 토큰 발급(추가 클레임 포함). B2B 예약 1건용 인증 등에 사용. */
+  signShortLivedToken(user: AccountUser, claims: Record<string, unknown>, expiresIn: string) {
+    return this.jwtService.sign(
+      { id: user.id, email: user.email, phoneNumber: user.phoneNumber, [ROLES_KEY]: user.roles, ...claims },
+      { expiresIn, issuer: JWT_ISSUER },
+    )
+  }
+
   async changePassword(dto: PasswordChangeDto, userId: string) {
     const user = await this.userService.findOne(userId)
     if (!(await this.userService.checkIsCorrectPassword(user, dto.oldPassword))) {
