@@ -64,6 +64,13 @@ export class B2bController {
     return this.service.verifyLookup(dto)
   }
 
+  @Get("my-reservations")
+  @Auth(AuthGuard(JWT_STRATEGY), SWAGGER_TOKEN_NAME, Role.USER)
+  @ApiOperation({ summary: "B2B 예약확인: 이 회사 이메일로 B2B 사이트에서 한 예약(입력 이름·연락처 포함)" })
+  async findMyReservations(@AuthUser() user: User) {
+    return this.service.findMyReservations(user)
+  }
+
   @Post("reservations")
   @ApiOkResponse({ type: Reservation })
   @Auth(AuthGuard(JWT_STRATEGY), SWAGGER_TOKEN_NAME, Role.USER)
