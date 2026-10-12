@@ -180,13 +180,15 @@ export class ProductService {
     const sheetDetailPageNames = new Set(products.map((p) => p.detailPageName).filter(Boolean))
 
     // 상세페이지/대분류 첫 등장 순서 추적
+    // 상세페이지는 "대분류||이름" 단위(같은 이름이 여러 대분류에 있으면 대분류별로 시트 위치대로 순서를 따로 매김)
+    const dpKey = (categoryName: string | undefined, name: string) => `${categoryName ?? ""}||${name}`
     const detailPageOrder = new Map<string, number>()
     const categoryOrder = new Map<string, number>()
     let dpIdx = 0
     let catIdx = 0
     for (const p of products) {
-      if (p.detailPageName && !detailPageOrder.has(p.detailPageName)) {
-        detailPageOrder.set(p.detailPageName, dpIdx++)
+      if (p.detailPageName && !detailPageOrder.has(dpKey(p.categoryName, p.detailPageName))) {
+        detailPageOrder.set(dpKey(p.categoryName, p.detailPageName), dpIdx++)
       }
       if (p.categoryName && !categoryOrder.has(p.categoryName)) {
         categoryOrder.set(p.categoryName, catIdx++)
@@ -201,10 +203,9 @@ export class ProductService {
     )) {
       categoryByName.set(name, await this.productCategoryService.findOrCreateByName({ name }))
     }
-    for (const dpName of Array.from(
-      new Set(products.map((p) => p.detailPageName).filter((n): n is string => !!n)),
-    )) {
-      const catName = products.find((p) => p.detailPageName === dpName)?.categoryName
+    // 대분류별로 각각 확보(같은 이름이 여러 대분류에 있으면 대분류마다 하나씩)
+    for (const key of Array.from(detailPageOrder.keys())) {
+      const [catName, dpName] = key.split("||")
       const category = catName ? categoryByName.get(catName) : undefined
       await this.productDetailPageService.findOrCreateByName({ name: dpName }, category)
     }
@@ -215,10 +216,14 @@ export class ProductService {
       }),
     )
 
-    // 상세페이지 order 업데이트
+    // 상세페이지 order 업데이트(대분류||이름 기준 시트 위치)
+    const categoryNameById = new Map<string, string>(
+      Array.from(categoryByName.entries()).map(([name, cat]) => [cat.id, name]),
+    )
     const allDetailPagesForOrder = await this.productDetailPageService.findAllActive()
     for (const dp of allDetailPagesForOrder) {
-      const order = detailPageOrder.get(dp.name)
+      const catName = dp.categoryId ? categoryNameById.get(dp.categoryId) : undefined
+      const order = detailPageOrder.get(dpKey(catName, dp.name))
       if (order !== undefined && dp.order !== order) {
         await this.productDetailPageService.updateOrder(dp.id, order)
       }
