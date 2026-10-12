@@ -50,7 +50,7 @@ import { LangCrmCategoryService } from "@root/smart-doctor/service/lang-crm-cate
 import { LangCrmCategory } from "@root/smart-doctor/entities/lang-crm-category.entity"
 import { CategoryGroup } from "@root/smart-doctor/entities/category-group"
 import { B2bReservation } from "@root/b2b/entities/b2b-reservation.entity"
-import { B2bReservationContext, buildB2bMemoLine } from "@root/b2b/b2b.util"
+import { B2bReservationContext, b2bPatientId, buildB2bMemoLine } from "@root/b2b/b2b.util"
 import { AccountUser } from "@root/users/entities/user.entity"
 
 /** 당일 예약 마감 여유시간(분). 분류(초진/재진/제모) 구분 없이 동일 적용 */
@@ -119,7 +119,8 @@ export class ReservationService {
           dto.status = ReservationStatus.WAITING
         }
         const customerName = b2b?.name ?? (await this.getCustomerName(user))
-        const customerId = await this.getCustomerId(user)
+        // B2B 예약은 회사 이메일 기준 별도 닥팔 환자 번호(입력한 이름이 닥팔에 그대로 들어가도록)
+        const customerId = b2b ? b2bPatientId(b2b.email) : await this.getCustomerId(user)
         const phone = b2b?.phone ?? (await this.getCustomerPhone(user))
         const email = await this.getCustomerEmail(user)
         const contact = phone || email

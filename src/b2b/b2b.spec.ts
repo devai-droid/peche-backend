@@ -1,6 +1,6 @@
 import { ForbiddenException } from "@nestjs/common"
 import { Reflector } from "@nestjs/core"
-import { buildB2bMemoLine, normalizeKoreanMobile } from "@root/b2b/b2b.util"
+import { b2bPatientId, buildB2bMemoLine, normalizeKoreanMobile } from "@root/b2b/b2b.util"
 import { B2bService } from "@root/b2b/service/b2b.service"
 import { RolesGuard } from "@root/shared/security/roles.guard"
 import { Role } from "@root/shared/enum/auth"
@@ -11,6 +11,12 @@ describe("b2b.util", () => {
     expect(normalizeKoreanMobile("+82 10 1234 5678")).toBe("+821012345678")
     expect(normalizeKoreanMobile("02-123-4567")).toBeNull()
     expect(normalizeKoreanMobile("")).toBeNull()
+  })
+
+  it("B2B 닥팔 환자 번호: 같은 이메일이면 같은 값, 대소문자 무시, 이메일이 다르면 다른 값", () => {
+    expect(b2bPatientId("A@Samsung.com")).toBe(b2bPatientId("a@samsung.com"))
+    expect(b2bPatientId("a@samsung.com")).not.toBe(b2bPatientId("b@samsung.com"))
+    expect(b2bPatientId("a@samsung.com")).toMatch(/^[0-9a-f-]{36}$/)
   })
 
   it("닥팔 메모 회사 줄", () => {
