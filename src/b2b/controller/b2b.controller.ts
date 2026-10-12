@@ -9,6 +9,7 @@ import { User } from "@root/shared/interface/user"
 import { getIpFromRequest } from "@root/shared/helper/base.helper"
 import { B2bService } from "@root/b2b/service/b2b.service"
 import {
+  B2bNoticeDto,
   B2bRequestCodeDto,
   B2bReservationList,
   B2bReservationQueryDto,
@@ -26,6 +27,13 @@ import { Reservation } from "@root/reservation/entities/reservation.entity"
 @ApiTags("b2b")
 export class B2bController {
   constructor(private readonly service: B2bService) {}
+
+  @Get("notice")
+  @ApiOkResponse({ type: B2bNoticeDto })
+  @ApiOperation({ summary: "예약 화면 안내 문구(공개)" })
+  async getNotice() {
+    return this.service.getNotice()
+  }
 
   @Post("auth/code")
   @ApiOperation({ summary: "협약사 회사 이메일로 인증번호 발송" })
@@ -76,6 +84,12 @@ export class B2bAdminController {
     @AuthUser() user: User,
   ) {
     return this.service.updateCompany(id, dto, user)
+  }
+
+  @Put("notice")
+  @ApiOkResponse({ type: B2bNoticeDto })
+  async updateNotice(@Body() dto: B2bNoticeDto, @AuthUser() user: User) {
+    return this.service.updateNotice(dto, user)
   }
 
   @Get("reservations")
