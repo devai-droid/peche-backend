@@ -275,11 +275,12 @@ export class ProductService {
 
     // Phase 2: 상세페이지 처리
     const detailPageDtos = await GoogleSpreadsheetHelper.getDetailPagesFromSpreadsheet(dto.url)
+    // 같은 이름이라도 대분류가 다르면 별도 상세페이지 → 맵 키도 "대분류||이름"으로(공용 옵션을 여러 대분류에 노출)
     const detailPageMap = new Map()
     for (const dpDto of detailPageDtos) {
       const category = dpDto.categoryName ? categoryMap.get(dpDto.categoryName) : undefined
       const detailPage = await this.productDetailPageService.findOrCreateByName(dpDto, category)
-      detailPageMap.set(dpDto.name, detailPage)
+      detailPageMap.set(`${dpDto.categoryName ?? ""}||${dpDto.name}`, detailPage)
     }
 
     // Phase 3: 상품 처리
@@ -288,8 +289,11 @@ export class ProductService {
 
     return await Promise.all(
       productDtos.map(async (pDto) => {
+        // 상품의 대분류에 맞는 상세페이지를 우선 연결(대분류||이름). 없으면 그 대분류에서 찾고, 그래도 없으면 이름만으로 폴백.
+        const pCategoryId = pDto.categoryName ? categoryMap.get(pDto.categoryName)?.id : undefined
         const detailPage = pDto.detailPageName
-          ? detailPageMap.get(pDto.detailPageName) ??
+          ? detailPageMap.get(`${pDto.categoryName ?? ""}||${pDto.detailPageName}`) ??
+            (await this.productDetailPageService.findOneByNameOrNull(pDto.detailPageName, pCategoryId)) ??
             (await this.productDetailPageService.findOneByNameOrNull(pDto.detailPageName))
           : undefined
         return await this.repository.save(

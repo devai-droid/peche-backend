@@ -80,15 +80,19 @@ export class ProductDetailPageService {
     return Object.assign(productDetailPage, { products: products })
   }
 
-  async findOneByNameOrNull(name: string) {
+  // categoryId를 주면 "이름 + 카테고리"로 찾는다. 같은 이름 상세페이지를 대분류별로 따로 둘 수 있게 하기 위함
+  // (예: "(마취 옵션) 에어녹스"를 탄력/리프팅·스킨부스터 양쪽에 각각). 안 주면 기존대로 이름만으로 찾는다.
+  async findOneByNameOrNull(name: string, categoryId?: string) {
     const entityName = "product_detail_page"
     const queryBuilder = this.repository.createQueryBuilder(entityName)
     queryBuilder.andWhere(`REPLACE(name, ' ', '') LIKE :name`, { name: name.replaceAll(" ", "") })
+    if (categoryId) queryBuilder.andWhere(`${entityName}.category_id = :cid`, { cid: categoryId })
     return queryBuilder.getOne()
   }
 
   async findOrCreateByName(dto: CreateDetailPageFromSheetDto, category?: ProductCategory) {
-    const existing = dto.name ? await this.findOneByNameOrNull(dto.name) : null
+    // 이름 + 카테고리로 찾는다. 같은 이름이라도 대분류가 다르면 별도 상세페이지로 생성(공용 옵션을 여러 대분류에 노출).
+    const existing = dto.name ? await this.findOneByNameOrNull(dto.name, category?.id) : null
     if (existing) return existing
     const { categoryName, ...fields } = dto
     return await this.repository.save(
