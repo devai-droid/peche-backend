@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common"
 import { ConfigService } from "@nestjs/config"
 import axios, { AxiosInstance } from "axios"
 import { Env } from "@root/shared/enum/env"
-import { PiFacts, PiOp } from "./pi-sync.util"
+import { PiFacts, PiOp, nfc } from "./pi-sync.util"
 
 /**
  * PI(챗봇) facts API 호출부. 토큰·조직/테넌트ID는 서버 환경변수에서만 읽는다.
@@ -77,17 +77,12 @@ export class PiClientService {
     return this.req("PUT", `/api/orgs/${this.orgId}/roles`, { practitionerId, locationId, position })
   }
 
-  /** 신규 의료진 key(이름 기반 슬러그) */
-  private pracKey(name: string): string {
-    return "doc-" + Buffer.from(String(name || "")).toString("hex").slice(0, 12)
-  }
-
   /** 계획 실행: 지점 → 의료진 → (신규 있으면 facts 재조회) → 역할 배치. 실패 시 즉시 throw. */
   async executePlan(ops: PiOp[], facts: PiFacts): Promise<{ ok: true }> {
     const key2locId: Record<string, string> = {}
     ;(facts.locations || []).forEach((l) => (key2locId[l.key] = l.id))
     const name2pracId: Record<string, string> = {}
-    ;(facts.practitioners || []).forEach((p) => (name2pracId[p.name] = p.id))
+    ;(facts.practitioners || []).forEach((p) => (name2pracId[nfc(p.name)] = p.id))
     let hasCreate = false
 
     for (const o of ops) {
@@ -102,7 +97,8 @@ export class PiClientService {
     for (const p of ops) {
       if (p.kind !== "practitioner") continue
       if (p.action === "create") {
-        await this.createPractitioner({ key: this.pracKey(p.name), ...p.payload })
+        // key = 사이트 의료진 고유 번호 기반(planSync가 정함) — 이름 글자 기반 슬러그는 두 글자가 같으면 충돌했다.
+        await this.createPractitioner({ key: p.key, ...p.payload })
         hasCreate = true
       } else if (p.action === "update" && p.id) {
         await this.updatePractitioner(p.id, p.payload)
@@ -116,15 +112,15 @@ export class PiClientService {
     if (needRole && hasCreate) {
       const fresh = await this.getFacts()
       ;(fresh.locations || []).forEach((l) => (key2locId[l.key] = l.id))
-      ;(fresh.practitioners || []).forEach((pp) => (name2pracId[pp.name] = pp.id))
+      ;(fresh.practitioners || []).forEach((pp) => (name2pracId[nfc(pp.name)] = pp.id))
     }
     for (const q of ops) {
       if (q.kind === "practitioner" && q.action === "create") {
-        const pid = name2pracId[q.name]
+        const pid = name2pracId[nfc(q.name)]
         const lid = q.at ? key2locId[q.at] : undefined
         if (pid && lid && q.position) await this.setRole(pid, lid, q.position)
       } else if (q.kind === "role" && q.action === "set") {
-        const pid = q.id || name2pracId[q.name]
+        const pid = q.id || name2pracId[nfc(q.name)]
         const lid = key2locId[q.at]
         if (pid && lid) await this.setRole(pid, lid, q.position)
       }

@@ -2,6 +2,11 @@
  * PI(챗봇) facts 변환 — 순수 함수(네트워크 없음).
  * 페슈는 지점이 1개(페슈의원)라 location 1건, practitioners = blog.doctors.
  * 참고: 다른 사이트(yswclinic 등)의 pi-sync.js 매핑 규칙을 페슈 데이터에 맞게 포팅.
+ *
+ * 원칙(2026-10-12, PHI-874): **사이트가 원본, PI는 받아 적는 쪽.**
+ *   · 사이트 값을 변형하지 않는다(직함 그대로, 빈 값도 그대로 보내 PI를 비운다).
+ *   · PI에만 남는 값을 만들지 않는다(예약 링크도 사이트 주소에서 만든다).
+ *   · 변경 비교는 PI가 돌려준 값과 **모양이 같은지**로 한다(jsonb는 키 순서를 바꾸므로 키를 정렬해 비교).
  */
 
 export const PECHE_LOCATION_KEY = "peche"
@@ -10,12 +15,14 @@ export interface PiHours {
   weekly: { days: string[]; open: string; close: string; break: { start: string; end: string } | null }[]
   notes: string[]
 }
+/** SNS 링크 1건 — PI 계약: platform 필수, url은 http(s) 또는 null, image_url(QR 등)은 선택 */
 export interface PiSnsLink {
   platform: string
-  url: string
+  url: string | null
+  image_url?: string
 }
 export interface PiSnsByLang {
-  // 언어별 대표(공식채널 안내용) + 전체 채널
+  // 언어별 대표(공식채널 안내용) + 전체 채널. 키는 PI 언어 코드(ko·en·ja·zh-CN·zh-TW·th).
   [lang: string]: { primary: PiSnsLink | null; channels: PiSnsLink[] }
 }
 export interface PiLocationPayload {
@@ -25,17 +32,17 @@ export interface PiLocationPayload {
   phone: string
   hours: PiHours
   sort_order?: number
-  parking?: string
-  booking_url?: string
-  kakao_url?: string
-  place_url?: string
-  channel_url?: string
+  parking?: string | null
+  booking_url?: string | null
+  kakao_url?: string | null
+  place_url?: string | null
+  channel_url?: string | null
   // 위치/지도 링크
-  map_links?: { naver?: string; google?: string; kakao?: string }
+  map_links?: { naver?: string; google?: string; kakao?: string } | null
   // 공통 SNS(모든 언어 공통 노출)
-  common_sns?: PiSnsLink[]
+  common_sns?: PiSnsLink[] | null
   // 언어별 SNS(대표 표시 포함 — 공식채널 안내는 primary만 사용)
-  sns_by_lang?: PiSnsByLang
+  sns_by_lang?: PiSnsByLang | null
 }
 export interface PiPractitionerPayload {
   name: string
@@ -43,7 +50,7 @@ export interface PiPractitionerPayload {
   career: string[]
   gender?: string
   specialty?: string[]
-  photo_url?: string
+  photo_url?: string | null
 }
 export interface PiFactLocation {
   id: string
@@ -56,6 +63,7 @@ export interface PiFactLocation {
 }
 export interface PiFactPractitioner {
   id: string
+  key?: string
   name: string
   education?: string[]
   career?: string[]
@@ -71,7 +79,18 @@ export interface PiFacts {
 }
 export type PiOp =
   | { kind: "location"; action: "create" | "update"; key: string; id?: string; name: string; payload: Record<string, unknown>; reason: string }
-  | { kind: "practitioner"; action: "create" | "update" | "delete"; name: string; id?: string; at?: string; position?: string; payload: Record<string, unknown>; reason: string }
+  | {
+      kind: "practitioner"
+      action: "create" | "update" | "delete"
+      name: string
+      /** create: PI에 줄 내부 이름(사이트 의료진 고유 번호 기반 — 이름 충돌 없음) / update·delete: PI id */
+      id?: string
+      key?: string
+      at?: string
+      position?: string
+      payload: Record<string, unknown>
+      reason: string
+    }
   | { kind: "role"; action: "set"; name: string; id?: string; at: string; position: string; reason: string }
 
 const DAY_WEEKDAY = ["mon", "tue", "wed", "thu", "fri"]
@@ -152,12 +171,46 @@ export function pecheHoursToPI(cfg: {
   return { weekly, notes }
 }
 
-/** 직책 → PI 규격(대표 포함=대표원장, 그 외=진료원장) */
+/** 직책: 사이트에 적힌 그대로(변형 없음). 비어 있으면 '원장'. */
 export function piPosition(jobTitle?: string): string {
-  return /대표/.test(String(jobTitle || "")) ? "대표원장" : "진료원장"
+  return String(jobTitle || "").trim() || "원장"
+}
+
+/** 사이트 주소 → 챗봇 예약 카드가 쓰는 예약 페이지(사이트 라우트 `/ko/reservation/new` — 언어 접두 없는 주소는 홈으로 간다). */
+export function bookingUrlOf(baseUrl?: string): string | null {
+  const b = String(baseUrl || "")
+    .trim()
+    .replace(/\/+$/, "")
+  return /^https?:\/\//.test(b) ? `${b}/ko/reservation/new` : null
+}
+
+/** 신규 의료진의 PI 내부 이름 — 사이트 의료진 고유 번호(uuid) 기반. 이름 글자 기반은 두 글자가 같으면 충돌했다. */
+export function piPractitionerKey(doctorId: string): string {
+  return "doc-" + String(doctorId || "").toLowerCase().replace(/[^a-z0-9._-]/g, "")
 }
 
 // ---- diff ----
+/**
+ * 값을 비교용 문자열로. null·undefined·''·[]·{}는 전부 빈 값(''), 객체는 키를 정렬해 직렬화
+ * (PI는 jsonb로 저장해 키 순서가 바뀌어 돌아온다). hours의 days도 정렬.
+ */
+export function canon(v: unknown): string {
+  if (v == null || v === "") return ""
+  if (Array.isArray(v)) {
+    if (v.length === 0) return ""
+    return "[" + v.map(canon).join(",") + "]"
+  }
+  if (typeof v === "object") {
+    const keys = Object.keys(v as Record<string, unknown>).sort()
+    const parts: string[] = []
+    for (const k of keys) {
+      const c = canon((v as Record<string, unknown>)[k])
+      if (c !== "") parts.push(JSON.stringify(k) + ":" + c)
+    }
+    return parts.length ? "{" + parts.join(",") + "}" : ""
+  }
+  return JSON.stringify(String(v))
+}
 function canonHours(h?: PiHours): string {
   const hh = h || { weekly: [], notes: [] }
   const wk = (hh.weekly || []).map((w) => ({
@@ -166,28 +219,27 @@ function canonHours(h?: PiHours): string {
     close: w.close || "",
     break: w.break ? { start: w.break.start, end: w.break.end } : null,
   }))
-  return JSON.stringify({ weekly: wk, notes: (hh.notes || []).slice() })
+  return canon({ weekly: wk, notes: (hh.notes || []).slice() })
 }
-function isEmpty(v: unknown): boolean {
-  return v == null || v === "" || (Array.isArray(v) && v.length === 0)
-}
-/** 필수 키는 항상, 선택 키는 값 있을 때만 포함(빈 값으로 PI를 덮지 않음) */
-export function pruneUpdate(
-  payload: Record<string, unknown>,
-  alwaysKeys: string[],
-  optKeys: string[],
-): Record<string, unknown> {
+
+/**
+ * 보낼 payload: 키 목록의 값을 전부 담는다. 빈 값은 null(= PI를 비운다 — PI에만 남는 값을 만들지 않는다).
+ * arrayKeys(PI가 배열만 받는 칸 — 의료진 학력·경력·전문분야)는 빈 값을 []로.
+ */
+export function toUpdatePayload(payload: Record<string, unknown>, keys: string[], arrayKeys: string[] = []): Record<string, unknown> {
   const out: Record<string, unknown> = {}
-  alwaysKeys.forEach((k) => {
-    if (k in payload) out[k] = payload[k]
-  })
-  optKeys.forEach((k) => {
-    if (!isEmpty(payload[k])) out[k] = payload[k]
+  keys.forEach((k) => {
+    const v = payload[k]
+    out[k] = canon(v) === "" ? (arrayKeys.includes(k) ? [] : null) : v
   })
   return out
 }
-export const LOC_ALWAYS = ["name", "address", "phone", "hours", "sort_order"]
-export const LOC_OPT = [
+export const LOC_KEYS = [
+  "name",
+  "address",
+  "phone",
+  "hours",
+  "sort_order",
   "parking",
   "booking_url",
   "place_url",
@@ -197,37 +249,26 @@ export const LOC_OPT = [
   "common_sns",
   "sns_by_lang",
 ]
-export const PRAC_ALWAYS = ["name", "education", "career"]
-export const PRAC_OPT = ["gender", "specialty", "photo_url"]
+export const PRAC_KEYS = ["name", "education", "career", "specialty", "photo_url"]
+export const PRAC_ARRAY_KEYS = ["education", "career", "specialty"]
 
-function norm(v: unknown): string {
-  if (v == null) return ""
-  if (typeof v === "object") return JSON.stringify(v)
-  return String(v)
-}
 function locChanged(payload: Record<string, unknown>, piLoc: PiFactLocation): boolean {
-  const pruned = pruneUpdate(payload, LOC_ALWAYS, LOC_OPT)
-  for (const k of Object.keys(pruned)) {
+  for (const k of LOC_KEYS) {
     if (k === "hours") {
-      if (canonHours(pruned.hours as PiHours) !== canonHours(piLoc.hours)) return true
+      if (canonHours(payload.hours as PiHours) !== canonHours(piLoc.hours)) return true
       continue
     }
-    if (norm(pruned[k]) !== norm((piLoc as Record<string, unknown>)[k])) return true
+    if (canon(payload[k]) !== canon((piLoc as Record<string, unknown>)[k])) return true
   }
   return false
 }
 function pracChanged(payload: Record<string, unknown>, piPrac: PiFactPractitioner): boolean {
-  const pruned = pruneUpdate(payload, PRAC_ALWAYS, PRAC_OPT)
-  for (const k of Object.keys(pruned)) {
-    const pv = pruned[k]
-    const bv = (piPrac as Record<string, unknown>)[k]
-    const a = Array.isArray(pv) ? JSON.stringify(pv) : String(pv ?? "")
-    const b = Array.isArray(bv) ? JSON.stringify(bv ?? []) : String(bv ?? "")
-    if (a !== b) return true
+  for (const k of PRAC_KEYS) {
+    if (canon(payload[k]) !== canon((piPrac as Record<string, unknown>)[k])) return true
   }
   return false
 }
-const nfc = (s: unknown) => {
+export const nfc = (s: unknown): string => {
   try {
     return String(s == null ? "" : s).normalize("NFC")
   } catch {
@@ -236,6 +277,8 @@ const nfc = (s: unknown) => {
 }
 
 export interface SyncDoctor {
+  /** 사이트 의료진 고유 번호 — 신규 의료진의 PI 내부 이름 재료 */
+  id: string
   name: string
   jobTitle?: string
   specialty?: string
@@ -267,7 +310,7 @@ export function planSync(
       action: "create",
       key: locKey,
       name: location.name,
-      payload: { key: locKey, ...pruneUpdate(locPayload, LOC_ALWAYS, LOC_OPT) },
+      payload: { key: locKey, ...toUpdatePayload(locPayload, LOC_KEYS) },
       reason: "신규 지점",
     })
   } else if (locChanged(locPayload, piLoc)) {
@@ -277,7 +320,7 @@ export function planSync(
       key: locKey,
       id: piLoc.id,
       name: location.name,
-      payload: pruneUpdate(locPayload, LOC_ALWAYS, LOC_OPT),
+      payload: toUpdatePayload(locPayload, LOC_KEYS),
       reason: "지점 정보 변경",
     })
   }
@@ -292,7 +335,7 @@ export function planSync(
       education: [],
       career: [],
       specialty: d.specialty ? [String(d.specialty).trim()] : [],
-      photo_url: d.photoUrl ? String(d.photoUrl) : "",
+      photo_url: d.photoUrl ? String(d.photoUrl) : null,
     }
     const position = piPosition(d.jobTitle)
     const cand = (piPracByName[nfc(d.name)] || [])[0]
@@ -301,9 +344,10 @@ export function planSync(
         kind: "practitioner",
         action: "create",
         name: d.name,
+        key: piPractitionerKey(d.id),
         at: locKey,
         position,
-        payload: pruneUpdate(ppay, PRAC_ALWAYS, PRAC_OPT),
+        payload: toUpdatePayload(ppay, PRAC_KEYS, PRAC_ARRAY_KEYS),
         reason: "신규 의료진",
       })
     } else {
@@ -313,7 +357,7 @@ export function planSync(
           action: "update",
           name: d.name,
           id: cand.id,
-          payload: pruneUpdate(ppay, PRAC_ALWAYS, PRAC_OPT),
+          payload: toUpdatePayload(ppay, PRAC_KEYS, PRAC_ARRAY_KEYS),
           reason: "의료진 정보 변경",
         })
       const role = (cand.locations || []).find((x) => x.location_key === locKey)
