@@ -113,4 +113,6 @@ export class UpdateSiteConfigDto {
   @ApiProperty({ required: false }) @IsOptional() @IsString() googlePlaceUrl?: string
   @ApiProperty({ required: false }) @IsOptional() @IsString() naverPlaceUrl?: string
   @ApiProperty({ required: false }) @IsOptional() @IsString() kakaoPlaceUrl?: string
+  @ApiProperty({ required: false }) @IsOptional() @IsString() reservationNotice?: string
+  @ApiProperty({ required: false }) @IsOptional() @IsBoolean() reservationNoticeEnabled?: boolean
 }

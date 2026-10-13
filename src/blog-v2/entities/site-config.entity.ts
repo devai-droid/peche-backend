@@ -154,4 +154,12 @@ export class BlogSiteConfig extends TimeStampEntity {
   @ApiProperty({ required: false, description: "카카오맵(지도) 링크 — 모든 언어 공통. 위치/지도 버튼 연결" })
   @Column({ name: "kakao_place_url", type: "text", nullable: true })
   kakaoPlaceUrl?: string
+
+  @ApiProperty({ required: false, description: "예약 화면 안내(NOTICE) 문구 — 언어별. 줄바꿈 허용" })
+  @Column({ name: "reservation_notice", type: "text", nullable: true })
+  reservationNotice?: string
+
+  @ApiProperty({ required: false, description: "예약 화면 안내(NOTICE) 노출 여부 — 언어별. 끄면 박스 미노출" })
+  @Column({ name: "reservation_notice_enabled", type: "boolean", default: false })
+  reservationNoticeEnabled?: boolean
 }

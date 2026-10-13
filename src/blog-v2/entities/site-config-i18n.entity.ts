@@ -93,4 +93,12 @@ export class BlogSiteConfigI18n extends TimeStampEntity {
   @ApiProperty({ required: false, description: "대표 상담 채널 링크 (언어별)" })
   @Column({ name: "primary_consult_url", type: "text", nullable: true })
   primaryConsultUrl?: string
+
+  @ApiProperty({ required: false, description: "예약 화면 안내(NOTICE) 문구 (언어별)" })
+  @Column({ name: "reservation_notice", type: "text", nullable: true })
+  reservationNotice?: string
+
+  @ApiProperty({ required: false, description: "예약 화면 안내(NOTICE) 노출 여부 (언어별). 비우면 기본(ko) 따름" })
+  @Column({ name: "reservation_notice_enabled", type: "boolean", nullable: true })
+  reservationNoticeEnabled?: boolean
 }

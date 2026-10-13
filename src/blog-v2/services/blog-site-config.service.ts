@@ -29,6 +29,8 @@ const LOCALIZABLE: (keyof BlogSiteConfigI18n)[] = [
   "socialLinks",
   "primaryConsultPlatform",
   "primaryConsultUrl",
+  "reservationNotice",
+  "reservationNoticeEnabled",
 ]
 
 @Injectable()
