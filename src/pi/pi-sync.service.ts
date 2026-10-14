@@ -7,18 +7,22 @@ import { BlogDoctor } from "@root/blog-v2/entities/doctor.entity"
 import { PiClientService } from "./pi-client.service"
 import {
   PECHE_LOCATION_KEY,
+  PI_LANG_OF_SITE,
+  PiBookingSettings,
   PiLocationPayload,
   PiSnsByLang,
   PiSnsLink,
   SyncDoctor,
+  bookingSettingsChanged,
   bookingUrlOf,
   cleanText,
   pecheHoursToPI,
   planSync,
+  reservationNoticeOf,
 } from "./pi-sync.util"
 
-// 사이트 내부 언어 코드 → PI 언어 코드(챗봇이 요청마다 받는 값과 같은 표기 — 간체는 zh-CN).
-const SNS_LANGS: Record<string, string> = { ko: "ko", en: "en", zh: "zh-CN", ja: "ja", th: "th", "zh-TW": "zh-TW" }
+// 사이트 내부 언어 코드 → PI 언어 코드(정본은 pi-sync.util — 예약 설정과 같은 표).
+const SNS_LANGS = PI_LANG_OF_SITE
 
 /** SNS 1건 → PI 링크. 링크 대신 QR 이미지로 뜨는 항목(위챗)은 image_url로 — 챗봇이 그 이미지를 안내한다. */
 function toPiLink(l: SiteSocialLink): PiSnsLink | null {
@@ -120,6 +124,26 @@ export class PiSyncService {
     }))
   }
 
+  /** 예약 설정(PI booking-settings) — 기본(ko) + 언어별 행의 예약 안내 문구 중 켠 언어만. */
+  private async buildBookingSettings(): Promise<PiBookingSettings> {
+    const base = await this.configRepo.findOne({ where: { targetSite: SITE } })
+    const i18ns = await this.i18nRepo.find({ where: { targetSite: SITE } })
+    return { reservation_notice: reservationNoticeOf(base, i18ns) }
+  }
+
+  /** 예약 설정 전송 — PI 값과 같으면 건너뛴다. 반환: 보냈는지. */
+  private async syncBookingSettings(): Promise<boolean> {
+    const local = await this.buildBookingSettings()
+    const current = await this.pi.getBookingSettings()
+    if (!bookingSettingsChanged(local, current)) {
+      this.logger.log("PI 예약 설정 변경 없음")
+      return false
+    }
+    await this.pi.putBookingSettings(local)
+    this.logger.log("PI 예약 설정 반영(reservation_notice)")
+    return true
+  }
+
   /**
    * 미리보기(실행 없이 계획만). PI 미설정이어도 '무엇을 보낼지'(location/doctors payload)는 보여준다.
    * (미설정 시 facts는 빈 것으로 간주 → 전부 신규 생성 계획으로 표시)
@@ -130,18 +154,56 @@ export class PiSyncService {
     const location = await this.buildLocation()
     const doctors = await this.buildDoctors()
     const { ops, warnings } = planSync(location, doctors, facts)
-    return { enabled, location, doctors, ops, warnings }
+    const bookingSettings = await this.buildBookingSettings()
+    // PI 값과 다른지(보낼지). 미설정이거나 조회 실패면 null — 미리보기를 막지 않는다.
+    let bookingSettingsWillUpdate: boolean | null = null
+    if (enabled) {
+      try {
+        bookingSettingsWillUpdate = bookingSettingsChanged(bookingSettings, await this.pi.getBookingSettings())
+      } catch (e) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        this.logger.warn(`PI 예약 설정 조회 실패(미리보기): ${(e as any)?.piMessage || (e as any)?.message}`)
+      }
+    }
+    return { enabled, location, doctors, ops, warnings, bookingSettings, bookingSettingsWillUpdate }
   }
 
-  /** 실제 동기화. PI 미설정 시 skip. 변경 없으면 no-op. */
-  async syncNow(): Promise<{ enabled: boolean; executed: number; warnings: unknown[] }> {
+  /**
+   * 실제 동기화. PI 미설정 시 skip. 변경 없으면 no-op.
+   * 단계: ① 지점·의료진(facts) ② 예약 설정. 두 단계는 서로를 막지 않는다 —
+   * ② 실패는 로그만, ① 실패는 ②를 마친 뒤 종전처럼 던진다.
+   */
+  async syncNow(): Promise<{
+    enabled: boolean
+    executed: number
+    warnings: unknown[]
+    bookingSettings?: "updated" | "unchanged" | "failed"
+  }> {
     if (!this.pi.enabled()) return { enabled: false, executed: 0, warnings: [] }
-    const facts = await this.pi.getFacts()
-    const location = await this.buildLocation()
-    const doctors = await this.buildDoctors()
-    const { ops, warnings } = planSync(location, doctors, facts)
-    if (ops.length > 0) await this.pi.executePlan(ops, facts)
-    return { enabled: true, executed: ops.length, warnings }
+    let factsError: unknown = null
+    let executed = 0
+    let warnings: unknown[] = []
+    try {
+      const facts = await this.pi.getFacts()
+      const location = await this.buildLocation()
+      const doctors = await this.buildDoctors()
+      const plan = planSync(location, doctors, facts)
+      warnings = plan.warnings
+      if (plan.ops.length > 0) await this.pi.executePlan(plan.ops, facts)
+      executed = plan.ops.length
+    } catch (e) {
+      factsError = e
+    }
+    let bookingSettings: "updated" | "unchanged" | "failed"
+    try {
+      bookingSettings = (await this.syncBookingSettings()) ? "updated" : "unchanged"
+    } catch (e) {
+      bookingSettings = "failed"
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      this.logger.warn(`PI 예약 설정 동기화 실패: ${(e as any)?.piMessage || (e as any)?.message}`)
+    }
+    if (factsError) throw factsError
+    return { enabled: true, executed, warnings, bookingSettings }
   }
 
   /**

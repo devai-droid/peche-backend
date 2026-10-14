@@ -1,11 +1,15 @@
 import {
+  bookingSettingsChanged,
   bookingUrlOf,
   canon,
+  mergeLocalized,
   parsePecheClock,
   pecheHoursToPI,
   piPosition,
   piPractitionerKey,
+  piLangOf,
   planSync,
+  reservationNoticeOf,
   toUpdatePayload,
   type PiFacts,
   type PiLocationPayload,
@@ -169,5 +173,59 @@ describe("planSync", () => {
     const { ops } = planSync(LOC, docs, FACTS_SAME)
     expect(ops).toEqual([expect.objectContaining({ kind: "practitioner", action: "update", id: "P1" })])
     expect(payloadOf(ops[0]).specialty).toEqual(["피부과"])
+  })
+})
+
+describe("예약 설정(reservation_notice) — 사이트 예약 화면과 같은 판정(getMerged 병합 후 enabled && 문구)", () => {
+  const ON = { reservationNotice: "  예약 전 안내입니다.\n  ", reservationNoticeEnabled: true }
+  it("언어별 값이 비면 기본(ko)을 따르고, false·문구는 덮는다 · zh→zh-CN · 목록 밖 언어는 버린다", () => {
+    const v = reservationNoticeOf(ON, [
+      { lang: "zh", reservationNotice: "预约须知", reservationNoticeEnabled: true },
+      { lang: "ja", reservationNotice: "ご予約前のご案内", reservationNoticeEnabled: false },
+      { lang: "en", reservationNotice: "Notice", reservationNoticeEnabled: null },
+      { lang: "th", reservationNotice: null, reservationNoticeEnabled: null },
+      { lang: "zh-TW", reservationNotice: "   ", reservationNoticeEnabled: true },
+      { lang: "xx", reservationNotice: "모르는 언어", reservationNoticeEnabled: true },
+    ])
+    expect(v).toEqual({
+      ko: "예약 전 안내입니다.",
+      "zh-CN": "预约须知",
+      en: "Notice", // enabled=null·문구 있음 + 기본 켜짐 → 포함
+      th: "예약 전 안내입니다.", // 둘 다 비어 있음 → 기본 그대로
+      // ja: enabled=false → 제외 / zh-TW: 공백 문구가 기본을 덮고 trim 뒤 비어 → 제외
+    })
+    expect(piLangOf("zh")).toBe("zh-CN")
+    expect(piLangOf("xx")).toBeNull()
+  })
+  it("언어별 행이 없어도 기본이 켜져 있으면 모든 사이트 언어에 ko 문구", () => {
+    const t = "예약 전 안내입니다."
+    expect(reservationNoticeOf(ON, [])).toEqual({ ko: t, en: t, "zh-CN": t, ja: t, th: t, "zh-TW": t })
+  })
+  it("기본을 끄면: 언어별 ko 행은 무시, 켠 언어만 남는다", () => {
+    expect(
+      reservationNoticeOf({ reservationNotice: "안내", reservationNoticeEnabled: false }, [
+        { lang: "ko", reservationNotice: "다른 안내", reservationNoticeEnabled: true },
+        { lang: "ja", reservationNotice: null, reservationNoticeEnabled: true },
+      ]),
+    ).toEqual({ ja: "안내" })
+  })
+  it("담을 언어가 없으면 null(PI에서 지운다)", () => {
+    expect(reservationNoticeOf({ reservationNotice: "", reservationNoticeEnabled: true }, [])).toBeNull()
+    expect(reservationNoticeOf(null, [])).toBeNull()
+  })
+  it("병합 규칙(getMerged 공용): 배열은 1개 이상·값은 null·''이 아닐 때만 덮는다, 행이 없으면 기본 그대로", () => {
+    const base = { a: "기본", b: ["x"], c: true }
+    expect(mergeLocalized(base, { a: "", b: [], c: false }, ["a", "b", "c"])).toEqual({ a: "기본", b: ["x"], c: false })
+    expect(mergeLocalized(base, { a: "번역" }, ["b"])).toEqual(base)
+    expect(mergeLocalized(base, null, ["a"])).toBe(base)
+  })
+  it("비교: 키 순서 무시·null과 {}·없는 칸은 같다, 문구가 다르면 다르다", () => {
+    const local = { reservation_notice: { ko: "안내", ja: "案内" } }
+    expect(bookingSettingsChanged(local, { reservation_notice: { ja: "案内", ko: "안내" } })).toBe(false)
+    expect(bookingSettingsChanged(local, { reservation_notice: { ko: "안내", ja: "案内2" } })).toBe(true)
+    expect(bookingSettingsChanged(local, { reservation_notice: null })).toBe(true)
+    expect(bookingSettingsChanged({ reservation_notice: null }, { reservation_notice: {} })).toBe(false)
+    expect(bookingSettingsChanged({ reservation_notice: null }, {})).toBe(false)
+    expect(bookingSettingsChanged({ reservation_notice: null }, null)).toBe(false)
   })
 })

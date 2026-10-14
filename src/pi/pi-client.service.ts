@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common"
 import { ConfigService } from "@nestjs/config"
 import axios, { AxiosInstance } from "axios"
 import { Env } from "@root/shared/enum/env"
-import { PiFacts, PiOp, nfc } from "./pi-sync.util"
+import { PiBookingSettings, PiFacts, PiOp, nfc } from "./pi-sync.util"
 
 /**
  * PI(챗봇) facts API 호출부. 토큰·조직/테넌트ID는 서버 환경변수에서만 읽는다.
@@ -75,6 +75,14 @@ export class PiClientService {
   }
   setRole(practitionerId: string, locationId: string, position: string) {
     return this.req("PUT", `/api/orgs/${this.orgId}/roles`, { practitionerId, locationId, position })
+  }
+  /** 예약 설정 조회 — 응답에 칸이 늘어도 reservation_notice만 쓴다. */
+  getBookingSettings(): Promise<Partial<PiBookingSettings>> {
+    return this.req<Partial<PiBookingSettings>>("GET", `/api/orgs/${this.orgId}/booking-settings`)
+  }
+  /** 예약 설정 저장 — 보낸 키만 바뀐다. 전부 끈 경우 reservation_notice는 null로 보낸다. */
+  putBookingSettings(b: PiBookingSettings): Promise<Partial<PiBookingSettings>> {
+    return this.req<Partial<PiBookingSettings>>("PUT", `/api/orgs/${this.orgId}/booking-settings`, b)
   }
 
   /** 계획 실행: 지점 → 의료진 → (신규 있으면 facts 재조회) → 역할 배치. 실패 시 즉시 throw. */
