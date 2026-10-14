@@ -419,11 +419,33 @@ export interface PiBookingSettings {
   reservation_notice: Record<string, string> | null
 }
 
+// ---- 언어별 표시값 병합(사이트 getMerged와 같은 규칙) ----
+/** 언어별 행의 값이 기본(ko) 값을 덮는가 — 배열은 1개 이상, 그 밖은 null·빈 문자열이 아닐 때(false는 덮는다). */
+export function overridesBase(v: unknown): boolean {
+  return Array.isArray(v) ? v.length > 0 : v != null && v !== ""
+}
 /**
- * 예약 안내 문구 → PI reservation_notice. 사이트가 원본:
- *   · 노출을 켰고(enabled === true) 문구가 trim 뒤 비어 있지 않은 언어만 담는다.
- *   · 언어별 행의 enabled가 비어 있으면(null) 꺼진 것으로 본다.
- *   · 기본 행은 ko. 언어별 행에 ko가 있어도 기본 행이 이긴다.
+ * 기본(공통+ko) 행 + 언어별 행 → 그 언어의 표시값. 사이트 공개 화면(BlogSiteConfigService.getMerged)이 이 함수를 쓴다.
+ * 언어별 행이 없으면 기본 행 그대로.
+ */
+export function mergeLocalized<B extends object>(base: B, i18n: object | null | undefined, keys: readonly string[]): B {
+  if (!i18n) return base
+  const merged = { ...base } as Record<string, unknown>
+  for (const k of keys) {
+    const v = (i18n as Record<string, unknown>)[k]
+    if (overridesBase(v)) merged[k] = v
+  }
+  return merged as B
+}
+
+const NOTICE_KEYS = ["reservationNotice", "reservationNoticeEnabled"] as const
+
+/**
+ * 예약 안내 문구 → PI reservation_notice. 사이트 예약 화면과 같은 판정:
+ *   · 대상 언어 = 사이트 언어 목록(PI_LANG_OF_SITE, ko 포함). 키는 PI 언어 코드(zh→zh-CN).
+ *   · 언어마다 getMerged와 같은 병합(mergeLocalized) — 언어별 enabled·문구가 비어 있으면(null·'') 기본(ko) 값을 따른다.
+ *     ko는 기본 행 그대로(언어별 ko 행은 화면에서도 안 쓴다).
+ *   · 병합 결과가 켜져 있고 문구가 trim 뒤 비어 있지 않으면 담는다(언어별 행이 없는 언어도 기본이 켜져 있으면 ko 문구).
  *   · 담을 언어가 없으면 null(= PI에서 지운다).
  */
 export function reservationNoticeOf(
@@ -431,16 +453,13 @@ export function reservationNoticeOf(
   i18nRows: (ReservationNoticeSource & { lang: string })[],
 ): Record<string, string> | null {
   const out: Record<string, string> = {}
-  const put = (lang: string | null, row?: ReservationNoticeSource | null) => {
-    if (!lang || !row || row.reservationNoticeEnabled !== true) return
-    const text = String(row.reservationNotice ?? "").trim()
-    if (text) out[lang] = text
+  const baseRow: ReservationNoticeSource = base || {}
+  for (const [siteLang, piLang] of Object.entries(PI_LANG_OF_SITE)) {
+    const row = siteLang === "ko" ? null : (i18nRows || []).find((r) => r.lang === siteLang)
+    const m = mergeLocalized(baseRow, row, NOTICE_KEYS)
+    const text = String(m.reservationNotice ?? "").trim()
+    if (m.reservationNoticeEnabled && text) out[piLang] = text
   }
-  for (const row of i18nRows || []) {
-    if (row.lang === "ko") continue
-    put(piLangOf(row.lang), row)
-  }
-  put("ko", base)
   return Object.keys(out).length ? out : null
 }
 

@@ -6,6 +6,7 @@ import { BlogSiteConfigI18n } from "@root/blog-v2/entities/site-config-i18n.enti
 import { UpdateSiteConfigDto } from "@root/blog-v2/dto/site-config.dto"
 import { User } from "@root/shared/interface/user"
 import { PiSyncService } from "@root/pi/pi-sync.service"
+import { mergeLocalized } from "@root/pi/pi-sync.util"
 
 const SITE = "peche"
 const DEFAULT_LANG = "ko"
@@ -62,16 +63,8 @@ export class BlogSiteConfigService {
     const base = await this.getBase()
     if (lang === DEFAULT_LANG) return base
     const i18n = await this.i18nRepo.findOne({ where: { targetSite: SITE, lang } })
-    if (!i18n) return base
-    const merged = { ...base } as BlogSiteConfig
-    for (const k of LOCALIZABLE) {
-      const v = i18n[k]
-      if (Array.isArray(v) ? v.length > 0 : v != null && v !== "") {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ;(merged as any)[k] = v
-      }
-    }
-    return merged
+    // 병합 규칙은 pi 동기화(예약 안내 문구)와 한 벌 — 챗봇이 화면과 같은 값을 보게.
+    return mergeLocalized(base, i18n, LOCALIZABLE)
   }
 
   async updateBase(dto: UpdateSiteConfigDto, user: User): Promise<BlogSiteConfig> {
