@@ -1,11 +1,14 @@
 import {
+  bookingSettingsChanged,
   bookingUrlOf,
   canon,
   parsePecheClock,
   pecheHoursToPI,
   piPosition,
   piPractitionerKey,
+  piLangOf,
   planSync,
+  reservationNoticeOf,
   toUpdatePayload,
   type PiFacts,
   type PiLocationPayload,
@@ -169,5 +172,41 @@ describe("planSync", () => {
     const { ops } = planSync(LOC, docs, FACTS_SAME)
     expect(ops).toEqual([expect.objectContaining({ kind: "practitioner", action: "update", id: "P1" })])
     expect(payloadOf(ops[0]).specialty).toEqual(["피부과"])
+  })
+})
+
+describe("예약 설정(reservation_notice)", () => {
+  it("켠 언어만·trim·언어 코드 zh→zh-CN, 언어별 enabled가 null이면 꺼짐", () => {
+    const v = reservationNoticeOf({ reservationNotice: "  예약 전 안내입니다.\n  ", reservationNoticeEnabled: true }, [
+      { lang: "zh", reservationNotice: "预约须知", reservationNoticeEnabled: true },
+      { lang: "ja", reservationNotice: "ご予約前のご案内", reservationNoticeEnabled: false },
+      { lang: "en", reservationNotice: "Notice", reservationNoticeEnabled: null },
+      { lang: "th", reservationNotice: "   ", reservationNoticeEnabled: true },
+      { lang: "zh-TW", reservationNotice: "預約須知", reservationNoticeEnabled: true },
+      { lang: "xx", reservationNotice: "모르는 언어", reservationNoticeEnabled: true },
+    ])
+    expect(v).toEqual({ ko: "예약 전 안내입니다.", "zh-CN": "预约须知", "zh-TW": "預約須知" })
+    expect(piLangOf("zh")).toBe("zh-CN")
+    expect(piLangOf("xx")).toBeNull()
+  })
+  it("기본(ko)을 끄면 언어별 행에 ko가 있어도 담지 않는다", () => {
+    expect(
+      reservationNoticeOf({ reservationNotice: "안내", reservationNoticeEnabled: false }, [
+        { lang: "ko", reservationNotice: "다른 안내", reservationNoticeEnabled: true },
+      ]),
+    ).toBeNull()
+  })
+  it("담을 언어가 없으면 null(PI에서 지운다)", () => {
+    expect(reservationNoticeOf({ reservationNotice: "", reservationNoticeEnabled: true }, [])).toBeNull()
+    expect(reservationNoticeOf(null, [])).toBeNull()
+  })
+  it("비교: 키 순서 무시·null과 {}·없는 칸은 같다, 문구가 다르면 다르다", () => {
+    const local = { reservation_notice: { ko: "안내", ja: "案内" } }
+    expect(bookingSettingsChanged(local, { reservation_notice: { ja: "案内", ko: "안내" } })).toBe(false)
+    expect(bookingSettingsChanged(local, { reservation_notice: { ko: "안내", ja: "案内2" } })).toBe(true)
+    expect(bookingSettingsChanged(local, { reservation_notice: null })).toBe(true)
+    expect(bookingSettingsChanged({ reservation_notice: null }, { reservation_notice: {} })).toBe(false)
+    expect(bookingSettingsChanged({ reservation_notice: null }, {})).toBe(false)
+    expect(bookingSettingsChanged({ reservation_notice: null }, null)).toBe(false)
   })
 })

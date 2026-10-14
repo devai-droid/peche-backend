@@ -392,3 +392,62 @@ export function planSync(
 
   return { ops, warnings }
 }
+
+// ---- 언어 코드 ----
+/** 사이트 내부 언어 코드 → PI 언어 코드(챗봇이 요청마다 받는 값과 같은 표기 — 간체는 zh-CN). */
+export const PI_LANG_OF_SITE: Record<string, string> = {
+  ko: "ko",
+  en: "en",
+  zh: "zh-CN",
+  ja: "ja",
+  th: "th",
+  "zh-TW": "zh-TW",
+}
+/** 사이트 언어 코드 → PI 언어 코드. 목록에 없는 언어는 null(보내지 않는다). */
+export function piLangOf(siteLang?: string): string | null {
+  return PI_LANG_OF_SITE[String(siteLang || "")] ?? null
+}
+
+// ---- 예약 설정(booking-settings) ----
+/** 예약 안내 문구를 읽을 행 모양 — 기본(site_config)·언어별(site_config_i18n) 공통 */
+export interface ReservationNoticeSource {
+  reservationNotice?: string | null
+  reservationNoticeEnabled?: boolean | null
+}
+/** PI 예약 설정 — 지금은 reservation_notice만 본다(PI가 칸을 늘려도 모르는 키는 무시). */
+export interface PiBookingSettings {
+  reservation_notice: Record<string, string> | null
+}
+
+/**
+ * 예약 안내 문구 → PI reservation_notice. 사이트가 원본:
+ *   · 노출을 켰고(enabled === true) 문구가 trim 뒤 비어 있지 않은 언어만 담는다.
+ *   · 언어별 행의 enabled가 비어 있으면(null) 꺼진 것으로 본다.
+ *   · 기본 행은 ko. 언어별 행에 ko가 있어도 기본 행이 이긴다.
+ *   · 담을 언어가 없으면 null(= PI에서 지운다).
+ */
+export function reservationNoticeOf(
+  base: ReservationNoticeSource | null | undefined,
+  i18nRows: (ReservationNoticeSource & { lang: string })[],
+): Record<string, string> | null {
+  const out: Record<string, string> = {}
+  const put = (lang: string | null, row?: ReservationNoticeSource | null) => {
+    if (!lang || !row || row.reservationNoticeEnabled !== true) return
+    const text = String(row.reservationNotice ?? "").trim()
+    if (text) out[lang] = text
+  }
+  for (const row of i18nRows || []) {
+    if (row.lang === "ko") continue
+    put(piLangOf(row.lang), row)
+  }
+  put("ko", base)
+  return Object.keys(out).length ? out : null
+}
+
+/** PI가 돌려준 예약 설정과 보낼 값이 다른가 — canon 비교(키 순서 무시·null과 {}는 같음). */
+export function bookingSettingsChanged(
+  local: PiBookingSettings,
+  pi: Partial<PiBookingSettings> | null | undefined,
+): boolean {
+  return canon(local.reservation_notice) !== canon(pi?.reservation_notice)
+}
