@@ -1,12 +1,12 @@
 import { Injectable, Logger } from "@nestjs/common"
-import { InjectRepository } from "@nestjs/typeorm"
-import { Repository } from "typeorm"
+import { InjectDataSource, InjectRepository } from "@nestjs/typeorm"
+import { DataSource, Repository } from "typeorm"
 import { BlogSiteConfig, SiteSocialLink } from "@root/blog-v2/entities/site-config.entity"
 import { BlogSiteConfigI18n } from "@root/blog-v2/entities/site-config-i18n.entity"
 import { BlogDoctor } from "@root/blog-v2/entities/doctor.entity"
-import { Product } from "@root/product/entities/product.entity"
-import { ProductCategory } from "@root/product/entities/product-category.entity"
-import { EventBundle } from "@root/event/entities/event-bundle.entity"
+import type { Product } from "@root/product/entities/product.entity"
+import type { ProductCategory } from "@root/product/entities/product-category.entity"
+import type { EventBundle } from "@root/event/entities/event-bundle.entity"
 import { ProductCategoryStatus } from "@root/shared/enum/product"
 import { PiClientService } from "./pi-client.service"
 import { PiCatalog, catalogChanged, catalogCounts, catalogOf } from "./pi-catalog.util"
@@ -66,10 +66,19 @@ export class PiSyncService {
     @InjectRepository(BlogSiteConfig) private readonly configRepo: Repository<BlogSiteConfig>,
     @InjectRepository(BlogSiteConfigI18n) private readonly i18nRepo: Repository<BlogSiteConfigI18n>,
     @InjectRepository(BlogDoctor) private readonly doctorRepo: Repository<BlogDoctor>,
-    @InjectRepository(Product) private readonly productRepo: Repository<Product>,
-    @InjectRepository(ProductCategory) private readonly categoryRepo: Repository<ProductCategory>,
-    @InjectRepository(EventBundle) private readonly bundleRepo: Repository<EventBundle>,
+    // 상품·분류·번들은 엔티티 이름으로 레포를 얻는다(클래스 import 금지 — pi.module 주석).
+    @InjectDataSource() private readonly dataSource: DataSource,
   ) {}
+
+  private get productRepo(): Repository<Product> {
+    return this.dataSource.getRepository<Product>("Product")
+  }
+  private get categoryRepo(): Repository<ProductCategory> {
+    return this.dataSource.getRepository<ProductCategory>("ProductCategory")
+  }
+  private get bundleRepo(): Repository<EventBundle> {
+    return this.dataSource.getRepository<EventBundle>("EventBundle")
+  }
 
   /** 언어별 SNS 묶음 — ko는 base, 나머지는 i18n(없으면 ko 폴백). 대표(primary) + 전체(channels). */
   private async buildSnsByLang(base?: BlogSiteConfig): Promise<PiSnsByLang> {

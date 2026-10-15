@@ -1,15 +1,11 @@
 import { Injectable, Logger } from "@nestjs/common"
 import { InjectDataSource } from "@nestjs/typeorm"
 import { DataSource, EntitySubscriberInterface, EventSubscriber, InsertEvent, RemoveEvent, UpdateEvent } from "typeorm"
-import { Product } from "@root/product/entities/product.entity"
-import { ProductCategory } from "@root/product/entities/product-category.entity"
-import { ProductDetailPage } from "@root/product/entities/product-detail-page.entity"
-import { Event } from "@root/event/entities/event.entity"
-import { EventBundle } from "@root/event/entities/event-bundle.entity"
 import { PiSyncService } from "./pi-sync.service"
 
-/** PI 카탈로그에 실리는 표 — 이 표의 행이 저장·삭제되면 PI 동기화를 예약한다. */
-const WATCHED = new Set<Function>([Product, ProductCategory, ProductDetailPage, Event, EventBundle])
+/** PI 카탈로그에 실리는 표(엔티티 이름) — 이 표의 행이 저장·삭제되면 PI 동기화를 예약한다.
+ *  클래스를 import 하지 않고 이름으로 맞춘다(엔티티 클래스를 여기서 먼저 import 하면 데코레이터 순서가 바뀌어 Swagger 순환 오류 — pi.module 주석). */
+const WATCHED = new Set<string>(["Product", "ProductCategory", "ProductDetailPage", "Event", "EventBundle"])
 const DEBOUNCE_MS = 3000
 
 /**
@@ -30,18 +26,18 @@ export class PiCatalogSubscriber implements EntitySubscriberInterface {
   }
 
   afterInsert(event: InsertEvent<unknown>): void {
-    this.touch(event.metadata.target, "insert")
+    this.touch(event.metadata.name, "insert")
   }
   afterUpdate(event: UpdateEvent<unknown>): void {
-    this.touch(event.metadata.target, "update")
+    this.touch(event.metadata.name, "update")
   }
   afterRemove(event: RemoveEvent<unknown>): void {
-    this.touch(event.metadata.target, "remove")
+    this.touch(event.metadata.name, "remove")
   }
 
-  private touch(target: Function | string, op: string): void {
-    if (typeof target !== "function" || !WATCHED.has(target)) return
-    this.pending.add(`${target.name}.${op}`)
+  private touch(name: string, op: string): void {
+    if (!WATCHED.has(name)) return
+    this.pending.add(`${name}.${op}`)
     if (this.timer) clearTimeout(this.timer)
     this.timer = setTimeout(() => this.flush(), DEBOUNCE_MS)
   }
