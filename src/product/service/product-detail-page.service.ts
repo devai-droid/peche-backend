@@ -13,11 +13,13 @@ import { ProductDetailPageQueryDto } from "@root/product/dto/product-detail-page
 import { RelatedProductDetailPageService } from "@root/product/service/related-product-detail-page.service"
 import { ProductService } from "@root/product/service/product.service"
 import { FileService } from "@root/file/service/files.service"
+import { PiSyncService } from "@root/pi/pi-sync.service"
 
 @Injectable()
 export class ProductDetailPageService {
   constructor(
     @InjectRepository(ProductDetailPage) private repository: Repository<ProductDetailPage>,
+    private readonly piSync: PiSyncService,
     @Inject(forwardRef(() => ProductCategoryService)) private readonly productCategoryService: ProductCategoryService,
     @Inject(forwardRef(() => RelatedProductDetailPageService))
     private readonly relatedProductDetailPageService: RelatedProductDetailPageService,
@@ -101,7 +103,10 @@ export class ProductDetailPageService {
   }
 
   async updateOrder(id: string, order: number) {
-    return this.repository.update(id, { order })
+    const r = await this.repository.update(id, { order })
+    // `repository.update`(쿼리빌더)는 엔티티 구독자(PiCatalogSubscriber)가 못 잡는다 — 순서는 챗봇 본문 순서라 직접 보낸다.
+    await this.piSync.syncSafe("product-detail-page.updateOrder")
+    return r
   }
 
   async findByIds(ids: string[]) {

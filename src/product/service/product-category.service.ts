@@ -8,10 +8,14 @@ import { ProductCategoryQueryDto } from "@root/product/dto/product-category-quer
 import { paginate } from "@root/shared/pagination"
 import { ProductCategoryStatus } from "@root/shared/enum/product"
 import { User } from "@root/shared/interface/user"
+import { PiSyncService } from "@root/pi/pi-sync.service"
 
 @Injectable()
 export class ProductCategoryService {
-  constructor(@InjectRepository(ProductCategory) private repository: Repository<ProductCategory>) {}
+  constructor(
+    @InjectRepository(ProductCategory) private repository: Repository<ProductCategory>,
+    private readonly piSync: PiSyncService,
+  ) {}
 
   async create(dto: CreateProductCategoryDto) {
     return await this.repository.save(dto)
@@ -41,7 +45,10 @@ export class ProductCategoryService {
   }
 
   async updateOrder(id: string, order: number) {
-    return this.repository.update(id, { order })
+    const r = await this.repository.update(id, { order })
+    // `repository.update`(쿼리빌더)는 엔티티 구독자(PiCatalogSubscriber)가 못 잡는다 — 순서는 챗봇 본문 순서라 직접 보낸다.
+    await this.piSync.syncSafe("product-category.updateOrder")
+    return r
   }
 
   async findOrCreateByName(dto: CreateCategoryFromSheetDto) {

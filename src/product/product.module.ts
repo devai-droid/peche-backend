@@ -19,6 +19,7 @@ import { RelatedProductDetailPageService } from "@root/product/service/related-p
 import { SmartDoctorModule } from "@root/smart-doctor/smart-doctor.module"
 import { ProductBackupController } from "@root/product/controller/product-backup.controller"
 import { FileModule } from "@root/file/file.module"
+import { PiModule } from "@root/pi/pi.module"
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { FileModule } from "@root/file/file.module"
     ]),
     forwardRef(() => SmartDoctorModule),
     forwardRef(() => FileModule),
+    PiModule, // 순서 변경(updateOrder)은 쿼리빌더라 구독자가 못 잡아 서비스가 직접 PI 동기화를 부른다
   ],
   controllers: [
     ProductController,

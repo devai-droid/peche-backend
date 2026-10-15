@@ -4,7 +4,12 @@ import { Repository } from "typeorm"
 import { BlogSiteConfig, SiteSocialLink } from "@root/blog-v2/entities/site-config.entity"
 import { BlogSiteConfigI18n } from "@root/blog-v2/entities/site-config-i18n.entity"
 import { BlogDoctor } from "@root/blog-v2/entities/doctor.entity"
+import { Product } from "@root/product/entities/product.entity"
+import { ProductCategory } from "@root/product/entities/product-category.entity"
+import { EventBundle } from "@root/event/entities/event-bundle.entity"
+import { ProductCategoryStatus } from "@root/shared/enum/product"
 import { PiClientService } from "./pi-client.service"
+import { PiCatalog, catalogChanged, catalogCounts, catalogOf } from "./pi-catalog.util"
 import {
   PECHE_LOCATION_KEY,
   PI_LANG_OF_SITE,
@@ -61,6 +66,9 @@ export class PiSyncService {
     @InjectRepository(BlogSiteConfig) private readonly configRepo: Repository<BlogSiteConfig>,
     @InjectRepository(BlogSiteConfigI18n) private readonly i18nRepo: Repository<BlogSiteConfigI18n>,
     @InjectRepository(BlogDoctor) private readonly doctorRepo: Repository<BlogDoctor>,
+    @InjectRepository(Product) private readonly productRepo: Repository<Product>,
+    @InjectRepository(ProductCategory) private readonly categoryRepo: Repository<ProductCategory>,
+    @InjectRepository(EventBundle) private readonly bundleRepo: Repository<EventBundle>,
   ) {}
 
   /** 언어별 SNS 묶음 — ko는 base, 나머지는 i18n(없으면 ko 폴백). 대표(primary) + 전체(channels). */
@@ -145,6 +153,33 @@ export class PiSyncService {
   }
 
   /**
+   * 시술·이벤트 카탈로그(PI catalog) — 상품 전부(노출 여부 포함)·ACTIVE 분류와 그 상세페이지·번들 전부(게시 기간 판정은 pi가 답할 때).
+   * 사이트 공개 API가 주던 것과 같은 집합이다(`products?limit=1000`·`product-categories`·번들).
+   */
+  private async buildCatalog(): Promise<PiCatalog> {
+    const [categories, products, bundles] = await Promise.all([
+      this.categoryRepo.find({ where: { status: ProductCategoryStatus.ACTIVE }, relations: ["detailPages"], order: { order: "ASC" } }),
+      this.productRepo.find(), // category·detailPage는 eager
+      this.bundleRepo.find({ order: { order: "ASC" } }), // events eager(category·detailPage eager)
+    ])
+    return catalogOf({ categories, products, bundles })
+  }
+
+  /** 카탈로그 전송 — PI 값과 같으면 건너뛴다. 반환: 보냈는지. */
+  private async syncCatalog(): Promise<boolean> {
+    const local = await this.buildCatalog()
+    const current = await this.pi.getCatalog()
+    if (!catalogChanged(local, current)) {
+      this.logger.log("PI 카탈로그 변경 없음")
+      return false
+    }
+    const r = await this.pi.putCatalog(local)
+    const n = catalogCounts(local)
+    this.logger.log(`PI 카탈로그 반영(changed=${r.changed}): 묶음 ${n.groups}·상품 ${n.services}·번들 ${n.bundles}·이벤트 ${n.events}`)
+    return r.changed
+  }
+
+  /**
    * 미리보기(실행 없이 계획만). PI 미설정이어도 '무엇을 보낼지'(location/doctors payload)는 보여준다.
    * (미설정 시 facts는 빈 것으로 간주 → 전부 신규 생성 계획으로 표시)
    */
@@ -165,19 +200,40 @@ export class PiSyncService {
         this.logger.warn(`PI 예약 설정 조회 실패(미리보기): ${(e as any)?.piMessage || (e as any)?.message}`)
       }
     }
-    return { enabled, location, doctors, ops, warnings, bookingSettings, bookingSettingsWillUpdate }
+    const catalog = await this.buildCatalog()
+    let catalogWillUpdate: boolean | null = null
+    if (enabled) {
+      try {
+        catalogWillUpdate = catalogChanged(catalog, await this.pi.getCatalog())
+      } catch (e) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        this.logger.warn(`PI 카탈로그 조회 실패(미리보기): ${(e as any)?.piMessage || (e as any)?.message}`)
+      }
+    }
+    return {
+      enabled,
+      location,
+      doctors,
+      ops,
+      warnings,
+      bookingSettings,
+      bookingSettingsWillUpdate,
+      catalog: catalogCounts(catalog),
+      catalogWillUpdate,
+    }
   }
 
   /**
    * 실제 동기화. PI 미설정 시 skip. 변경 없으면 no-op.
-   * 단계: ① 지점·의료진(facts) ② 예약 설정. 두 단계는 서로를 막지 않는다 —
-   * ② 실패는 로그만, ① 실패는 ②를 마친 뒤 종전처럼 던진다.
+   * 단계: ① 지점·의료진(facts) ② 예약 설정 ③ 시술·이벤트 카탈로그. 세 단계는 서로를 막지 않는다 —
+   * ②·③ 실패는 로그만, ① 실패는 ②·③을 마친 뒤 종전처럼 던진다.
    */
   async syncNow(): Promise<{
     enabled: boolean
     executed: number
     warnings: unknown[]
     bookingSettings?: "updated" | "unchanged" | "failed"
+    catalog?: "updated" | "unchanged" | "failed"
   }> {
     if (!this.pi.enabled()) return { enabled: false, executed: 0, warnings: [] }
     let factsError: unknown = null
@@ -202,8 +258,16 @@ export class PiSyncService {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       this.logger.warn(`PI 예약 설정 동기화 실패: ${(e as any)?.piMessage || (e as any)?.message}`)
     }
+    let catalog: "updated" | "unchanged" | "failed"
+    try {
+      catalog = (await this.syncCatalog()) ? "updated" : "unchanged"
+    } catch (e) {
+      catalog = "failed"
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      this.logger.warn(`PI 카탈로그 동기화 실패: ${(e as any)?.piMessage || (e as any)?.message}`)
+    }
     if (factsError) throw factsError
-    return { enabled: true, executed, warnings, bookingSettings }
+    return { enabled: true, executed, warnings, bookingSettings, catalog }
   }
 
   /**
@@ -214,7 +278,8 @@ export class PiSyncService {
     if (!this.pi.enabled()) return
     try {
       const r = await this.syncNow()
-      if (r.executed > 0) this.logger.log(`PI 동기화(${context}): ${r.executed}건 반영`)
+      if (r.executed > 0 || r.bookingSettings === "updated" || r.catalog === "updated")
+        this.logger.log(`PI 동기화(${context}): 사실 ${r.executed}건 · 예약 설정 ${r.bookingSettings} · 카탈로그 ${r.catalog}`)
     } catch (e) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       this.logger.warn(`PI 동기화 실패(${context}): ${(e as any)?.piMessage || (e as any)?.message}`)
