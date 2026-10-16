@@ -143,7 +143,23 @@ describe("planSync", () => {
     expect(payloadOf(loc)).toMatchObject({ key: "peche", parking: null, common_sns: null, channel_url: null, sort_order: 0 })
     const ahn = ops.find((o) => o.kind === "practitioner" && o.name === "안태언")!
     expect(ahn).toMatchObject({ action: "create", key: "doc-11111111-1111-4111-8111-111111111111", at: "peche", position: "대표원장" })
-    expect(payloadOf(ahn)).toEqual({ name: "안태언", education: [], career: [], specialty: [], photo_url: "https://cdn/ahn.jpg" })
+    expect(payloadOf(ahn)).toEqual({ name: "안태언", education: [], career: [], specialty: [], photo_url: "https://cdn/ahn.jpg", bio: null })
+  })
+
+  it("소개 글(bio)은 trim해서 싣고, 비면 null — pi 의료진 bio 칸(0073)으로 간다", () => {
+    const docs: SyncDoctor[] = [{ id: "d1", name: "안태언", jobTitle: "대표원장", bio: "  6만 건 이상의 임상 경험  " }, { id: "d2", name: "박해권", bio: "" }]
+    const { ops } = planSync(LOC, docs, { locations: [], practitioners: [] })
+    const ahn = ops.find((o) => o.kind === "practitioner" && o.name === "안태언")!
+    const park = ops.find((o) => o.kind === "practitioner" && o.name === "박해권")!
+    expect(payloadOf(ahn).bio).toBe("6만 건 이상의 임상 경험")
+    expect(payloadOf(park).bio).toBeNull()
+    // pi가 돌려준 bio와 같으면 변경 없음, 다르면 update
+    const same = planSync(LOC, docs, { locations: [{ id: "L", key: "peche" }], practitioners: [{ id: "P1", name: "안태언", education: [], career: [], specialty: [], bio: "6만 건 이상의 임상 경험", locations: [{ location_key: "peche", position: "대표원장" }] }] })
+    expect(same.ops.filter((o) => o.kind === "practitioner" && o.name === "안태언" && o.action === "update")).toHaveLength(0)
+  })
+
+  it("의료진 생성 — 직책은 사이트 그대로(총괄원장)", () => {
+    const { ops } = planSync(LOC, DOCS, { locations: [], practitioners: [] })
     const choi = ops.find((o) => o.kind === "practitioner" && o.name === "최재형")!
     expect(choi).toMatchObject({ action: "create", position: "총괄원장" })
   })

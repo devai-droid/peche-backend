@@ -138,6 +138,7 @@ export class PiSyncService {
       jobTitle: d.jobTitle,
       specialty: d.specialty,
       photoUrl: d.photoUrl,
+      bio: d.bio,
     }))
   }
 
