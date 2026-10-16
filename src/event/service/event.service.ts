@@ -1,4 +1,4 @@
-import { forwardRef, Inject, Injectable } from "@nestjs/common"
+import { forwardRef, Inject, Injectable, Logger } from "@nestjs/common"
 import { InjectRepository } from "@nestjs/typeorm"
 import { Event } from "@root/event/entities/event.entity"
 import { ILike, In, Repository, Brackets } from "typeorm"
@@ -22,6 +22,7 @@ import { kstDayBounds } from "@root/shared/helper/kst.helper"
 
 @Injectable()
 export class EventService {
+  private readonly logger = new Logger(EventService.name)
   constructor(
     @InjectRepository(Event) private repository: Repository<Event>,
     @Inject(forwardRef(() => EventBundleService)) private readonly eventBundleService: EventBundleService,
@@ -205,24 +206,18 @@ export class EventService {
   }
 
   async importFromGoogleSpreadsheetAllSheets(dto: { url: string }) {
+    // 시트 탭(이벤트가 1개 이상 있는 탭) = 목록 하나. 시트 = SSOT.
     const sheets = await GoogleSpreadsheetHelper.getEventsFromAllSheets(dto.url)
-    const sheetBundleNames = new Set(sheets.map((s) => s.sheetName))
-
-    // 시트에 없는 기존 번들은 통째로 삭제 (시트 = SSOT)
-    // 게시기간 지난 번들도 삭제 대상 판단에 포함해야 하므로 findAll(전체) 사용
-    const existingBundles = await this.eventBundleService.findAll()
-    for (const bundle of existingBundles) {
-      if (!sheetBundleNames.has(bundle.name)) {
-        await this.eventBundleService.remove(bundle.id)
-      }
-    }
 
     const allCreatedEvents = []
+    // 이번 임포트가 실제로 사용한 번들 id만 모은다(탭 1개 = 번들 1개).
+    const keepBundleIds = new Set<string>()
 
     for (let sheetIndex = 0; sheetIndex < sheets.length; sheetIndex++) {
       const { sheetName, events } = sheets[sheetIndex]
       // 탭 이름으로 번들 찾거나 생성 + 탭 순서 반영
       const bundle = await this.eventBundleService.findOrCreateByName(sheetName, sheetIndex)
+      keepBundleIds.add(bundle.id)
 
       // 해당 번들의 기존 이벤트 삭제
       await this.removeByBundleId(bundle.id)
@@ -237,6 +232,21 @@ export class EventService {
 
       allCreatedEvents.push(...createdEvents)
     }
+
+    // 이번 임포트가 쓰지 않은 번들은 모두 삭제.
+    // 이름이 아니라 id 기준이라, 시트에 없는 탭뿐 아니라 같은 이름 중복·유령 번들까지 정리된다.
+    const existingBundles = await this.eventBundleService.findAll()
+    const removedNames: string[] = []
+    for (const bundle of existingBundles) {
+      if (!keepBundleIds.has(bundle.id)) {
+        removedNames.push(bundle.name ?? "(이름없음)")
+        await this.eventBundleService.remove(bundle.id)
+      }
+    }
+    this.logger.log(
+      `[event import] 시트 탭 ${sheets.length}개 반영, 미사용 목록 ${removedNames.length}개 삭제` +
+        (removedNames.length ? `: ${removedNames.join(", ")}` : ""),
+    )
 
     return allCreatedEvents
   }
