@@ -51,6 +51,8 @@ export interface PiPractitionerPayload {
   gender?: string
   specialty?: string[]
   photo_url?: string | null
+  /** 소개 글(pi 0073) — 챗봇 facts.md 의료진 줄에 「이름 직책 — 소개」로 실린다. 소개 글이 있는 원장 전부(대표원장 특례 없음) */
+  bio?: string | null
 }
 export interface PiFactLocation {
   id: string
@@ -249,7 +251,7 @@ export const LOC_KEYS = [
   "common_sns",
   "sns_by_lang",
 ]
-export const PRAC_KEYS = ["name", "education", "career", "specialty", "photo_url"]
+export const PRAC_KEYS = ["name", "education", "career", "specialty", "photo_url", "bio"]
 export const PRAC_ARRAY_KEYS = ["education", "career", "specialty"]
 
 function locChanged(payload: Record<string, unknown>, piLoc: PiFactLocation): boolean {
@@ -283,6 +285,7 @@ export interface SyncDoctor {
   jobTitle?: string
   specialty?: string
   photoUrl?: string
+  bio?: string
 }
 
 /** 페슈(지점1 + 의료진) vs PI facts → 작업 목록. 순수 함수. 삭제는 warning만. */
@@ -336,6 +339,7 @@ export function planSync(
       career: [],
       specialty: d.specialty ? [String(d.specialty).trim()] : [],
       photo_url: d.photoUrl ? String(d.photoUrl) : null,
+      bio: d.bio && String(d.bio).trim() ? String(d.bio).trim() : null,
     }
     const position = piPosition(d.jobTitle)
     const cand = (piPracByName[nfc(d.name)] || [])[0]
